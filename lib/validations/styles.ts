@@ -16,5 +16,5 @@ export const globalPromptUpdateSchema = z.object({
   negativePrompt: z.string().trim().max(4000),
 });
 
-export type StyleCreateInput = z.infer<typeof styleCreateSchema>;
-export type StyleUpdateInput = z.infer<typeof styleUpdateSchema>;
+export type StyleCreateInput = z.input<typeof styleCreateSchema>;
+export type StyleUpdateInput = z.input<typeof styleUpdateSchema>;

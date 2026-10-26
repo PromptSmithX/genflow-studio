@@ -3,16 +3,18 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ImageConfigCard, type ImageRowState } from "@/components/create/image-config-card";
 import { AdvancedSettings, type AdvancedSettingsState } from "@/components/create/advanced-settings";
 import { BatchTracker } from "@/components/create/batch-tracker";
 import { useStyles } from "@/hooks/use-styles";
+import { useScenes } from "@/hooks/use-scenes";
+import { usePoses } from "@/hooks/use-poses";
 import { useGlobalPrompt } from "@/hooks/use-global-prompt";
 import { useSettings } from "@/hooks/use-settings";
 import { useWorkflow } from "@/hooks/use-workflow";
@@ -24,12 +26,14 @@ function makeLocalId() {
   return Math.random().toString(36).slice(2);
 }
 
-function makeRow(defaultStyleId: string): ImageRowState {
-  return { localId: makeLocalId(), styleId: defaultStyleId, positiveOverride: "", negativeOverride: "" };
+function makeRow(defaultSceneId: string, defaultPoseId: string): ImageRowState {
+  return { localId: makeLocalId(), sceneId: defaultSceneId, poseId: defaultPoseId, positiveOverride: "", negativeOverride: "" };
 }
 
 export function CreateForm() {
   const { data: styles } = useStyles();
+  const { data: scenes } = useScenes();
+  const { data: poses } = usePoses();
   const { data: globalPrompt } = useGlobalPrompt();
   const { data: settings } = useSettings();
   const { data: workflow } = useWorkflow();
@@ -37,8 +41,10 @@ export function CreateForm() {
   const createMutation = useCreateGeneration();
 
   const activeStyles = useMemo(() => (styles ?? []).filter((s) => s.isActive), [styles]);
+  const activeScenes = useMemo(() => (scenes ?? []).filter((s) => s.isActive), [scenes]);
+  const activePoses = useMemo(() => (poses ?? []).filter((p) => p.isActive), [poses]);
 
-  const [idea, setIdea] = useState("");
+  const [styleId, setStyleId] = useState("");
   const [imageCount, setImageCount] = useState(1);
   const [images, setImages] = useState<ImageRowState[]>([]);
   const [advanced, setAdvanced] = useState<AdvancedSettingsState>({
@@ -72,40 +78,48 @@ export function CreateForm() {
     }
   }
 
+  // Backfill the batch-level style once active styles finish loading.
+  const defaultStyleId = activeStyles[0]?.id ?? "";
+  const [prevDefaultStyleId, setPrevDefaultStyleId] = useState("");
+  if (defaultStyleId !== prevDefaultStyleId) {
+    setPrevDefaultStyleId(defaultStyleId);
+    if (!styleId && defaultStyleId) setStyleId(defaultStyleId);
+  }
+
   // Keep the per-image rows in sync with imageCount (grow/shrink, keeping
-  // existing rows' style/notes) and backfill a default style once active
-  // styles finish loading, without clobbering rows the user already edited.
-  const stylesReady = activeStyles.length > 0;
+  // existing rows' choices) and backfill default scene/pose once those
+  // libraries finish loading, without clobbering rows the user already edited.
+  const defaultSceneId = activeScenes[0]?.id ?? "";
+  const defaultPoseId = activePoses[0]?.id ?? "";
+  const defaultsKey = `${defaultSceneId}|${defaultPoseId}`;
   const [prevImageCount, setPrevImageCount] = useState(-1);
-  const [prevStylesReady, setPrevStylesReady] = useState(false);
-  if (imageCount !== prevImageCount || stylesReady !== prevStylesReady) {
+  const [prevDefaultsKey, setPrevDefaultsKey] = useState("");
+  if (imageCount !== prevImageCount || defaultsKey !== prevDefaultsKey) {
     setPrevImageCount(imageCount);
-    setPrevStylesReady(stylesReady);
-    const defaultStyleId = activeStyles[0]?.id ?? "";
+    setPrevDefaultsKey(defaultsKey);
     setImages((prev) => {
+      let next = prev;
       if (imageCount > prev.length) {
-        return [...prev, ...Array.from({ length: imageCount - prev.length }, () => makeRow(defaultStyleId))];
+        next = [...prev, ...Array.from({ length: imageCount - prev.length }, () => makeRow(defaultSceneId, defaultPoseId))];
+      } else if (imageCount < prev.length) {
+        next = prev.slice(0, imageCount);
       }
-      if (imageCount < prev.length) {
-        return prev.slice(0, imageCount);
-      }
-      if (stylesReady && !prevStylesReady) {
-        return prev.map((row) => (row.styleId ? row : { ...row, styleId: defaultStyleId }));
-      }
-      return prev;
+      return next.map((row) => ({
+        ...row,
+        sceneId: row.sceneId || defaultSceneId,
+        poseId: row.poseId || defaultPoseId,
+      }));
     });
   }
 
   const maxImages = settings?.maxImagesPerBatch ?? 8;
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
-  const hasStyles = activeStyles.length > 0;
-  const allRowsHaveStyle = images.length > 0 && images.every((row) => row.styleId);
+  const selectedStyle = activeStyles.find((s) => s.id === styleId);
   const canSubmit =
-    idea.trim().length > 0 &&
+    Boolean(styleId) &&
     connectionState === "connected" &&
     workflowReady &&
-    hasStyles &&
-    allRowsHaveStyle &&
+    images.length > 0 &&
     !createMutation.isPending;
 
   function handleCountChange(next: number) {
@@ -116,9 +130,10 @@ export function CreateForm() {
   function handleSubmit() {
     createMutation.mutate(
       {
-        idea: idea.trim(),
+        styleId,
         images: images.map((row) => ({
-          styleId: row.styleId,
+          sceneId: row.sceneId || undefined,
+          poseId: row.poseId || undefined,
           positiveOverride: row.positiveOverride || undefined,
           negativeOverride: row.negativeOverride || undefined,
         })),
@@ -171,16 +186,28 @@ export function CreateForm() {
 
       <Card>
         <CardContent className="space-y-3 p-4">
-          <Label htmlFor="idea">Bạn muốn tạo ảnh gì?</Label>
-          <Textarea
-            id="idea"
-            rows={4}
-            value={idea}
-            onChange={(e) => setIdea(e.target.value)}
-            placeholder="Một cô gái tóc xanh đứng trong khu vườn ngập nắng, mặc trang phục phong cách anime."
-          />
+          <Label htmlFor="style">Style nhân vật (áp cho tất cả ảnh)</Label>
+          {activeStyles.length === 0 ? (
+            <p className="text-sm text-amber-700">
+              Chưa có style nào đang hoạt động. Vào <span className="font-medium">Thư viện prompt</span> để tạo style
+              (khuôn mặt, kiểu tóc, vóc dáng... cố định).
+            </p>
+          ) : (
+            <Select value={styleId || undefined} onValueChange={(v) => { if (typeof v === "string") setStyleId(v); }}>
+              <SelectTrigger className="w-full sm:w-96">
+                <SelectValue placeholder="Chọn style" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeStyles.map((style) => (
+                  <SelectItem key={style.id} value={style.id}>
+                    {style.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <p className="text-xs text-muted-foreground">
-            Mô tả bằng tiếng Việt hoặc tiếng Anh. Bạn có thể xem và chỉnh prompt đầy đủ trước khi tạo.
+            Mỗi ảnh bên dưới chọn bối cảnh và tư thế riêng. Bạn có thể xem prompt đầy đủ trước khi tạo.
           </p>
         </CardContent>
       </Card>
@@ -206,8 +233,9 @@ export function CreateForm() {
             index={index}
             value={row}
             onChange={(next) => setImages((prev) => prev.map((r) => (r.localId === row.localId ? next : r)))}
-            activeStyles={activeStyles}
-            idea={idea}
+            activeScenes={activeScenes}
+            activePoses={activePoses}
+            style={selectedStyle}
             globalPrompt={globalPrompt}
           />
         ))}
@@ -218,7 +246,7 @@ export function CreateForm() {
       <div className="flex items-center justify-between rounded-md border bg-background p-4">
         <p className="text-sm text-muted-foreground">
           Sẽ tạo <span className="font-medium text-foreground">{images.length}</span> ảnh
-          {activeStyles.length > 0 && images.length === 1 ? ` với style "${activeStyles.find((s) => s.id === images[0]?.styleId)?.name ?? ""}"` : ""}.
+          {selectedStyle ? ` với style "${selectedStyle.name}"` : ""}.
         </p>
         <Button size="lg" onClick={handleSubmit} disabled={!canSubmit}>
           <Sparkles className="h-4 w-4" />

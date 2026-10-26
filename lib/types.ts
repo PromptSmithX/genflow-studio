@@ -1,7 +1,9 @@
-import type { StylePreset, GlobalPrompt, GeneratedImage } from "@prisma/client";
+import type { StylePreset, ScenePreset, PosePreset, GlobalPrompt, GeneratedImage } from "@prisma/client";
 import type { NodeSummary, NodeMapping } from "@/lib/comfyui/workflow-mapper";
 
 export type StyleDTO = StylePreset;
+export type SceneDTO = ScenePreset;
+export type PoseDTO = PosePreset;
 export type GlobalPromptDTO = GlobalPrompt;
 export type GeneratedImageDTO = GeneratedImage;
 
@@ -60,6 +62,14 @@ export interface GenerationJobDTO {
   styleNameSnapshot: string | null;
   stylePositiveSnapshot: string | null;
   styleNegativeSnapshot: string | null;
+  sceneId: string | null;
+  sceneNameSnapshot: string | null;
+  scenePositiveSnapshot: string | null;
+  sceneNegativeSnapshot: string | null;
+  poseId: string | null;
+  poseNameSnapshot: string | null;
+  posePositiveSnapshot: string | null;
+  poseNegativeSnapshot: string | null;
   ideaPromptSnapshot: string;
   positiveFinal: string;
   negativeFinal: string;

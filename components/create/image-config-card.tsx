@@ -6,11 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { buildPrompts } from "@/lib/prompts/build-prompts";
-import type { StyleDTO, GlobalPromptDTO } from "@/lib/types";
+import type { StyleDTO, SceneDTO, PoseDTO, GlobalPromptDTO } from "@/lib/types";
 
 export interface ImageRowState {
   localId: string;
-  styleId: string;
+  sceneId: string;
+  poseId: string;
   positiveOverride: string;
   negativeOverride: string;
 }
@@ -19,20 +20,25 @@ interface ImageConfigCardProps {
   index: number;
   value: ImageRowState;
   onChange: (next: ImageRowState) => void;
-  activeStyles: StyleDTO[];
-  idea: string;
+  activeScenes: SceneDTO[];
+  activePoses: PoseDTO[];
+  style: StyleDTO | undefined;
   globalPrompt: GlobalPromptDTO | undefined;
 }
 
-export function ImageConfigCard({ index, value, onChange, activeStyles, idea, globalPrompt }: ImageConfigCardProps) {
-  const selectedStyle = activeStyles.find((s) => s.id === value.styleId);
+export function ImageConfigCard({ index, value, onChange, activeScenes, activePoses, style, globalPrompt }: ImageConfigCardProps) {
+  const selectedScene = activeScenes.find((s) => s.id === value.sceneId);
+  const selectedPose = activePoses.find((p) => p.id === value.poseId);
 
   const preview = buildPrompts({
     globalPositive: globalPrompt?.positivePrompt ?? "",
     globalNegative: globalPrompt?.negativePrompt ?? "",
-    idea,
-    stylePositive: selectedStyle?.positivePrompt ?? "",
-    styleNegative: selectedStyle?.negativePrompt ?? "",
+    stylePositive: style?.positivePrompt ?? "",
+    styleNegative: style?.negativePrompt ?? "",
+    scenePositive: selectedScene?.positivePrompt ?? "",
+    sceneNegative: selectedScene?.negativePrompt ?? "",
+    posePositive: selectedPose?.positivePrompt ?? "",
+    poseNegative: selectedPose?.negativePrompt ?? "",
     imagePositiveOverride: value.positiveOverride,
     imageNegativeOverride: value.negativeOverride,
   });
@@ -45,25 +51,52 @@ export function ImageConfigCard({ index, value, onChange, activeStyles, idea, gl
         </div>
 
         <div className="space-y-2">
-          <Label>Style</Label>
-          {activeStyles.length === 0 ? (
+          <Label>Bối cảnh</Label>
+          {activeScenes.length === 0 ? (
             <p className="text-sm text-amber-700">
-              Chưa có style nào đang hoạt động. Vào <span className="font-medium">Thư viện prompt</span> để tạo style.
+              Chưa có bối cảnh nào. Vào <span className="font-medium">Thư viện prompt</span> để tạo.
             </p>
           ) : (
             <Select
-              value={value.styleId || undefined}
-              onValueChange={(styleId) => {
-                if (typeof styleId === "string") onChange({ ...value, styleId });
+              value={value.sceneId || undefined}
+              onValueChange={(sceneId) => {
+                if (typeof sceneId === "string") onChange({ ...value, sceneId });
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn style" />
+                <SelectValue placeholder="Chọn bối cảnh" />
               </SelectTrigger>
               <SelectContent>
-                {activeStyles.map((style) => (
-                  <SelectItem key={style.id} value={style.id}>
-                    {style.name}
+                {activeScenes.map((scene) => (
+                  <SelectItem key={scene.id} value={scene.id}>
+                    {scene.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tư thế</Label>
+          {activePoses.length === 0 ? (
+            <p className="text-sm text-amber-700">
+              Chưa có tư thế nào. Vào <span className="font-medium">Thư viện prompt</span> để tạo.
+            </p>
+          ) : (
+            <Select
+              value={value.poseId || undefined}
+              onValueChange={(poseId) => {
+                if (typeof poseId === "string") onChange({ ...value, poseId });
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Chọn tư thế" />
+              </SelectTrigger>
+              <SelectContent>
+                {activePoses.map((pose) => (
+                  <SelectItem key={pose.id} value={pose.id}>
+                    {pose.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -98,13 +131,19 @@ export function ImageConfigCard({ index, value, onChange, activeStyles, idea, gl
             <AccordionContent className="space-y-2 text-xs">
               <div>
                 <p className="font-medium text-foreground">Prompt chung</p>
-                <p className="text-muted-foreground">
-                  {preview.parts.positive.global || "—"} {preview.parts.positive.idea && `/ ${preview.parts.positive.idea}`}
-                </p>
+                <p className="text-muted-foreground">{preview.parts.positive.global || "—"}</p>
               </div>
               <div>
-                <p className="font-medium text-foreground">Phong cách</p>
+                <p className="font-medium text-foreground">Style (nhân vật)</p>
                 <p className="text-muted-foreground">{preview.parts.positive.style || "—"}</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Bối cảnh</p>
+                <p className="text-muted-foreground">{preview.parts.positive.scene || "—"}</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Tư thế</p>
+                <p className="text-muted-foreground">{preview.parts.positive.pose || "—"}</p>
               </div>
               <div>
                 <p className="font-medium text-foreground">Chi tiết riêng</p>

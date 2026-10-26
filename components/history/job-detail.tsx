@@ -65,17 +65,15 @@ export function JobDetail({ jobId }: { jobId: string }) {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{STATUS_LABEL[job.status]}</Badge>
-          {job.styleNameSnapshot && <Badge variant="secondary">{job.styleNameSnapshot}</Badge>}
+          {job.styleNameSnapshot && <Badge variant="secondary">Style: {job.styleNameSnapshot}</Badge>}
+          {job.sceneNameSnapshot && <Badge variant="secondary">Bối cảnh: {job.sceneNameSnapshot}</Badge>}
+          {job.poseNameSnapshot && <Badge variant="secondary">Tư thế: {job.poseNameSnapshot}</Badge>}
         </div>
 
         <Card>
           <CardContent className="space-y-3 p-4 text-sm">
-            <div>
-              <p className="font-medium">Ý tưởng chung</p>
-              <p className="text-muted-foreground">{job.ideaPromptSnapshot}</p>
-            </div>
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-medium">Positive final</p>

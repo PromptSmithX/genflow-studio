@@ -1,9 +1,9 @@
-import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, apiError } from "@/lib/api/errors";
 import { serializeBigInts } from "@/lib/api/serialize";
 import { getOrCreateSettings } from "@/lib/settings";
+import { resolveOutputRoot } from "@/lib/output-dir";
 import { ComfyClient } from "@/lib/comfyui/client";
 import { syncBatch } from "@/lib/comfyui/job-sync";
 
@@ -25,9 +25,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
     }
 
     const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });
-    const outputRoot = path.isAbsolute(settings.outputDirectory)
-      ? settings.outputDirectory
-      : path.join(process.cwd(), settings.outputDirectory);
+    const outputRoot = resolveOutputRoot(settings);
 
     await syncBatch(batchId, client, outputRoot);
 

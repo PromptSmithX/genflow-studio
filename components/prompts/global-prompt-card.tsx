@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,13 +15,15 @@ export function GlobalPromptCard() {
 
   const [positive, setPositive] = useState("");
   const [negative, setNegative] = useState("");
+  const [syncedData, setSyncedData] = useState(data);
 
-  useEffect(() => {
+  if (data !== syncedData) {
+    setSyncedData(data);
     if (data) {
       setPositive(data.positivePrompt);
       setNegative(data.negativePrompt);
     }
-  }, [data]);
+  }
 
   const isDirty = data && (positive !== data.positivePrompt || negative !== data.negativePrompt);
 

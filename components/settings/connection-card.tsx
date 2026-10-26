@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,10 +20,12 @@ export function ConnectionCard() {
 
   const [url, setUrl] = useState("");
   const [lastResult, setLastResult] = useState<ConnectionTestResponse | null>(null);
+  const [syncedSettings, setSyncedSettings] = useState(settings);
 
-  useEffect(() => {
+  if (settings !== syncedSettings) {
+    setSyncedSettings(settings);
     if (settings) setUrl(settings.comfyBaseUrl ?? "");
-  }, [settings]);
+  }
 
   function handleTest() {
     testMutation.mutate(url || undefined, {

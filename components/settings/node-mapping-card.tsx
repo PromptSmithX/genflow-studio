@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -45,10 +45,12 @@ export function NodeMappingCard() {
   const validateMutation = useValidateMapping();
   const [mapping, setMapping] = useState<NodeMapping>({});
   const [validation, setValidation] = useState<MappingValidationResponse | null>(null);
+  const [syncedMapping, setSyncedMapping] = useState(data?.mapping);
 
-  useEffect(() => {
+  if (data?.mapping !== syncedMapping) {
+    setSyncedMapping(data?.mapping);
     if (data?.mapping) setMapping(data.mapping);
-  }, [data?.mapping]);
+  }
 
   if (isLoading) return null;
   if (!data?.configured || !data.nodes) {

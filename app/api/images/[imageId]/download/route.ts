@@ -1,10 +1,10 @@
-import path from "node:path";
 import fs from "node:fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { apiError, handleApiError } from "@/lib/api/errors";
 import { resolveSafePath } from "@/lib/files/safe-output";
 import { getOrCreateSettings } from "@/lib/settings";
+import { resolveOutputRoot } from "@/lib/output-dir";
 
 export const runtime = "nodejs";
 
@@ -19,9 +19,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     if (!image) return apiError("not_found", "Không tìm thấy ảnh", 404);
 
     const settings = await getOrCreateSettings();
-    const outputRoot = path.isAbsolute(settings.outputDirectory)
-      ? settings.outputDirectory
-      : path.join(process.cwd(), settings.outputDirectory);
+    const outputRoot = resolveOutputRoot(settings);
 
     const fullPath = resolveSafePath(outputRoot, image.relativePath);
     const buffer = await fs.readFile(fullPath);

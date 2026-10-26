@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,9 @@ export function DefaultsCard() {
     outputDirectory: "data/outputs",
   });
 
-  useEffect(() => {
+  const [syncedData, setSyncedData] = useState(data);
+  if (data !== syncedData) {
+    setSyncedData(data);
     if (data) {
       setForm({
         defaultWidth: data.defaultWidth,
@@ -38,7 +40,7 @@ export function DefaultsCard() {
         outputDirectory: data.outputDirectory,
       });
     }
-  }, [data]);
+  }
 
   function handleSave() {
     updateMutation.mutate(

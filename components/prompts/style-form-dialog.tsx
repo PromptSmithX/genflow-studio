@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -41,7 +41,9 @@ export function StyleFormDialog({ open, onOpenChange, style, duplicateFrom }: St
   const updateMutation = useUpdateStyle();
   const isPending = createMutation.isPending || updateMutation.isPending;
 
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setName(duplicateFrom ? `${duplicateFrom.name} (bản sao)` : source?.name ?? "");
       setDescription(source?.description ?? "");
@@ -50,7 +52,7 @@ export function StyleFormDialog({ open, onOpenChange, style, duplicateFrom }: St
       setIsActive(source?.isActive ?? true);
       setError(null);
     }
-  }, [open, source, duplicateFrom]);
+  }
 
   function handleSubmit() {
     setError(null);

@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model GlobalPrompt {
+  id             String   @id @default("main")
+  positivePrompt String   @default("")
+  negativePrompt String   @default("")
+  updatedAt      DateTime @updatedAt
+}
+
+model StylePreset {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  description    String?
+  positivePrompt String   @default("")
+  negativePrompt String   @default("")
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  jobs GenerationJob[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model AppSettings {
+  id                String   @id @default("main")
+  comfyBaseUrl      String?
+  hasGatewayToken   Boolean  @default(false)
+  defaultWidth      Int      @default(1024)
+  defaultHeight     Int      @default(1024)
+  defaultSteps      Int      @default(25)
+  defaultCfg        Float    @default(4.0)
+  defaultSeedMode   String   @default("random") // "random" | "fixed"
+  defaultFixedSeed  BigInt?
+  maxImagesPerBatch Int      @default(8)
+  outputDirectory   String   @default("data/outputs")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model WorkflowConfig {
+  id                   String    @id @default("main")
+  workflowRelativePath String
+  originalFilename     String
+  nodeCount            Int       @default(0)
+  nodeMappingJson      String    @default("{}")
+  isValidated          Boolean   @default(false)
+  validatedAt          DateTime?
+  importedAt           DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+enum BatchStatus {
+  queued
+  running
+  completed
+  partial
+  failed
+}
+
+enum JobStatus {
+  queued
+  running
+  completed
+  failed
+  unknown
+}
+
+model GenerationBatch {
+  id             String      @id @default(cuid())
+  ideaPrompt     String
+  status         BatchStatus @default(queued)
+  requestedCount Int
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  jobs GenerationJob[]
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model GenerationJob {
+  id                    String    @id @default(cuid())
+  batchId               String
+  indexInBatch          Int
+  styleId               String?
+  styleNameSnapshot     String?
+  stylePositiveSnapshot String?
+  styleNegativeSnapshot String?
+  ideaPromptSnapshot    String
+  positiveFinal         String
+  negativeFinal         String
+  promptId              String?
+  status                JobStatus @default(queued)
+  seed                  BigInt?
+  width                 Int?
+  height                Int?
+  steps                 Int?
+  cfg                   Float?
+  sampler               String?
+  scheduler             String?
+  errorCode             String?
+  errorMessage          String?
+  submittedAt           DateTime?
+  startedAt             DateTime?
+  finishedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  batch  GenerationBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  style  StylePreset?     @relation(fields: [styleId], references: [id], onDelete: SetNull)
+  images GeneratedImage[]
+
+  @@index([batchId])
+  @@index([status])
+  @@index([styleId])
+  @@index([promptId])
+}
+
+model GeneratedImage {
+  id           String   @id @default(cuid())
+  jobId        String
+  relativePath String
+  filename     String
+  mimeType     String
+  width        Int?
+  height       Int?
+  createdAt    DateTime @default(now())
+
+  job GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+}

@@ -98,6 +98,23 @@ describe("ComfyClient", () => {
     expect(new Uint8Array(buffer)).toEqual(new Uint8Array([1, 2, 3]));
   });
 
+  it("detects an HTML interstitial on /view instead of returning it as image bytes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "text/html" }),
+        text: async () => "<!doctype html><html><body>Tunnel reminder</body></html>",
+        arrayBuffer: async () => new ArrayBuffer(0),
+      }),
+    );
+    const client = new ComfyClient({ baseUrl: "http://localhost:8188" });
+    await expect(
+      client.viewImage({ filename: "out.png", subfolder: "", type: "output" }),
+    ).rejects.toMatchObject({ code: "html_interstitial" });
+  });
+
   it("throws no_url error when base URL is missing", () => {
     expect(() => new ComfyClient({ baseUrl: "" })).toThrow(ComfyApiError);
   });

@@ -75,8 +75,11 @@ model AppSettings {
   defaultCfg        Float    @default(4.0)
   defaultSeedMode   String   @default("random") // "random" | "fixed"
   defaultFixedSeed  BigInt?
-  maxImagesPerBatch Int      @default(8)
+  maxImagesPerBatch Int      @default(20)
   outputDirectory   String   @default("data/outputs")
+  llmBaseUrl        String?
+  llmModel          String?
+  llmSystemPrompt   String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }

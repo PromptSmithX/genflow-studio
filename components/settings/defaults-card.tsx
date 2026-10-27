@@ -137,7 +137,7 @@ export function DefaultsCard() {
             <Input
               type="number"
               min={1}
-              max={8}
+              max={20}
               value={form.maxImagesPerBatch}
               onChange={(e) => setForm((f) => ({ ...f, maxImagesPerBatch: Number(e.target.value) }))}
             />

@@ -45,6 +45,7 @@ interface ComfyClientOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+const VIEW_IMAGE_TIMEOUT_MS = 60_000;
 
 /**
  * Thin server-only wrapper around the ComfyUI HTTP API. Every call runs on
@@ -76,9 +77,9 @@ export class ComfyClient {
     return headers;
   }
 
-  private async request(path: string, init?: RequestInit): Promise<Response> {
+  private async request(path: string, init?: RequestInit, timeoutMs?: number): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs ?? this.timeoutMs);
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         ...init,
@@ -210,7 +211,15 @@ export class ComfyClient {
       subfolder: ref.subfolder,
       type: ref.type,
     });
-    const response = await this.request(`/view?${params.toString()}`);
+    const response = await this.request(`/view?${params.toString()}`, undefined, VIEW_IMAGE_TIMEOUT_MS);
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("text/html")) {
+      throw new ComfyApiError(
+        "Nhận được trang HTML thay vì ảnh — tunnel có thể đã hết hạn hoặc cần xác nhận interstitial",
+        "html_interstitial",
+      );
+    }
     if (!response.ok) {
       throw new ComfyApiError(`Không tải được ảnh output (HTTP ${response.status})`, "http_error");
     }

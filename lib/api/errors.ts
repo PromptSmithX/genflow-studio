@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { ComfyApiError } from "@/lib/comfyui/client";
+import { LlmApiError } from "@/lib/llm/client";
 import { WorkflowMappingError } from "@/lib/comfyui/workflow-mapper";
 import { GenerationSetupError } from "@/lib/generations/create-batch";
 
@@ -29,6 +30,9 @@ export function handleApiError(error: unknown) {
   }
   if (error instanceof ComfyApiError) {
     return apiError(error.code, error.message, 502, error.details);
+  }
+  if (error instanceof LlmApiError) {
+    return apiError(error.code, error.message, error.code === "no_config" ? 400 : 502);
   }
   if (error instanceof GenerationSetupError) {
     return apiError(error.code, error.message, 400);

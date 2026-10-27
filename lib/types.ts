@@ -18,6 +18,10 @@ export interface SettingsDTO {
   defaultFixedSeed: number | null;
   maxImagesPerBatch: number;
   outputDirectory: string;
+  llmBaseUrl: string | null;
+  llmModel: string | null;
+  llmSystemPrompt: string | null;
+  hasLlmKey: boolean;
   updatedAt: string;
 }
 

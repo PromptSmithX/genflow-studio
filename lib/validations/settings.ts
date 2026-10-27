@@ -11,8 +11,12 @@ export const settingsUpdateSchema = z.object({
   defaultCfg: z.number().min(0).max(30).optional(),
   defaultSeedMode: seedModeSchema.optional(),
   defaultFixedSeed: z.number().int().min(0).optional().nullable(),
-  maxImagesPerBatch: z.number().int().min(1).max(8).optional(),
+  maxImagesPerBatch: z.number().int().min(1).max(20).optional(),
   outputDirectory: z.string().trim().min(1).optional(),
+  llmBaseUrl: z.string().trim().optional().nullable(),
+  llmModel: z.string().trim().optional().nullable(),
+  llmSystemPrompt: z.string().trim().max(8000).optional().nullable(),
+  llmApiKey: z.string().trim().optional().nullable(),
 });
 
 export const connectionTestSchema = z.object({

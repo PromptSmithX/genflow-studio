@@ -47,8 +47,8 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     );
   }
 
-  const style = await prisma.stylePreset.findUnique({ where: { id: input.styleId } });
-  if (!style || !style.isActive) {
+  const style = input.styleId ? await prisma.stylePreset.findUnique({ where: { id: input.styleId } }) : null;
+  if (input.styleId && (!style || !style.isActive)) {
     throw new GenerationSetupError(`Style "${input.styleId}" không hợp lệ hoặc không còn hoạt động`, "invalid_style");
   }
 
@@ -75,7 +75,9 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     incrementFixedSeed: input.incrementFixedSeed ?? true,
   });
 
-  const batchLabel = `${style.name} — ${input.images.length} ảnh`;
+  const batchLabel =
+    input.ideaPrompt?.trim() ||
+    (style ? `${style.name} — ${input.images.length} ảnh` : `Trợ lý AI — ${input.images.length} ảnh`);
 
   const batch = await prisma.generationBatch.create({
     data: {
@@ -94,8 +96,8 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     const built = buildPrompts({
       globalPositive: globalPrompt.positivePrompt,
       globalNegative: globalPrompt.negativePrompt,
-      stylePositive: style.positivePrompt,
-      styleNegative: style.negativePrompt,
+      stylePositive: style?.positivePrompt ?? "",
+      styleNegative: style?.negativePrompt ?? "",
       scenePositive: scene?.positivePrompt,
       sceneNegative: scene?.negativePrompt,
       posePositive: pose?.positivePrompt,
@@ -108,10 +110,10 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
       data: {
         batchId: batch.id,
         indexInBatch: index,
-        styleId: style.id,
-        styleNameSnapshot: style.name,
-        stylePositiveSnapshot: style.positivePrompt,
-        styleNegativeSnapshot: style.negativePrompt,
+        styleId: style?.id ?? null,
+        styleNameSnapshot: style?.name ?? null,
+        stylePositiveSnapshot: style?.positivePrompt ?? null,
+        styleNegativeSnapshot: style?.negativePrompt ?? null,
         sceneId: scene?.id ?? null,
         sceneNameSnapshot: scene?.name ?? null,
         scenePositiveSnapshot: scene?.positivePrompt ?? null,

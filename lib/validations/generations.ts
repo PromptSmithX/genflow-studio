@@ -8,8 +8,9 @@ export const imageRequestSchema = z.object({
 });
 
 export const createGenerationSchema = z.object({
-  styleId: z.string().min(1, "Vui lòng chọn một style"),
-  images: z.array(imageRequestSchema).min(1).max(8),
+  styleId: z.string().min(1).optional().nullable(),
+  ideaPrompt: z.string().trim().max(2000).optional(),
+  images: z.array(imageRequestSchema).min(1).max(20),
   width: z.number().int().min(64).max(4096).optional(),
   height: z.number().int().min(64).max(4096).optional(),
   steps: z.number().int().min(1).max(200).optional(),

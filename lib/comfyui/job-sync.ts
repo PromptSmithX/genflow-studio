@@ -46,6 +46,32 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   }
 
   if (history.status === "not_found") {
+    // Not in /history yet does NOT mean lost: ComfyUI only moves a prompt into
+    // history after it finishes, so while queued/running it lives in /queue.
+    let activeIds: Set<string>;
+    try {
+      activeIds = await client.getActivePromptIds();
+    } catch {
+      activeIds = new Set();
+    }
+
+    if (activeIds.has(job.promptId)) {
+      await prisma.generationJob.update({
+        where: { id: jobId },
+        data: { status: "running", startedAt: job.startedAt ?? new Date(), errorCode: null, errorMessage: null },
+      });
+      return;
+    }
+
+    // Neither in history nor in the queue. Allow a grace window after submit
+    // for the brief handoff between leaving the queue and appearing in
+    // history (and transient network hiccups) before declaring it lost.
+    const GRACE_MS = 120_000;
+    const since = job.submittedAt ?? job.createdAt;
+    if (Date.now() - since.getTime() < GRACE_MS) {
+      return; // keep current queued/running status, let polling retry
+    }
+
     await prisma.generationJob.update({
       where: { id: jobId },
       data: {
@@ -102,7 +128,7 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
 
   await prisma.generationJob.update({
     where: { id: jobId },
-    data: { status: "completed", finishedAt: new Date() },
+    data: { status: "completed", finishedAt: new Date(), errorCode: null, errorMessage: null },
   });
 }
 

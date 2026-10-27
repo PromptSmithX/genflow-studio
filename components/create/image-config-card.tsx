@@ -64,7 +64,9 @@ export function ImageConfigCard({ index, value, onChange, activeScenes, activePo
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn bối cảnh" />
+                <SelectValue placeholder="Chọn bối cảnh">
+                  {(value: string | null) => activeScenes.find((s) => s.id === value)?.name ?? value}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {activeScenes.map((scene) => (
@@ -91,7 +93,9 @@ export function ImageConfigCard({ index, value, onChange, activeScenes, activePo
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn tư thế" />
+                <SelectValue placeholder="Chọn tư thế">
+                  {(value: string | null) => activePoses.find((p) => p.id === value)?.name ?? value}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {activePoses.map((pose) => (

@@ -182,6 +182,28 @@ export class ComfyClient {
     return this.parseJson(response);
   }
 
+  /**
+   * Returns the prompt_ids currently running or pending in ComfyUI's queue.
+   * A prompt sits here while being processed and only moves to /history once
+   * finished, so this is how we tell "still working" apart from "lost".
+   */
+  async getActivePromptIds(): Promise<Set<string>> {
+    const json = (await this.getQueue()) as {
+      queue_running?: unknown[];
+      queue_pending?: unknown[];
+    };
+    const ids = new Set<string>();
+    for (const list of [json.queue_running, json.queue_pending]) {
+      if (!Array.isArray(list)) continue;
+      for (const entry of list) {
+        // Each queue entry is [number, prompt_id, prompt, extra_data, outputs].
+        const promptId = Array.isArray(entry) ? entry[1] : undefined;
+        if (typeof promptId === "string") ids.add(promptId);
+      }
+    }
+    return ids;
+  }
+
   async viewImage(ref: HistoryImageRef): Promise<ArrayBuffer> {
     const params = new URLSearchParams({
       filename: ref.filename,

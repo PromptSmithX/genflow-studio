@@ -62,7 +62,7 @@ export function CreateForm() {
 
   // Sync editable defaults from settings whenever a (re)fetch brings a new
   // object -- same once-per-load-or-refetch behavior as a settings-synced effect.
-  const [syncedSettings, setSyncedSettings] = useState(settings);
+  const [syncedSettings, setSyncedSettings] = useState<typeof settings>(undefined);
   if (settings !== syncedSettings) {
     setSyncedSettings(settings);
     if (settings) {
@@ -195,7 +195,9 @@ export function CreateForm() {
           ) : (
             <Select value={styleId || undefined} onValueChange={(v) => { if (typeof v === "string") setStyleId(v); }}>
               <SelectTrigger className="w-full sm:w-96">
-                <SelectValue placeholder="Chọn style" />
+                <SelectValue placeholder="Chọn style">
+                  {(value: string | null) => activeStyles.find((s) => s.id === value)?.name ?? value}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {activeStyles.map((style) => (

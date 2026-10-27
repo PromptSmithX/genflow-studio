@@ -44,3 +44,11 @@ export function useRegenerateJob() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["history"] }),
   });
 }
+
+export function useResyncBatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) => apiPost<GenerationBatchDTO>(`/api/generations/${batchId}/sync`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["history"] }),
+  });
+}

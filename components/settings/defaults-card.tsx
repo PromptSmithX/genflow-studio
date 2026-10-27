@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +26,7 @@ export function DefaultsCard() {
     outputDirectory: "data/outputs",
   });
 
-  const [syncedData, setSyncedData] = useState(data);
+  const [syncedData, setSyncedData] = useState<typeof data>(undefined);
   if (data !== syncedData) {
     setSyncedData(data);
     if (data) {
@@ -41,6 +42,17 @@ export function DefaultsCard() {
       });
     }
   }
+
+  const hasUnsavedChanges =
+    Boolean(data) &&
+    (form.defaultWidth !== data!.defaultWidth ||
+      form.defaultHeight !== data!.defaultHeight ||
+      form.defaultSteps !== data!.defaultSteps ||
+      form.defaultCfg !== data!.defaultCfg ||
+      form.defaultSeedMode !== data!.defaultSeedMode ||
+      (form.defaultFixedSeed === "" ? null : Number(form.defaultFixedSeed)) !== (data!.defaultFixedSeed ?? null) ||
+      form.maxImagesPerBatch !== data!.maxImagesPerBatch ||
+      form.outputDirectory !== data!.outputDirectory);
 
   function handleSave() {
     updateMutation.mutate(
@@ -139,8 +151,11 @@ export function DefaultsCard() {
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={updateMutation.isPending}>
+        <div className="flex items-center justify-end gap-2">
+          {hasUnsavedChanges && (
+            <Badge variant="destructive">Có thay đổi chưa lưu</Badge>
+          )}
+          <Button onClick={handleSave} disabled={updateMutation.isPending || !hasUnsavedChanges}>
             {updateMutation.isPending ? "Đang lưu..." : "Lưu thành mặc định"}
           </Button>
         </div>

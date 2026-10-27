@@ -15,20 +15,21 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useCreateStyle, useUpdateStyle } from "@/hooks/use-styles";
-import type { StyleDTO } from "@/lib/types";
 import { ApiRequestError } from "@/lib/client/api";
+import type { PresetDTO, PresetHooks, PresetLabels } from "@/components/prompts/preset-types";
 
-interface StyleFormDialogProps {
+interface PresetFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  style?: StyleDTO | null;
-  duplicateFrom?: StyleDTO | null;
+  preset?: PresetDTO | null;
+  duplicateFrom?: PresetDTO | null;
+  hooks: PresetHooks;
+  labels: PresetLabels;
 }
 
-export function StyleFormDialog({ open, onOpenChange, style, duplicateFrom }: StyleFormDialogProps) {
-  const source = style ?? duplicateFrom ?? null;
-  const isEditing = Boolean(style);
+export function PresetFormDialog({ open, onOpenChange, preset, duplicateFrom, hooks, labels }: PresetFormDialogProps) {
+  const source = preset ?? duplicateFrom ?? null;
+  const isEditing = Boolean(preset);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -37,8 +38,8 @@ export function StyleFormDialog({ open, onOpenChange, style, duplicateFrom }: St
   const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const createMutation = useCreateStyle();
-  const updateMutation = useUpdateStyle();
+  const createMutation = hooks.useCreate();
+  const updateMutation = hooks.useUpdate();
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const [wasOpen, setWasOpen] = useState(open);
@@ -57,7 +58,7 @@ export function StyleFormDialog({ open, onOpenChange, style, duplicateFrom }: St
   function handleSubmit() {
     setError(null);
     if (!name.trim()) {
-      setError("Tên style không được để trống");
+      setError(`Tên ${labels.noun} không được để trống`);
       return;
     }
 
@@ -71,14 +72,14 @@ export function StyleFormDialog({ open, onOpenChange, style, duplicateFrom }: St
       }
     };
 
-    if (isEditing && style) {
+    if (isEditing && preset) {
       updateMutation.mutate(
-        { id: style.id, input },
-        { onSuccess: () => { toast.success("Đã lưu style"); onOpenChange(false); }, onError },
+        { id: preset.id, input },
+        { onSuccess: () => { toast.success(`Đã lưu ${labels.noun}`); onOpenChange(false); }, onError },
       );
     } else {
       createMutation.mutate(input, {
-        onSuccess: () => { toast.success("Đã tạo style"); onOpenChange(false); },
+        onSuccess: () => { toast.success(`Đã tạo ${labels.noun}`); onOpenChange(false); },
         onError,
       });
     }
@@ -88,46 +89,48 @@ export function StyleFormDialog({ open, onOpenChange, style, duplicateFrom }: St
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Sửa style" : duplicateFrom ? "Nhân bản style" : "Tạo style mới"}</DialogTitle>
-          <DialogDescription>Style là dữ liệu có thể dùng ngay ở trang Tạo ảnh.</DialogDescription>
+          <DialogTitle>
+            {isEditing ? `Sửa ${labels.noun}` : duplicateFrom ? `Nhân bản ${labels.noun}` : `Tạo ${labels.noun} mới`}
+          </DialogTitle>
+          <DialogDescription>Dữ liệu này có thể dùng ngay ở trang Tạo ảnh.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="style-name">Tên style</Label>
-            <Input id="style-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Anime Cinematic" />
+            <Label htmlFor="preset-name">Tên {labels.noun}</Label>
+            <Input id="preset-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={labels.namePlaceholder} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="style-description">Mô tả ngắn</Label>
+            <Label htmlFor="preset-description">Mô tả ngắn</Label>
             <Input
-              id="style-description"
+              id="preset-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Phong cách anime điện ảnh, ánh sáng kịch tính"
+              placeholder={labels.descriptionPlaceholder}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="style-positive">Positive prompt của style</Label>
+            <Label htmlFor="preset-positive">Positive prompt</Label>
             <Textarea
-              id="style-positive"
+              id="preset-positive"
               value={positivePrompt}
               onChange={(e) => setPositivePrompt(e.target.value)}
               rows={3}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="style-negative">Negative prompt của style (tùy chọn)</Label>
+            <Label htmlFor="preset-negative">Negative prompt (tùy chọn)</Label>
             <Textarea
-              id="style-negative"
+              id="preset-negative"
               value={negativePrompt}
               onChange={(e) => setNegativePrompt(e.target.value)}
               rows={2}
             />
           </div>
           <div className="flex items-center justify-between rounded-md border px-3 py-2">
-            <Label htmlFor="style-active" className="cursor-pointer">
+            <Label htmlFor="preset-active" className="cursor-pointer">
               Hoạt động (hiện ở trang Tạo ảnh)
             </Label>
-            <Switch id="style-active" checked={isActive} onCheckedChange={setIsActive} />
+            <Switch id="preset-active" checked={isActive} onCheckedChange={setIsActive} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>

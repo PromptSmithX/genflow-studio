@@ -1,14 +1,16 @@
 import { z } from "zod";
 
 export const imageRequestSchema = z.object({
-  styleId: z.string().min(1, "Vui lòng chọn một style"),
+  sceneId: z.string().optional().nullable(),
+  poseId: z.string().optional().nullable(),
   positiveOverride: z.string().trim().max(2000).optional().nullable(),
   negativeOverride: z.string().trim().max(2000).optional().nullable(),
 });
 
 export const createGenerationSchema = z.object({
-  idea: z.string().trim().min(1, "Vui lòng nhập ý tưởng").max(4000),
-  images: z.array(imageRequestSchema).min(1).max(8),
+  styleId: z.string().min(1).optional().nullable(),
+  ideaPrompt: z.string().trim().max(2000).optional(),
+  images: z.array(imageRequestSchema).min(1).max(20),
   width: z.number().int().min(64).max(4096).optional(),
   height: z.number().int().min(64).max(4096).optional(),
   steps: z.number().int().min(1).max(200).optional(),

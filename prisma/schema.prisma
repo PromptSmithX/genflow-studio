@@ -31,6 +31,40 @@ model StylePreset {
   @@index([sortOrder])
 }
 
+model ScenePreset {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  description    String?
+  positivePrompt String   @default("")
+  negativePrompt String   @default("")
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  jobs GenerationJob[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model PosePreset {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  description    String?
+  positivePrompt String   @default("")
+  negativePrompt String   @default("")
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  jobs GenerationJob[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
 model AppSettings {
   id                String   @id @default("main")
   comfyBaseUrl      String?
@@ -41,8 +75,11 @@ model AppSettings {
   defaultCfg        Float    @default(4.0)
   defaultSeedMode   String   @default("random") // "random" | "fixed"
   defaultFixedSeed  BigInt?
-  maxImagesPerBatch Int      @default(8)
+  maxImagesPerBatch Int      @default(20)
   outputDirectory   String   @default("data/outputs")
+  llmBaseUrl        String?
+  llmModel          String?
+  llmSystemPrompt   String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -97,6 +134,14 @@ model GenerationJob {
   styleNameSnapshot     String?
   stylePositiveSnapshot String?
   styleNegativeSnapshot String?
+  sceneId               String?
+  sceneNameSnapshot     String?
+  scenePositiveSnapshot String?
+  sceneNegativeSnapshot String?
+  poseId                String?
+  poseNameSnapshot      String?
+  posePositiveSnapshot  String?
+  poseNegativeSnapshot  String?
   ideaPromptSnapshot    String
   positiveFinal         String
   negativeFinal         String
@@ -119,11 +164,15 @@ model GenerationJob {
 
   batch  GenerationBatch  @relation(fields: [batchId], references: [id], onDelete: Cascade)
   style  StylePreset?     @relation(fields: [styleId], references: [id], onDelete: SetNull)
+  scene  ScenePreset?     @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+  pose   PosePreset?      @relation(fields: [poseId], references: [id], onDelete: SetNull)
   images GeneratedImage[]
 
   @@index([batchId])
   @@index([status])
   @@index([styleId])
+  @@index([sceneId])
+  @@index([poseId])
   @@index([promptId])
 }
 

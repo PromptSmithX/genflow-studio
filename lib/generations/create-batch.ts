@@ -15,9 +15,10 @@ export class GenerationSetupError extends Error {
 }
 
 /**
- * Creates a GenerationBatch with one GenerationJob per requested image
- * (each may use a different style), snapshots its final prompts/settings,
- * then submits each job to ComfyUI /prompt independently. A per-image
+ * Creates a GenerationBatch with one GenerationJob per requested image.
+ * The style (fixed character) is shared across the whole batch; each image
+ * may pick its own scene + pose. Final prompts/settings are snapshotted,
+ * then each job is submitted to ComfyUI /prompt independently. A per-image
  * submit failure marks only that job as failed -- it never blocks the
  * other images in the same batch, and never gets silently retried.
  */
@@ -46,15 +47,19 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     );
   }
 
-  const styleIds = [...new Set(input.images.map((image) => image.styleId))];
-  const styles = await prisma.stylePreset.findMany({ where: { id: { in: styleIds } } });
-  const styleById = new Map(styles.map((style) => [style.id, style]));
-  for (const styleId of styleIds) {
-    const style = styleById.get(styleId);
-    if (!style || !style.isActive) {
-      throw new GenerationSetupError(`Style "${styleId}" không hợp lệ hoặc không còn hoạt động`, "invalid_style");
-    }
+  const style = input.styleId ? await prisma.stylePreset.findUnique({ where: { id: input.styleId } }) : null;
+  if (input.styleId && (!style || !style.isActive)) {
+    throw new GenerationSetupError(`Style "${input.styleId}" không hợp lệ hoặc không còn hoạt động`, "invalid_style");
   }
+
+  const sceneIds = [...new Set(input.images.map((image) => image.sceneId).filter((id): id is string => Boolean(id)))];
+  const poseIds = [...new Set(input.images.map((image) => image.poseId).filter((id): id is string => Boolean(id)))];
+  const scenes = sceneIds.length
+    ? await prisma.scenePreset.findMany({ where: { id: { in: sceneIds } } })
+    : [];
+  const poses = poseIds.length ? await prisma.posePreset.findMany({ where: { id: { in: poseIds } } }) : [];
+  const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
+  const poseById = new Map(poses.map((pose) => [pose.id, pose]));
 
   const globalPrompt = await getOrCreateGlobalPrompt();
 
@@ -70,9 +75,13 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     incrementFixedSeed: input.incrementFixedSeed ?? true,
   });
 
+  const batchLabel =
+    input.ideaPrompt?.trim() ||
+    (style ? `${style.name} — ${input.images.length} ảnh` : `Trợ lý AI — ${input.images.length} ảnh`);
+
   const batch = await prisma.generationBatch.create({
     data: {
-      ideaPrompt: input.idea,
+      ideaPrompt: batchLabel,
       requestedCount: input.images.length,
       status: "queued",
     },
@@ -81,14 +90,18 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
   const jobs = [];
   for (let index = 0; index < input.images.length; index++) {
     const imageRequest = input.images[index];
-    const style = styleById.get(imageRequest.styleId)!;
+    const scene = imageRequest.sceneId ? sceneById.get(imageRequest.sceneId) ?? null : null;
+    const pose = imageRequest.poseId ? poseById.get(imageRequest.poseId) ?? null : null;
 
     const built = buildPrompts({
       globalPositive: globalPrompt.positivePrompt,
       globalNegative: globalPrompt.negativePrompt,
-      idea: input.idea,
-      stylePositive: style.positivePrompt,
-      styleNegative: style.negativePrompt,
+      stylePositive: style?.positivePrompt ?? "",
+      styleNegative: style?.negativePrompt ?? "",
+      scenePositive: scene?.positivePrompt,
+      sceneNegative: scene?.negativePrompt,
+      posePositive: pose?.positivePrompt,
+      poseNegative: pose?.negativePrompt,
       imagePositiveOverride: imageRequest.positiveOverride,
       imageNegativeOverride: imageRequest.negativeOverride,
     });
@@ -97,11 +110,19 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
       data: {
         batchId: batch.id,
         indexInBatch: index,
-        styleId: style.id,
-        styleNameSnapshot: style.name,
-        stylePositiveSnapshot: style.positivePrompt,
-        styleNegativeSnapshot: style.negativePrompt,
-        ideaPromptSnapshot: input.idea,
+        styleId: style?.id ?? null,
+        styleNameSnapshot: style?.name ?? null,
+        stylePositiveSnapshot: style?.positivePrompt ?? null,
+        styleNegativeSnapshot: style?.negativePrompt ?? null,
+        sceneId: scene?.id ?? null,
+        sceneNameSnapshot: scene?.name ?? null,
+        scenePositiveSnapshot: scene?.positivePrompt ?? null,
+        sceneNegativeSnapshot: scene?.negativePrompt ?? null,
+        poseId: pose?.id ?? null,
+        poseNameSnapshot: pose?.name ?? null,
+        posePositiveSnapshot: pose?.positivePrompt ?? null,
+        poseNegativeSnapshot: pose?.negativePrompt ?? null,
+        ideaPromptSnapshot: batchLabel,
         positiveFinal: built.positiveFinal,
         negativeFinal: built.negativeFinal,
         seed: seeds[index],
@@ -196,6 +217,14 @@ export async function regenerateJob(sourceJobId: string, options: RegenerateOpti
       styleNameSnapshot: source.styleNameSnapshot,
       stylePositiveSnapshot: source.stylePositiveSnapshot,
       styleNegativeSnapshot: source.styleNegativeSnapshot,
+      sceneId: source.sceneId,
+      sceneNameSnapshot: source.sceneNameSnapshot,
+      scenePositiveSnapshot: source.scenePositiveSnapshot,
+      sceneNegativeSnapshot: source.sceneNegativeSnapshot,
+      poseId: source.poseId,
+      poseNameSnapshot: source.poseNameSnapshot,
+      posePositiveSnapshot: source.posePositiveSnapshot,
+      poseNegativeSnapshot: source.poseNegativeSnapshot,
       ideaPromptSnapshot: source.ideaPromptSnapshot,
       positiveFinal: source.positiveFinal,
       negativeFinal: source.negativeFinal,

@@ -46,6 +46,32 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   }
 
   if (history.status === "not_found") {
+    // Not in /history yet does NOT mean lost: ComfyUI only moves a prompt into
+    // history after it finishes, so while queued/running it lives in /queue.
+    let activeIds: Set<string>;
+    try {
+      activeIds = await client.getActivePromptIds();
+    } catch {
+      activeIds = new Set();
+    }
+
+    if (activeIds.has(job.promptId)) {
+      await prisma.generationJob.update({
+        where: { id: jobId },
+        data: { status: "running", startedAt: job.startedAt ?? new Date(), errorCode: null, errorMessage: null },
+      });
+      return;
+    }
+
+    // Neither in history nor in the queue. Allow a grace window after submit
+    // for the brief handoff between leaving the queue and appearing in
+    // history (and transient network hiccups) before declaring it lost.
+    const GRACE_MS = 120_000;
+    const since = job.submittedAt ?? job.createdAt;
+    if (Date.now() - since.getTime() < GRACE_MS) {
+      return; // keep current queued/running status, let polling retry
+    }
+
     await prisma.generationJob.update({
       where: { id: jobId },
       data: {
@@ -82,34 +108,55 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
 
   await fs.mkdir(outputRoot, { recursive: true });
 
-  for (const imageRef of history.images) {
-    if (existingFilenames.has(imageRef.filename)) continue;
+  try {
+    for (const imageRef of history.images) {
+      if (existingFilenames.has(imageRef.filename)) continue;
 
-    const buffer = await client.viewImage(imageRef);
-    const outFilename = buildOutputFilename(job.id, imageRef.filename);
-    const outPath = resolveSafePath(outputRoot, outFilename);
-    await fs.writeFile(outPath, Buffer.from(buffer));
+      const buffer = await client.viewImage(imageRef);
+      const outFilename = buildOutputFilename(job.id, imageRef.filename);
+      const outPath = resolveSafePath(outputRoot, outFilename);
+      await fs.writeFile(outPath, Buffer.from(buffer));
 
-    await prisma.generatedImage.create({
-      data: {
-        jobId: job.id,
-        relativePath: outFilename,
-        filename: imageRef.filename,
-        mimeType: mimeTypeFromFilename(imageRef.filename),
-      },
+      await prisma.generatedImage.create({
+        data: {
+          jobId: job.id,
+          relativePath: outFilename,
+          filename: imageRef.filename,
+          mimeType: mimeTypeFromFilename(imageRef.filename),
+        },
+      });
+    }
+  } catch (error) {
+    // Tải/lưu ảnh thất bại (timeout, tunnel interstitial, lỗi đĩa...). Đánh
+    // dấu job này là "unknown" thay vì ném lỗi ra ngoài, để một job lỗi
+    // không chặn việc đồng bộ các job khác trong cùng batch. Người dùng có
+    // thể bấm "Thử lại" (regenerate) trên job này.
+    const message = error instanceof Error ? error.message : "Lỗi không xác định khi tải ảnh output";
+    const code = error instanceof ComfyApiError ? error.code : "download_failed";
+    await prisma.generationJob.update({
+      where: { id: jobId },
+      data: { status: "unknown", errorCode: code, errorMessage: message },
     });
+    return;
   }
 
   await prisma.generationJob.update({
     where: { id: jobId },
-    data: { status: "completed", finishedAt: new Date() },
+    data: { status: "completed", finishedAt: new Date(), errorCode: null, errorMessage: null },
   });
 }
 
 export async function syncBatch(batchId: string, client: ComfyClient, outputRoot: string): Promise<void> {
-  const jobs = await prisma.generationJob.findMany({ where: { batchId } });
+  const jobs = await prisma.generationJob.findMany({ where: { batchId }, orderBy: { indexInBatch: "asc" } });
   for (const job of jobs) {
-    await syncJob(job.id, client, outputRoot);
+    try {
+      await syncJob(job.id, client, outputRoot);
+    } catch (error) {
+      // Lỗi bất ngờ khi đồng bộ một job (vd lỗi DB) không được phép chặn
+      // việc đồng bộ các job còn lại trong batch; job này sẽ được thử lại
+      // ở lần poll kế tiếp.
+      console.error(`syncJob thất bại cho job ${job.id}`, error);
+    }
   }
 
   const updatedJobs = await prisma.generationJob.findMany({ where: { batchId } });

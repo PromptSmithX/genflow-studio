@@ -45,6 +45,7 @@ interface ComfyClientOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+const VIEW_IMAGE_TIMEOUT_MS = 60_000;
 
 /**
  * Thin server-only wrapper around the ComfyUI HTTP API. Every call runs on
@@ -76,9 +77,9 @@ export class ComfyClient {
     return headers;
   }
 
-  private async request(path: string, init?: RequestInit): Promise<Response> {
+  private async request(path: string, init?: RequestInit, timeoutMs?: number): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs ?? this.timeoutMs);
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         ...init,
@@ -182,13 +183,43 @@ export class ComfyClient {
     return this.parseJson(response);
   }
 
+  /**
+   * Returns the prompt_ids currently running or pending in ComfyUI's queue.
+   * A prompt sits here while being processed and only moves to /history once
+   * finished, so this is how we tell "still working" apart from "lost".
+   */
+  async getActivePromptIds(): Promise<Set<string>> {
+    const json = (await this.getQueue()) as {
+      queue_running?: unknown[];
+      queue_pending?: unknown[];
+    };
+    const ids = new Set<string>();
+    for (const list of [json.queue_running, json.queue_pending]) {
+      if (!Array.isArray(list)) continue;
+      for (const entry of list) {
+        // Each queue entry is [number, prompt_id, prompt, extra_data, outputs].
+        const promptId = Array.isArray(entry) ? entry[1] : undefined;
+        if (typeof promptId === "string") ids.add(promptId);
+      }
+    }
+    return ids;
+  }
+
   async viewImage(ref: HistoryImageRef): Promise<ArrayBuffer> {
     const params = new URLSearchParams({
       filename: ref.filename,
       subfolder: ref.subfolder,
       type: ref.type,
     });
-    const response = await this.request(`/view?${params.toString()}`);
+    const response = await this.request(`/view?${params.toString()}`, undefined, VIEW_IMAGE_TIMEOUT_MS);
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("text/html")) {
+      throw new ComfyApiError(
+        "Nhận được trang HTML thay vì ảnh — tunnel có thể đã hết hạn hoặc cần xác nhận interstitial",
+        "html_interstitial",
+      );
+    }
     if (!response.ok) {
       throw new ComfyApiError(`Không tải được ảnh output (HTTP ${response.status})`, "http_error");
     }

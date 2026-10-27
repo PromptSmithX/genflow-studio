@@ -30,6 +30,10 @@ export function redactSettings(settings: AppSettings) {
     defaultFixedSeed: settings.defaultFixedSeed ? Number(settings.defaultFixedSeed) : null,
     maxImagesPerBatch: settings.maxImagesPerBatch,
     outputDirectory: settings.outputDirectory,
+    llmBaseUrl: settings.llmBaseUrl,
+    llmModel: settings.llmModel,
+    llmSystemPrompt: settings.llmSystemPrompt,
+    hasLlmKey: Boolean(process.env.LLM_API_KEY),
     updatedAt: settings.updatedAt,
   };
 }

@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useHistoryList, type HistoryFilters } from "@/hooks/use-history";
+import { useHistoryList, useResyncBatch, type HistoryFilters } from "@/hooks/use-history";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Đang chờ",
@@ -18,6 +19,14 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useHistoryList(filters);
+  const resyncMutation = useResyncBatch();
+
+  function handleResync(batchId: string) {
+    resyncMutation.mutate(batchId, {
+      onSuccess: () => toast.success("Đã đồng bộ lại từ ComfyUI"),
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Đồng bộ thất bại"),
+    });
+  }
 
   const jobs = data?.pages.flatMap((page) => page.jobs) ?? [];
 
@@ -49,9 +58,22 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
     <div className="space-y-6">
       {groups.map((group) => (
         <div key={group.batchId} className="space-y-2">
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between gap-3">
             <p className="text-sm font-medium">{group.ideaPrompt}</p>
-            <p className="text-xs text-muted-foreground">{new Date(group.createdAt).toLocaleString("vi-VN")}</p>
+            <div className="flex items-center gap-2">
+              {group.jobs.some((job) => job.status !== "completed") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleResync(group.batchId)}
+                  disabled={resyncMutation.isPending}
+                >
+                  <RefreshCcw className={resyncMutation.isPending ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+                  Đồng bộ lại
+                </Button>
+              )}
+              <p className="shrink-0 text-xs text-muted-foreground">{new Date(group.createdAt).toLocaleString("vi-VN")}</p>
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {group.jobs.map((job) => (

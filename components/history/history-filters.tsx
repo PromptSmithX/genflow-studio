@@ -41,7 +41,11 @@ export function HistoryFiltersBar({ value, onChange }: HistoryFiltersBarProps) {
           if (typeof v === "string") onChange({ ...value, status: v === "all" ? undefined : v });
         }}
       >
-        <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="w-48">
+          <SelectValue>
+            {(v: string | null) => STATUS_OPTIONS.find((opt) => opt.value === v)?.label ?? v}
+          </SelectValue>
+        </SelectTrigger>
         <SelectContent>
           {STATUS_OPTIONS.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -55,7 +59,11 @@ export function HistoryFiltersBar({ value, onChange }: HistoryFiltersBarProps) {
           if (typeof v === "string") onChange({ ...value, styleId: v === "all" ? undefined : v });
         }}
       >
-        <SelectTrigger className="w-48"><SelectValue placeholder="Tất cả style" /></SelectTrigger>
+        <SelectTrigger className="w-48">
+          <SelectValue placeholder="Tất cả style">
+            {(v: string | null) => (v === "all" || v == null ? "Tất cả style" : styles?.find((s) => s.id === v)?.name ?? v)}
+          </SelectValue>
+        </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tất cả style</SelectItem>
           {(styles ?? []).map((style) => (

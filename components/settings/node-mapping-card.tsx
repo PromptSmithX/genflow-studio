@@ -45,7 +45,7 @@ export function NodeMappingCard() {
   const validateMutation = useValidateMapping();
   const [mapping, setMapping] = useState<NodeMapping>({});
   const [validation, setValidation] = useState<MappingValidationResponse | null>(null);
-  const [syncedMapping, setSyncedMapping] = useState(data?.mapping);
+  const [syncedMapping, setSyncedMapping] = useState<NodeMapping | undefined>(undefined);
 
   if (data?.mapping !== syncedMapping) {
     setSyncedMapping(data?.mapping);
@@ -81,12 +81,19 @@ export function NodeMappingCard() {
   }
 
   function handleValidate() {
-    validateMutation.mutate(undefined, {
-      onSuccess: (result) => {
-        setValidation(result);
-        if (result.valid) toast.success("Mapping hợp lệ");
-        else toast.error("Mapping còn vấn đề, xem chi tiết dưới bảng");
+    // Validate chạy trên mapping đã lưu trong DB, nên lưu mapping đang hiển
+    // thị trước rồi mới validate -- một cú bấm kiểm tra đúng những gì trên bảng.
+    saveMutation.mutate(mapping, {
+      onSuccess: () => {
+        validateMutation.mutate(undefined, {
+          onSuccess: (result) => {
+            setValidation(result);
+            if (result.valid) toast.success("Mapping hợp lệ");
+            else toast.error("Mapping còn vấn đề, xem chi tiết dưới bảng");
+          },
+        });
       },
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Lưu mapping thất bại"),
     });
   }
 
@@ -193,13 +200,26 @@ export function NodeMappingCard() {
           </p>
         )}
 
-        <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? "Đang lưu..." : "Lưu mapping"}
-          </Button>
-          <Button variant="outline" onClick={handleValidate} disabled={validateMutation.isPending}>
-            {validateMutation.isPending ? "Đang kiểm tra..." : "Validate mapping"}
-          </Button>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={saveMutation.isPending || validateMutation.isPending}>
+              {saveMutation.isPending && !validateMutation.isPending ? "Đang lưu..." : "Lưu mapping"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleValidate}
+              disabled={saveMutation.isPending || validateMutation.isPending}
+            >
+              {validateMutation.isPending
+                ? "Đang kiểm tra..."
+                : saveMutation.isPending
+                  ? "Đang lưu..."
+                  : "Validate mapping"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Bấm &quot;Validate mapping&quot; sẽ tự lưu mapping hiện tại rồi kiểm tra.
+          </p>
         </div>
       </CardContent>
     </Card>

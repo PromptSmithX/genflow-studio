@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
 import { useConnectionTest } from "@/hooks/use-connection";
@@ -20,7 +21,8 @@ export function ConnectionCard() {
 
   const [url, setUrl] = useState("");
   const [lastResult, setLastResult] = useState<ConnectionTestResponse | null>(null);
-  const [syncedSettings, setSyncedSettings] = useState(settings);
+  const [syncedSettings, setSyncedSettings] = useState<typeof settings>(undefined);
+  const hasUnsavedChanges = url !== (settings?.comfyBaseUrl ?? "");
 
   if (settings !== syncedSettings) {
     setSyncedSettings(settings);
@@ -82,16 +84,21 @@ export function ConnectionCard() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={handleTest} disabled={testMutation.isPending || !url}>
             {testMutation.isPending ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
           </Button>
-          <Button variant="outline" onClick={handleSave} disabled={updateSettings.isPending || url === (settings?.comfyBaseUrl ?? "")}>
+          <Button variant="outline" onClick={handleSave} disabled={updateSettings.isPending || !hasUnsavedChanges}>
             Lưu URL
           </Button>
           <Button variant="ghost" onClick={handleClear} disabled={!settings?.comfyBaseUrl}>
             Xóa URL đã lưu
           </Button>
+          {hasUnsavedChanges && (
+            <Badge variant="destructive" className="ml-1">
+              Có thay đổi chưa lưu — bấm &quot;Lưu URL&quot; trước khi rời trang
+            </Badge>
+          )}
         </div>
 
         {lastResult && (

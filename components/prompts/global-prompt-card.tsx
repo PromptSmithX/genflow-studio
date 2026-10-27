@@ -15,7 +15,7 @@ export function GlobalPromptCard() {
 
   const [positive, setPositive] = useState("");
   const [negative, setNegative] = useState("");
-  const [syncedData, setSyncedData] = useState(data);
+  const [syncedData, setSyncedData] = useState<typeof data>(undefined);
 
   if (data !== syncedData) {
     setSyncedData(data);

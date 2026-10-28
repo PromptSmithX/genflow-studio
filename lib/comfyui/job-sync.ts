@@ -146,6 +146,23 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   });
 }
 
+// Per-batch in-flight promises so concurrent callers (BatchTracker poll, the
+// manual "Đồng bộ lại" button, and the background auto-sync poller) never run
+// syncBatch for the same batch at the same time -- which could otherwise
+// download the same output twice and create duplicate GeneratedImage rows.
+const inFlightBatchSyncs = new Map<string, Promise<void>>();
+
+export function syncBatchExclusive(batchId: string, client: ComfyClient, outputRoot: string): Promise<void> {
+  const existing = inFlightBatchSyncs.get(batchId);
+  if (existing) return existing;
+
+  const run = syncBatch(batchId, client, outputRoot).finally(() => {
+    inFlightBatchSyncs.delete(batchId);
+  });
+  inFlightBatchSyncs.set(batchId, run);
+  return run;
+}
+
 export async function syncBatch(batchId: string, client: ComfyClient, outputRoot: string): Promise<void> {
   const jobs = await prisma.generationJob.findMany({ where: { batchId }, orderBy: { indexInBatch: "asc" } });
   for (const job of jobs) {

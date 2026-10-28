@@ -1,11 +1,16 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { LlmClient, LlmApiError } from "@/lib/llm/client";
 
-function chatResponse(body: unknown, ok = true, status = 200) {
+function chatResponse(body: unknown, options: { ok?: boolean; status?: number; usage?: unknown } = {}) {
+  const { ok = true, status = 200, usage } = options;
   return {
     ok,
     status,
-    text: async () => JSON.stringify({ choices: [{ message: { content: JSON.stringify(body) } }] }),
+    text: async () =>
+      JSON.stringify({
+        choices: [{ message: { content: JSON.stringify(body) } }],
+        ...(usage ? { usage } : {}),
+      }),
   };
 }
 
@@ -36,6 +41,22 @@ describe("LlmClient", () => {
     const result = await client.generatePrompts({ systemPrompt: "sys", userMessage: "user", expectedCount: 2 });
     expect(result.images).toHaveLength(2);
     expect(result.negative).toBe("extra limbs");
+    expect(result.usage).toBeNull();
+  });
+
+  it("returns token usage when the provider includes it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        chatResponse(
+          { images: [{ positive: "a", caption: "b" }], negative: "" },
+          { usage: { prompt_tokens: 120, completion_tokens: 40, total_tokens: 160 } },
+        ),
+      ),
+    );
+    const client = new LlmClient({ baseUrl: "http://localhost:1234/v1", model: "test-model" });
+    const result = await client.generatePrompts({ systemPrompt: "sys", userMessage: "user", expectedCount: 1 });
+    expect(result.usage).toEqual({ promptTokens: 120, completionTokens: 40, totalTokens: 160 });
   });
 
   it("retries once and succeeds when the first reply has the wrong image count", async () => {

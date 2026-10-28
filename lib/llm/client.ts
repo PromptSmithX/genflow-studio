@@ -1,5 +1,10 @@
 import { ZodError } from "zod";
-import { llmSuggestionResultSchema, type LlmSuggestionResult } from "@/lib/validations/llm";
+import {
+  llmSuggestionResultSchema,
+  type LlmSuggestionResult,
+  type SuggestPromptsResponse,
+  type TokenUsage,
+} from "@/lib/validations/llm";
 
 export class LlmApiError extends Error {
   constructor(
@@ -50,7 +55,10 @@ export class LlmClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  private async chatCompletion(systemPrompt: string, userMessage: string): Promise<string> {
+  private async chatCompletion(
+    systemPrompt: string,
+    userMessage: string,
+  ): Promise<{ content: string; usage: TokenUsage | null }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
@@ -95,11 +103,22 @@ export class LlmClient {
       throw new LlmApiError("Phản hồi từ LLM không phải JSON hợp lệ", "invalid_json", { body: text.slice(0, 500) });
     }
 
-    const content = (json as { choices?: { message?: { content?: string } }[] }).choices?.[0]?.message?.content;
+    const parsedJson = json as {
+      choices?: { message?: { content?: string } }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    };
+    const content = parsedJson.choices?.[0]?.message?.content;
     if (typeof content !== "string") {
       throw new LlmApiError("Phản hồi LLM thiếu nội dung trả lời", "invalid_json", json);
     }
-    return content;
+    const usage: TokenUsage | null = parsedJson.usage
+      ? {
+          promptTokens: parsedJson.usage.prompt_tokens ?? null,
+          completionTokens: parsedJson.usage.completion_tokens ?? null,
+          totalTokens: parsedJson.usage.total_tokens ?? null,
+        }
+      : null;
+    return { content, usage };
   }
 
   private parseResult(content: string, expectedCount: number): LlmSuggestionResult {
@@ -126,17 +145,17 @@ export class LlmClient {
    * prompt. Retries once (same request) if the model returns malformed JSON
    * or the wrong number of images, since LLM output is inherently variable.
    */
-  async generatePrompts({ systemPrompt, userMessage, expectedCount }: GeneratePromptsInput): Promise<LlmSuggestionResult> {
+  async generatePrompts({ systemPrompt, userMessage, expectedCount }: GeneratePromptsInput): Promise<SuggestPromptsResponse> {
     try {
-      const content = await this.chatCompletion(systemPrompt, userMessage);
-      return this.parseResult(content, expectedCount);
+      const { content, usage } = await this.chatCompletion(systemPrompt, userMessage);
+      return { ...this.parseResult(content, expectedCount), usage };
     } catch (error) {
       if (!(error instanceof LlmApiError && (error.code === "invalid_json" || error.code === "bad_shape")) &&
         !(error instanceof ZodError)) {
         throw error;
       }
-      const content = await this.chatCompletion(systemPrompt, userMessage);
-      return this.parseResult(content, expectedCount);
+      const { content, usage } = await this.chatCompletion(systemPrompt, userMessage);
+      return { ...this.parseResult(content, expectedCount), usage };
     }
   }
 }

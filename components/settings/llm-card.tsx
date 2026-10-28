@@ -10,7 +10,30 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
+
+interface ProviderPreset {
+  id: string;
+  label: string;
+  baseUrl: string | null;
+  modelHint: string;
+}
+
+const PROVIDER_PRESETS: ProviderPreset[] = [
+  { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", modelHint: "vd: gpt-4o-mini, gpt-4o" },
+  { id: "xai", label: "xAI Grok", baseUrl: "https://api.x.ai/v1", modelHint: "vd: grok-4, grok-3, grok-3-mini (kiểm tra console xAI để biết model có sẵn)" },
+  { id: "groq", label: "Groq", baseUrl: "https://api.groq.com/openai/v1", modelHint: "vd: llama-3.3-70b-versatile" },
+  { id: "ollama", label: "Local — Ollama", baseUrl: "http://localhost:11434/v1", modelHint: "vd: llama3.1, qwen2.5 (tên model đã tải về)" },
+  { id: "lmstudio", label: "Local — LM Studio", baseUrl: "http://localhost:1234/v1", modelHint: "tên model đang load trong LM Studio" },
+  { id: "custom", label: "Tùy chỉnh", baseUrl: null, modelHint: "nhập base URL và model theo nhà cung cấp của bạn" },
+];
+
+const CUSTOM_PROVIDER = PROVIDER_PRESETS[PROVIDER_PRESETS.length - 1];
+
+function providerForBaseUrl(baseUrl: string): ProviderPreset {
+  return PROVIDER_PRESETS.find((p) => p.baseUrl && p.baseUrl === baseUrl.trim()) ?? CUSTOM_PROVIDER;
+}
 
 export function LlmCard() {
   const { data, isLoading } = useSettings();
@@ -61,6 +84,17 @@ export function LlmCard() {
     );
   }
 
+  const selectedProvider = providerForBaseUrl(form.llmBaseUrl);
+
+  function handleProviderChange(id: string) {
+    const preset = PROVIDER_PRESETS.find((p) => p.id === id);
+    if (preset && preset.baseUrl) {
+      setForm((f) => ({ ...f, llmBaseUrl: preset.baseUrl! }));
+    } else if (preset?.id === "custom") {
+      setForm((f) => ({ ...f, llmBaseUrl: "" }));
+    }
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -75,11 +109,26 @@ export function LlmCard() {
       <CardHeader>
         <CardTitle>Trợ lý AI (chế độ tạo ảnh bằng mô tả)</CardTitle>
         <CardDescription>
-          Dùng một LLM theo chuẩn OpenAI (OpenAI, OpenRouter, Groq, hoặc server local như Ollama/LM Studio) để tự
+          Dùng một LLM theo chuẩn OpenAI (OpenAI, xAI Grok, Groq, hoặc server local như Ollama/LM Studio) để tự
           viết yêu cầu chi tiết cho từng ảnh.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Nhà cung cấp</Label>
+          <Select value={selectedProvider.id} onValueChange={(v) => { if (typeof v === "string") handleProviderChange(v); }}>
+            <SelectTrigger className="w-full sm:w-72"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {PROVIDER_PRESETS.map((preset) => (
+                <SelectItem key={preset.id} value={preset.id}>
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Chọn nhà cung cấp để tự điền Base URL, hoặc chọn &quot;Tùy chỉnh&quot; để nhập tay.</p>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="llm-base-url">Base URL (chuẩn OpenAI Chat Completions)</Label>
@@ -98,6 +147,7 @@ export function LlmCard() {
               onChange={(e) => setForm((f) => ({ ...f, llmModel: e.target.value }))}
               placeholder="gpt-4o-mini"
             />
+            <p className="text-xs text-muted-foreground">{selectedProvider.modelHint}</p>
           </div>
         </div>
 
@@ -112,7 +162,9 @@ export function LlmCard() {
           />
           <p className="text-xs text-muted-foreground">
             API key không được lưu vào database. Đặt biến môi trường{" "}
-            <code className="rounded bg-muted px-1">LLM_API_KEY</code> trên server rồi khởi động lại ứng dụng.
+            <code className="rounded bg-muted px-1">LLM_API_KEY</code> trên server rồi khởi động lại ứng dụng. Key này
+            phải khớp với nhà cung cấp đang chọn ở trên — đổi nhà cung cấp thì nhớ đổi key trong{" "}
+            <code className="rounded bg-muted px-1">.env</code>.
           </p>
           <div className="flex items-center gap-1.5 text-xs">
             {data?.hasLlmKey ? (

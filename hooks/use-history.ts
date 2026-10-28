@@ -10,6 +10,11 @@ export interface HistoryFilters {
   to?: string;
 }
 
+function hasUnsettledJob(pages: HistoryListResponse[] | undefined): boolean {
+  if (!pages) return false;
+  return pages.some((page) => page.jobs.some((job) => job.status === "queued" || job.status === "running"));
+}
+
 export function useHistoryList(filters: HistoryFilters) {
   return useInfiniteQuery({
     queryKey: ["history", filters],
@@ -25,6 +30,9 @@ export function useHistoryList(filters: HistoryFilters) {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+    // Trong lúc còn job chưa xong, tự refetch để grid hiện ảnh mà poller nền
+    // vừa tải về mà người dùng không phải bấm "Đồng bộ lại".
+    refetchInterval: (query) => (hasUnsettledJob(query.state.data?.pages) ? 8_000 : false),
   });
 }
 

@@ -15,7 +15,8 @@ import { useWorkflow } from "@/hooks/use-workflow";
 import { useHeaderConnectionState } from "@/hooks/use-connection";
 import { useCreateGeneration } from "@/hooks/use-generations";
 import { useSuggestPrompts } from "@/hooks/use-llm-suggest";
-import type { LlmSuggestionResult } from "@/lib/validations/llm";
+import { randomSeed } from "@/lib/seed";
+import type { SuggestPromptsResponse } from "@/lib/validations/llm";
 import { ApiRequestError } from "@/lib/client/api";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +33,7 @@ export function AssistantCreateForm() {
   const [requestText, setRequestText] = useState("");
   const [imageCount, setImageCount] = useState(4);
   const [styleId, setStyleId] = useState("");
-  const [suggestions, setSuggestions] = useState<LlmSuggestionResult | null>(null);
+  const [suggestions, setSuggestions] = useState<SuggestPromptsResponse | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
 
   const maxImages = settings?.maxImagesPerBatch ?? 8;
@@ -66,6 +67,9 @@ export function AssistantCreateForm() {
 
   function handleSubmit() {
     if (!suggestions) return;
+    // Chung 1 seed cho cả batch để gương mặt đồng nhất giữa các ảnh trong cùng
+    // lần gen; mỗi lần bấm Tạo lại random seed mới nên các lần gen vẫn khác nhau.
+    const sharedSeed = randomSeed();
     createMutation.mutate(
       {
         styleId: styleId || undefined,
@@ -74,7 +78,9 @@ export function AssistantCreateForm() {
           positiveOverride: image.positive,
           negativeOverride: suggestions.negative || undefined,
         })),
-        seedMode: "random",
+        seedMode: "fixed",
+        fixedSeed: sharedSeed,
+        incrementFixedSeed: false,
       },
       {
         onSuccess: (batch) => {
@@ -224,10 +230,33 @@ export function AssistantCreateForm() {
                 <CardContent className="space-y-1 p-4">
                   <p className="text-sm font-medium">Ảnh {index + 1}</p>
                   <p className="text-sm text-muted-foreground">{image.caption}</p>
+                  <details className="pt-1 text-xs">
+                    <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+                      Chi tiết kỹ thuật (dev)
+                    </summary>
+                    <p className="mt-1 rounded bg-muted p-2 font-mono text-[0.7rem] break-words">{image.positive}</p>
+                  </details>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          <Card>
+            <CardContent className="space-y-2 p-4 text-xs">
+              <details>
+                <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+                  Negative prompt dùng chung (dev)
+                </summary>
+                <p className="mt-1 rounded bg-muted p-2 font-mono text-[0.7rem] break-words">{suggestions.negative || "—"}</p>
+              </details>
+              <p className="text-muted-foreground">
+                Token:{" "}
+                {suggestions.usage
+                  ? `prompt ${suggestions.usage.promptTokens ?? "—"} · completion ${suggestions.usage.completionTokens ?? "—"} · tổng ${suggestions.usage.totalTokens ?? "—"}`
+                  : "—"}
+              </p>
+            </CardContent>
+          </Card>
 
           <div className="flex items-center justify-between rounded-md border bg-background p-4">
             <Button variant="ghost" onClick={handleEditRequest} disabled={createMutation.isPending}>

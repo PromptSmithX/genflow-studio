@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   applyWorkflowMapping,
+  readMappedNumber,
+  readMappedString,
   summarizeWorkflowNodes,
   validateMapping,
   WorkflowMappingError,
@@ -18,7 +20,11 @@ const workflow: WorkflowApiJson = {
   },
   "3": {
     class_type: "KSampler",
-    inputs: { seed: 0, steps: 20, cfg: 8 },
+    inputs: { seed: 0, steps: 20, cfg: 8, sampler_name: "dpmpp_2m", latent_image: ["5", 0] },
+  },
+  "5": {
+    class_type: "EmptyLatentImage",
+    inputs: { width: 896, height: 1152, batch_size: 1 },
   },
 };
 
@@ -82,10 +88,50 @@ describe("applyWorkflowMapping", () => {
 describe("summarizeWorkflowNodes", () => {
   it("lists every node id, class type and input keys", () => {
     const summary = summarizeWorkflowNodes(workflow);
-    expect(summary).toHaveLength(3);
+    expect(summary).toHaveLength(4);
     const node6 = summary.find((n) => n.nodeId === "6");
     expect(node6?.classType).toBe("CLIPTextEncode");
     expect(node6?.inputs.map((i) => i.key)).toContain("text");
+  });
+});
+
+describe("readMappedNumber / readMappedString", () => {
+  const mapping = {
+    steps: { nodeId: "3", inputKey: "steps", enabled: true },
+    cfg: { nodeId: "3", inputKey: "cfg", enabled: true },
+    sampler: { nodeId: "3", inputKey: "sampler_name", enabled: true },
+    width: { nodeId: "5", inputKey: "width", enabled: true },
+    // Points at a node-reference input, not a literal.
+    seed: { nodeId: "3", inputKey: "latent_image", enabled: true },
+    // Mapped but disabled.
+    height: { nodeId: "5", inputKey: "height", enabled: false },
+  };
+
+  it("reads the literal value baked into the workflow for a mapped number field", () => {
+    expect(readMappedNumber(workflow, mapping, "steps")).toBe(20);
+    expect(readMappedNumber(workflow, mapping, "cfg")).toBe(8);
+    expect(readMappedNumber(workflow, mapping, "width")).toBe(896);
+  });
+
+  it("reads the literal value for a mapped string field", () => {
+    expect(readMappedString(workflow, mapping, "sampler")).toBe("dpmpp_2m");
+  });
+
+  it("returns undefined for an unmapped field", () => {
+    expect(readMappedNumber(workflow, {}, "steps")).toBeUndefined();
+  });
+
+  it("returns undefined for a disabled mapping", () => {
+    expect(readMappedNumber(workflow, mapping, "height")).toBeUndefined();
+  });
+
+  it("returns undefined when the mapped input is a node reference, not a literal", () => {
+    expect(readMappedNumber(workflow, mapping, "seed")).toBeUndefined();
+  });
+
+  it("returns undefined when the node or input no longer exists", () => {
+    const stale = { steps: { nodeId: "99", inputKey: "steps", enabled: true } };
+    expect(readMappedNumber(workflow, stale, "steps")).toBeUndefined();
   });
 });
 

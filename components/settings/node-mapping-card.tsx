@@ -81,19 +81,16 @@ export function NodeMappingCard() {
   }
 
   function handleValidate() {
-    // Validate chạy trên mapping đã lưu trong DB, nên lưu mapping đang hiển
-    // thị trước rồi mới validate -- một cú bấm kiểm tra đúng những gì trên bảng.
-    saveMutation.mutate(mapping, {
-      onSuccess: () => {
-        validateMutation.mutate(undefined, {
-          onSuccess: (result) => {
-            setValidation(result);
-            if (result.valid) toast.success("Mapping hợp lệ");
-            else toast.error("Mapping còn vấn đề, xem chi tiết dưới bảng");
-          },
-        });
+    // Validate nhận luôn mapping đang hiển thị, lưu + kiểm tra + đặt cờ trong
+    // một request -> chỉ một lần invalidate query, tránh race khiến isValidated
+    // bị kẹt ở false dù mapping hợp lệ.
+    validateMutation.mutate(mapping, {
+      onSuccess: (result) => {
+        setValidation(result);
+        if (result.valid) toast.success("Mapping hợp lệ");
+        else toast.error("Mapping còn vấn đề, xem chi tiết dưới bảng");
       },
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Lưu mapping thất bại"),
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Validate mapping thất bại"),
     });
   }
 
@@ -102,8 +99,9 @@ export function NodeMappingCard() {
       <CardHeader>
         <CardTitle>Node mapping</CardTitle>
         <CardDescription>
-          Chọn node và input field tương ứng cho từng thông số. Chỉ node/input tồn tại trong workflow mới được
-          chọn.
+          Mapping được <span className="font-medium">tự đoán và tự kiểm tra khi import</span>. Nếu hợp lệ thì sẵn
+          sàng tạo ảnh ngay. Sửa gì thì bấm &quot;Lưu mapping&quot; (sẽ tự kiểm tra lại). Chỉ node/input tồn tại
+          trong workflow mới được chọn.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db";
 import { resolveSafePath, buildWorkflowUploadFilename } from "@/lib/files/safe-output";
+import { guessNodeMapping, validateMapping } from "@/lib/comfyui/workflow-mapper";
 import type { NodeMapping, WorkflowApiJson } from "@/lib/comfyui/workflow-mapper";
 
 export const WORKFLOW_ROOT = path.join(process.cwd(), "data", "workflows");
@@ -53,6 +54,14 @@ export async function importWorkflow(rawText: string, originalFilename: string) 
   const fullPath = resolveSafePath(WORKFLOW_ROOT, filename);
   await fs.writeFile(fullPath, JSON.stringify(parsed, null, 2), "utf-8");
 
+  // Best-effort auto-detected mapping, then auto-validate it: if the guess is
+  // structurally complete the workflow is ready to generate right away, with no
+  // separate manual "Validate" step to forget (or to lose by clicking "Save").
+  const guessed = guessNodeMapping(parsed as WorkflowApiJson);
+  const guessedMapping = JSON.stringify(guessed);
+  const isValid = validateMapping(parsed as WorkflowApiJson, guessed).length === 0;
+  const validatedAt = isValid ? new Date() : null;
+
   const config = await prisma.workflowConfig.upsert({
     where: { id: "main" },
     create: {
@@ -60,16 +69,17 @@ export async function importWorkflow(rawText: string, originalFilename: string) 
       workflowRelativePath: filename,
       originalFilename,
       nodeCount,
-      nodeMappingJson: "{}",
-      isValidated: false,
+      nodeMappingJson: guessedMapping,
+      isValidated: isValid,
+      validatedAt,
     },
     update: {
       workflowRelativePath: filename,
       originalFilename,
       nodeCount,
-      nodeMappingJson: "{}",
-      isValidated: false,
-      validatedAt: null,
+      nodeMappingJson: guessedMapping,
+      isValidated: isValid,
+      validatedAt,
     },
   });
 

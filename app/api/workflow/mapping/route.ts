@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError, apiError } from "@/lib/api/errors";
 import { nodeMappingSchema } from "@/lib/validations/generations";
-import { getWorkflowConfig } from "@/lib/comfyui/workflow-store";
+import { getWorkflowConfig, loadWorkflowJson } from "@/lib/comfyui/workflow-store";
+import { validateMapping } from "@/lib/comfyui/workflow-mapper";
 
 export const runtime = "nodejs";
 
@@ -14,12 +15,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const mapping = nodeMappingSchema.parse(await request.json());
+
+    // Saving also (re)computes validity, so a valid mapping stays validated
+    // instead of being forced back to "chưa validate" on every save.
+    const workflow = await loadWorkflowJson(config.workflowRelativePath);
+    const isValid = validateMapping(workflow, mapping).length === 0;
+
     const updated = await prisma.workflowConfig.update({
       where: { id: "main" },
-      data: { nodeMappingJson: JSON.stringify(mapping), isValidated: false, validatedAt: null },
+      data: {
+        nodeMappingJson: JSON.stringify(mapping),
+        isValidated: isValid,
+        validatedAt: isValid ? new Date() : null,
+      },
     });
 
-    return NextResponse.json({ mapping, updatedAt: updated.updatedAt });
+    return NextResponse.json({ mapping, isValidated: isValid, updatedAt: updated.updatedAt });
   } catch (error) {
     return handleApiError(error);
   }

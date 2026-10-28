@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/db";
 import { getOrCreateSettings, getOrCreateGlobalPrompt } from "@/lib/settings";
 import { getWorkflowConfig, loadWorkflowJson, parseNodeMapping } from "@/lib/comfyui/workflow-store";
-import { applyWorkflowMapping, validateMapping, type ApplyMappingValues } from "@/lib/comfyui/workflow-mapper";
+import {
+  applyWorkflowMapping,
+  validateMapping,
+  readMappedNumber,
+  readMappedString,
+  type ApplyMappingValues,
+} from "@/lib/comfyui/workflow-mapper";
 import { buildPrompts } from "@/lib/prompts/build-prompts";
 import { resolveSeeds } from "@/lib/seed";
 import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
@@ -63,10 +69,18 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
 
   const globalPrompt = await getOrCreateGlobalPrompt();
 
-  const width = input.width ?? settings.defaultWidth;
-  const height = input.height ?? settings.defaultHeight;
-  const steps = input.steps ?? settings.defaultSteps;
-  const cfg = input.cfg ?? settings.defaultCfg;
+  // Prefer an explicit request value, else whatever the workflow JSON itself
+  // has baked into the mapped node -- never silently overwrite a workflow's
+  // own width/steps/cfg/sampler/scheduler with the app's generic defaults
+  // (those only exist to pre-fill the Quick/Advanced form). A mode that
+  // doesn't send these (e.g. Trợ lý AI) ends up leaving the workflow's own
+  // settings untouched, since applyWorkflowMapping skips undefined values.
+  const width = input.width ?? readMappedNumber(workflow, mapping, "width");
+  const height = input.height ?? readMappedNumber(workflow, mapping, "height");
+  const steps = input.steps ?? readMappedNumber(workflow, mapping, "steps");
+  const cfg = input.cfg ?? readMappedNumber(workflow, mapping, "cfg");
+  const sampler = input.sampler ?? readMappedString(workflow, mapping, "sampler");
+  const scheduler = input.scheduler ?? readMappedString(workflow, mapping, "scheduler");
 
   const seeds = resolveSeeds({
     mode: input.seedMode,
@@ -126,12 +140,12 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
         positiveFinal: built.positiveFinal,
         negativeFinal: built.negativeFinal,
         seed: seeds[index],
-        width,
-        height,
-        steps,
-        cfg,
-        sampler: input.sampler,
-        scheduler: input.scheduler,
+        width: width ?? null,
+        height: height ?? null,
+        steps: steps ?? null,
+        cfg: cfg ?? null,
+        sampler: sampler ?? null,
+        scheduler: scheduler ?? null,
         status: "queued",
       },
     });

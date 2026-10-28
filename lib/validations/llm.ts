@@ -19,3 +19,11 @@ export const llmSuggestionResultSchema = z.object({
 });
 
 export type LlmSuggestionResult = z.infer<typeof llmSuggestionResultSchema>;
+
+export interface TokenUsage {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+}
+
+export type SuggestPromptsResponse = LlmSuggestionResult & { usage: TokenUsage | null };

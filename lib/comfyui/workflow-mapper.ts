@@ -102,6 +102,33 @@ export function applyWorkflowMapping(
   return cloned;
 }
 
+function readMappedInput(workflow: WorkflowApiJson, mapping: NodeMapping, field: MappableField): unknown {
+  const fieldMapping = mapping[field];
+  if (!fieldMapping || !fieldMapping.enabled) return undefined;
+  const node = workflow[fieldMapping.nodeId];
+  if (!node?.inputs || !(fieldMapping.inputKey in node.inputs)) return undefined;
+  return node.inputs[fieldMapping.inputKey];
+}
+
+/**
+ * Reads a field's current literal value straight from the workflow JSON via
+ * the mapping, instead of a hard-coded app default. Returns undefined (not
+ * null/0) when unmapped, or when the input is a node reference (e.g. a
+ * latent/model link, `["nodeId", idx]`) rather than a literal number -- so
+ * callers can safely `??` this into an "optional" value without ever
+ * clobbering a wired-up reference.
+ */
+export function readMappedNumber(workflow: WorkflowApiJson, mapping: NodeMapping, field: MappableField): number | undefined {
+  const value = readMappedInput(workflow, mapping, field);
+  return typeof value === "number" ? value : undefined;
+}
+
+/** Same as {@link readMappedNumber} but for string-valued fields (sampler, scheduler). */
+export function readMappedString(workflow: WorkflowApiJson, mapping: NodeMapping, field: MappableField): string | undefined {
+  const value = readMappedInput(workflow, mapping, field);
+  return typeof value === "string" ? value : undefined;
+}
+
 export interface NodeSummary {
   nodeId: string;
   classType: string;
@@ -123,6 +150,71 @@ export function summarizeWorkflowNodes(workflow: WorkflowApiJson): NodeSummary[]
       valuePreview: previewValue(value),
     })),
   }));
+}
+
+function nodeRefId(value: unknown): string | null {
+  return Array.isArray(value) && typeof value[0] === "string" ? value[0] : null;
+}
+
+function setGuess(mapping: NodeMapping, field: MappableField, nodeId: string, inputKey: string): void {
+  mapping[field] = { nodeId, inputKey, enabled: true };
+}
+
+/**
+ * Best-effort auto-detection of the node mapping right after import, so the
+ * user reviews + validates instead of mapping all fields by hand. Heuristics
+ * target the common ComfyUI node shapes (KSampler, CLIPTextEncode via the
+ * sampler's positive/negative references, EmptyLatentImage); anything it
+ * can't infer is left unmapped for manual selection. Never throws on odd
+ * input -- returns whatever it could confidently guess.
+ */
+export function guessNodeMapping(workflow: WorkflowApiJson): NodeMapping {
+  const mapping: NodeMapping = {};
+  if (!workflow || typeof workflow !== "object") return mapping;
+
+  const entries = Object.entries(workflow).filter(
+    ([, node]) => node && typeof node === "object" && node.inputs && typeof node.inputs === "object",
+  );
+
+  // Sampler node: prefer a KSampler, else any node exposing positive+negative.
+  const sampler =
+    entries.find(([, node]) => /KSampler/i.test(node.class_type)) ??
+    entries.find(([, node]) => "positive" in node.inputs && "negative" in node.inputs);
+
+  if (sampler) {
+    const [samplerId, samplerNode] = sampler;
+    const inputs = samplerNode.inputs;
+
+    if ("seed" in inputs) setGuess(mapping, "seed", samplerId, "seed");
+    else if ("noise_seed" in inputs) setGuess(mapping, "seed", samplerId, "noise_seed");
+    if ("steps" in inputs) setGuess(mapping, "steps", samplerId, "steps");
+    if ("cfg" in inputs) setGuess(mapping, "cfg", samplerId, "cfg");
+    if ("sampler_name" in inputs) setGuess(mapping, "sampler", samplerId, "sampler_name");
+    if ("scheduler" in inputs) setGuess(mapping, "scheduler", samplerId, "scheduler");
+
+    for (const [field, refKey] of [
+      ["positivePrompt", "positive"],
+      ["negativePrompt", "negative"],
+    ] as const) {
+      const refId = nodeRefId(inputs[refKey]);
+      const target = refId ? workflow[refId] : undefined;
+      if (refId && target?.inputs && "text" in target.inputs) {
+        setGuess(mapping, field, refId, "text");
+      }
+    }
+  }
+
+  // Latent/size node.
+  const latent = entries.find(([, node]) => /Empty(SD3)?Latent/i.test(node.class_type));
+  if (latent) {
+    const [latentId, latentNode] = latent;
+    const inputs = latentNode.inputs;
+    if ("width" in inputs) setGuess(mapping, "width", latentId, "width");
+    if ("height" in inputs) setGuess(mapping, "height", latentId, "height");
+    if ("batch_size" in inputs) setGuess(mapping, "batchSize", latentId, "batch_size");
+  }
+
+  return mapping;
 }
 
 export interface MappingValidationIssue {

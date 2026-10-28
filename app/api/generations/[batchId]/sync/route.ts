@@ -5,7 +5,7 @@ import { serializeBigInts } from "@/lib/api/serialize";
 import { getOrCreateSettings } from "@/lib/settings";
 import { resolveOutputRoot } from "@/lib/output-dir";
 import { ComfyClient } from "@/lib/comfyui/client";
-import { syncBatch } from "@/lib/comfyui/job-sync";
+import { syncBatchExclusive } from "@/lib/comfyui/job-sync";
 
 export const runtime = "nodejs";
 
@@ -27,7 +27,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
     const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });
     const outputRoot = resolveOutputRoot(settings);
 
-    await syncBatch(batchId, client, outputRoot);
+    await syncBatchExclusive(batchId, client, outputRoot);
 
     const updated = await prisma.generationBatch.findUniqueOrThrow({
       where: { id: batchId },

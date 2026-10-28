@@ -46,7 +46,8 @@ export function useSaveMapping() {
 export function useValidateMapping() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiPost<MappingValidationResponse>("/api/workflow/validate"),
+    mutationFn: (mapping?: NodeMapping) =>
+      apiPost<MappingValidationResponse>("/api/workflow/validate", mapping),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workflow"] }),
   });
 }

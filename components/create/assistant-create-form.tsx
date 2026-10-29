@@ -29,6 +29,12 @@ import { cn } from "@/lib/utils";
 type AdvancedParamField = "width" | "height" | "steps" | "cfg";
 type AdvancedParams = Record<AdvancedParamField, string>;
 
+// Mặc định dọc (hợp bìa lịch) thay cho khung vuông của workflow -- khung vuông
+// khi chụp full-body dễ gây sai tỉ lệ đầu/thân (đầu to) trên model Turbo
+// CFG=1 không có negative để sửa.
+const COVER_DEFAULT_WIDTH = 896;
+const COVER_DEFAULT_HEIGHT = 1152;
+
 /**
  * Reads a field's current literal value out of the imported workflow JSON via
  * its node mapping, so the Trợ lý AI form can pre-fill CFG/steps/size with the
@@ -74,8 +80,8 @@ export function AssistantCreateForm() {
     setSyncedWorkflow(workflow);
     if (workflow?.configured) {
       setParams({
-        width: readWorkflowNumber(workflow, "width"),
-        height: readWorkflowNumber(workflow, "height"),
+        width: String(COVER_DEFAULT_WIDTH),
+        height: String(COVER_DEFAULT_HEIGHT),
         steps: readWorkflowNumber(workflow, "steps"),
         cfg: readWorkflowNumber(workflow, "cfg"),
       });
@@ -97,7 +103,12 @@ export function AssistantCreateForm() {
 
   function handleSuggest() {
     suggestMutation.mutate(
-      { request: requestText.trim(), count: imageCount, styleId: styleId || undefined, mediumId: mediumId || undefined },
+      {
+        request: requestText.trim(),
+        count: imageCount,
+        styleId: styleId || undefined,
+        mediumId: mediumId || undefined,
+      },
       {
         onSuccess: (result) => setSuggestions(result),
         onError: (error) => {
@@ -127,6 +138,10 @@ export function AssistantCreateForm() {
         images: suggestions.images.map((image) => ({
           positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
           negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,
+          overlaySpec:
+            image.layout && image.textLayers?.length
+              ? { layout: image.layout, textLayers: image.textLayers }
+              : undefined,
         })),
         // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.
         width: params.width ? Number(params.width) : undefined,
@@ -158,7 +173,8 @@ export function AssistantCreateForm() {
       <div>
         <h1 className="text-xl font-semibold">Trợ lý AI</h1>
         <p className="text-sm text-muted-foreground">
-          Gõ ý tưởng bằng lời của bạn, AI sẽ tự viết yêu cầu chi tiết cho từng ảnh.
+          Gõ ý tưởng bằng lời của bạn, AI sẽ tự viết yêu cầu chi tiết cho từng ảnh và tự tạo ảnh đầu thành bìa
+          lịch (tên + năm do AI tự quyết nếu bạn không nêu).
         </p>
       </div>
 
@@ -379,8 +395,25 @@ export function AssistantCreateForm() {
             {suggestions.images.map((image, index) => (
               <Card key={index}>
                 <CardContent className="space-y-1 p-4">
-                  <p className="text-sm font-medium">Ảnh {index + 1}</p>
+                  <p className="text-sm font-medium">
+                    Ảnh {index + 1}
+                    <span className="ml-2 font-normal text-muted-foreground">
+                      {index === 0 ? "· Trang bìa (có chữ)" : "· Artwork (không chữ)"}
+                    </span>
+                  </p>
                   <p className="text-sm text-muted-foreground">{image.caption}</p>
+                  {image.layout && image.textLayers?.length ? (
+                    <div className="rounded border bg-muted/50 p-2 text-xs">
+                      <p className="font-medium text-muted-foreground">Chữ sẽ chèn · {image.layout}</p>
+                      <ul className="mt-1 space-y-0.5">
+                        {image.textLayers.map((layer, i) => (
+                          <li key={i}>
+                            <span className="text-muted-foreground">{layer.role}:</span> {layer.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   <details className="pt-1 text-xs">
                     <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
                       Chi tiết kỹ thuật (dev)

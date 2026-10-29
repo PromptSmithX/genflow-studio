@@ -160,6 +160,7 @@ model GenerationJob {
   ideaPromptSnapshot    String
   positiveFinal         String
   negativeFinal         String
+  overlaySpecJson       String?
   promptId              String?
   status                JobStatus @default(queued)
   seed                  BigInt?

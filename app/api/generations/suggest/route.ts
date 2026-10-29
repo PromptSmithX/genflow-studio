@@ -4,7 +4,12 @@ import { handleApiError } from "@/lib/api/errors";
 import { getOrCreateSettings } from "@/lib/settings";
 import { suggestPromptsSchema } from "@/lib/validations/llm";
 import { LlmClient, LlmApiError } from "@/lib/llm/client";
-import { DEFAULT_LLM_SYSTEM_PROMPT, composeUserMessage } from "@/lib/llm/default-system-prompt";
+import {
+  CALENDAR_SYSTEM_PROMPT,
+  SINGLE_SUBJECT_QUALITY_TAGS,
+  composeUserMessage,
+} from "@/lib/llm/default-system-prompt";
+import { mergeTags } from "@/lib/prompts/merge-tags";
 
 export const runtime = "nodejs";
 
@@ -29,13 +34,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const userMessage = composeUserMessage({ request: input.request, count: input.count, styleHint });
+    const userMessage = composeUserMessage({
+      request: input.request,
+      count: input.count,
+      styleHint,
+    });
+    // Trợ lý AI luôn tạo bộ ảnh lịch (ảnh #1 = bìa có chữ, còn lại = artwork sạch).
+    const systemPrompt = CALENDAR_SYSTEM_PROMPT;
     const client = new LlmClient({ baseUrl: settings.llmBaseUrl, apiKey, model: settings.llmModel });
 
     let result;
     try {
       result = await client.generatePrompts({
-        systemPrompt: settings.llmSystemPrompt?.trim() || DEFAULT_LLM_SYSTEM_PROMPT,
+        systemPrompt,
         userMessage,
         expectedCount: input.count,
       });
@@ -49,6 +60,20 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
+
+    // Chỉ ẢNH ĐẦU TIÊN (trang bìa) được có chữ; mọi ảnh sau là artwork sạch.
+    // Dù system prompt đã yêu cầu điều này, ta vẫn ép ở đây để không phụ thuộc
+    // vào việc LLM có tuân thủ đúng hay không.
+    // Model đang chạy Turbo (CFG=1, negative bị ZeroOut vô hiệu hoá) nên không
+    // có negative để loại trừ dị tật (2 người, sai tỉ lệ đầu/thân) -- ép thêm
+    // tag kiểm soát số lượng người + tỉ lệ cơ thể vào MỌI positive.
+    result.images.forEach((image, index) => {
+      if (index !== 0) {
+        image.layout = undefined;
+        image.textLayers = undefined;
+      }
+      image.positive = mergeTags(image.positive, SINGLE_SUBJECT_QUALITY_TAGS);
+    });
 
     console.log(
       `[LLM suggest] model=${settings.llmModel} usage=${JSON.stringify(result.usage)}\n` +

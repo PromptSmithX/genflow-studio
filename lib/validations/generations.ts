@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { overlaySpecSchema } from "@/lib/validations/llm";
 
 export const imageRequestSchema = z.object({
   sceneId: z.string().optional().nullable(),
   poseId: z.string().optional().nullable(),
   positiveOverride: z.string().trim().max(2000).optional().nullable(),
   negativeOverride: z.string().trim().max(2000).optional().nullable(),
+  overlaySpec: overlaySpecSchema.optional().nullable(),
 });
 
 export const createGenerationSchema = z.object({

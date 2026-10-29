@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // @napi-rs/canvas là native .node addon -> để Next require ở runtime thay vì
+  // bundle (Turbopack không resolve được .node khi bundle).
+  serverExternalPackages: ["@napi-rs/canvas"],
   turbopack: {
     rules: {
       "*.css": {

@@ -78,6 +78,11 @@ export class LlmClient {
             { role: "user", content: userMessage },
           ],
           response_format: { type: "json_object" },
+          // Nhiều provider mặc định gần-deterministic (đặc biệt ở JSON mode) --
+          // không set temperature khiến cùng 1 ý tưởng luôn ra cùng style/layout
+          // chữ. Ép temperature/top_p cao để output đa dạng giữa các lần gen.
+          temperature: 1,
+          top_p: 1,
         }),
         signal: controller.signal,
       });

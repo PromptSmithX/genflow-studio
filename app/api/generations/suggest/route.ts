@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api/errors";
 import { getOrCreateSettings } from "@/lib/settings";
 import { suggestPromptsSchema } from "@/lib/validations/llm";
@@ -17,7 +18,18 @@ export async function POST(request: NextRequest) {
       throw new LlmApiError("Chưa cấu hình Trợ lý AI, vui lòng cấu hình ở trang Cài đặt", "no_config");
     }
 
-    const userMessage = composeUserMessage({ request: input.request, count: input.count });
+    let styleHint: string | undefined;
+    if (input.mediumId) {
+      const medium = await prisma.mediumPreset.findUnique({ where: { id: input.mediumId } });
+      if (medium && medium.isActive) {
+        styleHint =
+          `Phong cách BẮT BUỘC cho toàn bộ ảnh: "${medium.name}"` +
+          (medium.description ? ` — ${medium.description}.` : ".") +
+          ` Hệ thống đã tự chèn sẵn tag phong cách/chất lượng, nên KHÔNG lặp lại tag phong cách; hãy tập trung mô tả chủ thể, trang phục, bối cảnh, ánh sáng, tư thế cho khớp.`;
+      }
+    }
+
+    const userMessage = composeUserMessage({ request: input.request, count: input.count, styleHint });
     const client = new LlmClient({ baseUrl: settings.llmBaseUrl, apiKey, model: settings.llmModel });
 
     let result;

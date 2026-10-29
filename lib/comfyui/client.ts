@@ -23,6 +23,54 @@ export interface SystemStats {
   devices?: { name?: string; vram_total?: number; vram_free?: number }[];
 }
 
+interface ComfyNodeError {
+  type?: string;
+  message?: string;
+  details?: string;
+  extra_info?: { input_name?: string; received_value?: unknown };
+}
+
+interface ComfyNodeErrorEntry {
+  class_type?: string;
+  errors?: ComfyNodeError[];
+}
+
+/**
+ * Flattens ComfyUI's /prompt `node_errors` map into a short, human-readable
+ * string: which node (id + class_type), which input, and the validation
+ * message/details. Lets the UI show the real reason a workflow was rejected
+ * instead of a bare "HTTP 400".
+ */
+function formatNodeErrors(nodeErrors: Record<string, ComfyNodeErrorEntry>): string {
+  const parts: string[] = [];
+  for (const [nodeId, entry] of Object.entries(nodeErrors)) {
+    const classType = entry?.class_type ? ` (${entry.class_type})` : "";
+    const errors = Array.isArray(entry?.errors) ? entry.errors : [];
+    if (errors.length === 0) {
+      parts.push(`node ${nodeId}${classType}`);
+      continue;
+    }
+    for (const err of errors) {
+      const input = err.extra_info?.input_name ? ` [input: ${err.extra_info.input_name}]` : "";
+      const label = err.message ?? err.type ?? "lỗi không rõ";
+      const detail = err.details ? `: ${err.details}` : "";
+      parts.push(`node ${nodeId}${classType}${input} — ${label}${detail}`);
+    }
+  }
+  return parts.join("; ");
+}
+
+/** Pulls `message`/`details` out of ComfyUI's top-level `error` object. */
+function extractComfyErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const e = error as { message?: unknown; details?: unknown };
+    const message = typeof e.message === "string" ? e.message : "";
+    const details = typeof e.details === "string" ? e.details : "";
+    return [message, details].filter(Boolean).join(": ");
+  }
+  return "";
+}
+
 export interface SubmitPromptResult {
   promptId: string;
 }
@@ -136,16 +184,59 @@ export class ComfyClient {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: workflow, ...(clientId ? { client_id: clientId } : {}) }),
     });
-    const json = (await this.parseJson(response)) as {
-      prompt_id?: string;
-      node_errors?: Record<string, unknown>;
-      error?: unknown;
-    };
 
-    if (json.node_errors && Object.keys(json.node_errors).length > 0) {
-      throw new ComfyApiError("ComfyUI báo lỗi ở node khi submit prompt", "node_errors", json.node_errors);
+    // Read the body ourselves (instead of parseJson) so a validation failure --
+    // ComfyUI returns HTTP 400 with `error` + `node_errors` in the JSON body --
+    // is surfaced with its real cause instead of a bare "HTTP 400".
+    const contentType = response.headers.get("content-type") ?? "";
+    const text = await response.text();
+
+    if (contentType.includes("text/html") || /^\s*<!doctype html/i.test(text)) {
+      throw new ComfyApiError(
+        "Nhận được trang HTML thay vì phản hồi API — tunnel có thể đã hết hạn hoặc cần xác nhận interstitial",
+        "html_interstitial",
+      );
     }
-    if (!json.prompt_id) {
+
+    let json: { prompt_id?: string; node_errors?: Record<string, ComfyNodeErrorEntry>; error?: unknown } | undefined;
+    try {
+      json = text ? JSON.parse(text) : undefined;
+    } catch {
+      if (!response.ok) {
+        throw new ComfyApiError(`ComfyUI trả lỗi HTTP ${response.status}`, "http_error", {
+          status: response.status,
+          body: text.slice(0, 500),
+        });
+      }
+      throw new ComfyApiError("Phản hồi từ ComfyUI không phải JSON hợp lệ", "invalid_json", {
+        body: text.slice(0, 500),
+      });
+    }
+
+    const nodeErrors = json?.node_errors;
+    const hasNodeErrors = Boolean(
+      nodeErrors && typeof nodeErrors === "object" && Object.keys(nodeErrors).length > 0,
+    );
+
+    if (hasNodeErrors || json?.error) {
+      const nodeDetail = hasNodeErrors ? formatNodeErrors(nodeErrors as Record<string, ComfyNodeErrorEntry>) : "";
+      const topMessage = extractComfyErrorMessage(json?.error);
+      const message = ["ComfyUI từ chối workflow", topMessage, nodeDetail].filter(Boolean).join(" — ");
+      throw new ComfyApiError(message, "node_errors", {
+        status: response.status,
+        error: json?.error,
+        node_errors: nodeErrors,
+      });
+    }
+
+    if (!response.ok) {
+      throw new ComfyApiError(`ComfyUI trả lỗi HTTP ${response.status}`, "http_error", {
+        status: response.status,
+        body: text.slice(0, 500),
+      });
+    }
+
+    if (!json?.prompt_id) {
       throw new ComfyApiError("ComfyUI không trả về prompt_id", "invalid_json", json);
     }
 

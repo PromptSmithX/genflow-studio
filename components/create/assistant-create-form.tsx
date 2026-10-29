@@ -7,21 +7,48 @@ import { Wand2, Sparkles, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BatchTracker } from "@/components/create/batch-tracker";
 import { useStyles } from "@/hooks/use-styles";
+import { useMediums } from "@/hooks/use-mediums";
 import { useSettings } from "@/hooks/use-settings";
 import { useWorkflow } from "@/hooks/use-workflow";
 import { useHeaderConnectionState } from "@/hooks/use-connection";
 import { useCreateGeneration } from "@/hooks/use-generations";
 import { useSuggestPrompts } from "@/hooks/use-llm-suggest";
 import { randomSeed } from "@/lib/seed";
+import { mergeTags } from "@/lib/prompts/merge-tags";
 import type { SuggestPromptsResponse } from "@/lib/validations/llm";
+import type { WorkflowSummaryResponse } from "@/lib/types";
 import { ApiRequestError } from "@/lib/client/api";
 import { cn } from "@/lib/utils";
 
+type AdvancedParamField = "width" | "height" | "steps" | "cfg";
+type AdvancedParams = Record<AdvancedParamField, string>;
+
+/**
+ * Reads a field's current literal value out of the imported workflow JSON via
+ * its node mapping, so the Trợ lý AI form can pre-fill CFG/steps/size with the
+ * workflow's real defaults instead of app-level guesses. Returns "" when the
+ * field is unmapped/disabled or the value isn't a plain number (e.g. a wired
+ * node reference), in which case we send nothing and let the backend keep the
+ * workflow's own value. `valuePreview` for numbers is their full string form.
+ */
+function readWorkflowNumber(workflow: WorkflowSummaryResponse | undefined, field: AdvancedParamField): string {
+  const fieldMapping = workflow?.mapping?.[field];
+  if (!fieldMapping?.enabled) return "";
+  const node = workflow?.nodes?.find((n) => n.nodeId === fieldMapping.nodeId);
+  const input = node?.inputs.find((i) => i.key === fieldMapping.inputKey);
+  const value = input ? Number(input.valuePreview) : NaN;
+  return Number.isFinite(value) ? String(value) : "";
+}
+
 export function AssistantCreateForm() {
   const { data: styles } = useStyles();
+  const { data: mediums } = useMediums();
   const { data: settings } = useSettings();
   const { data: workflow } = useWorkflow();
   const { state: connectionState } = useHeaderConnectionState();
@@ -29,12 +56,31 @@ export function AssistantCreateForm() {
   const createMutation = useCreateGeneration();
 
   const activeStyles = useMemo(() => (styles ?? []).filter((s) => s.isActive), [styles]);
+  const activeMediums = useMemo(() => (mediums ?? []).filter((m) => m.isActive), [mediums]);
 
   const [requestText, setRequestText] = useState("");
   const [imageCount, setImageCount] = useState(4);
   const [styleId, setStyleId] = useState("");
+  const [mediumId, setMediumId] = useState("");
   const [suggestions, setSuggestions] = useState<SuggestPromptsResponse | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
+  const [params, setParams] = useState<AdvancedParams>({ width: "", height: "", steps: "", cfg: "" });
+
+  // Pre-fill the advanced params from the workflow's own values once per
+  // (re)fetch, mirroring create-form's settings sync. We never re-sync on later
+  // renders, so a value the user has edited is left untouched.
+  const [syncedWorkflow, setSyncedWorkflow] = useState<typeof workflow>(undefined);
+  if (workflow !== syncedWorkflow) {
+    setSyncedWorkflow(workflow);
+    if (workflow?.configured) {
+      setParams({
+        width: readWorkflowNumber(workflow, "width"),
+        height: readWorkflowNumber(workflow, "height"),
+        steps: readWorkflowNumber(workflow, "steps"),
+        cfg: readWorkflowNumber(workflow, "cfg"),
+      });
+    }
+  }
 
   const maxImages = settings?.maxImagesPerBatch ?? 8;
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
@@ -51,7 +97,7 @@ export function AssistantCreateForm() {
 
   function handleSuggest() {
     suggestMutation.mutate(
-      { request: requestText.trim(), count: imageCount, styleId: styleId || undefined },
+      { request: requestText.trim(), count: imageCount, styleId: styleId || undefined, mediumId: mediumId || undefined },
       {
         onSuccess: (result) => setSuggestions(result),
         onError: (error) => {
@@ -70,14 +116,23 @@ export function AssistantCreateForm() {
     // Chung 1 seed cho cả batch để gương mặt đồng nhất giữa các ảnh trong cùng
     // lần gen; mỗi lần bấm Tạo lại random seed mới nên các lần gen vẫn khác nhau.
     const sharedSeed = randomSeed();
+    // Kiểu ảnh (Người thực/Anime...) ghép tag phong cách/chất lượng do app
+    // kiểm soát vào trước mỗi positive, và trộn vào negative chung -- không
+    // phụ thuộc vào chất lượng tag mà LLM tự viết.
+    const medium = activeMediums.find((m) => m.id === mediumId);
     createMutation.mutate(
       {
         styleId: styleId || undefined,
         ideaPrompt: requestText.trim(),
         images: suggestions.images.map((image) => ({
-          positiveOverride: image.positive,
-          negativeOverride: suggestions.negative || undefined,
+          positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
+          negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,
         })),
+        // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.
+        width: params.width ? Number(params.width) : undefined,
+        height: params.height ? Number(params.height) : undefined,
+        steps: params.steps ? Number(params.steps) : undefined,
+        cfg: params.cfg ? Number(params.cfg) : undefined,
         seedMode: "fixed",
         fixedSeed: sharedSeed,
         incrementFixedSeed: false,
@@ -161,6 +216,47 @@ export function AssistantCreateForm() {
 
           <Card>
             <CardContent className="space-y-3 p-4">
+              <h3 className="text-sm font-medium">Kiểu ảnh</h3>
+              <p className="text-xs text-muted-foreground">
+                Chọn một kiểu để app tự ghép tag phong cách/chất lượng chuẩn (ổn định, không phụ thuộc AI). Để trống
+                nếu muốn AI tự chọn phong cách.
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() => setMediumId("")}
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
+                    mediumId === "" ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
+                  )}
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg">
+                    <Wand2 className="h-5 w-5" />
+                  </span>
+                  <span className="text-sm font-medium">Để AI tự quyết</span>
+                </button>
+                {activeMediums.map((medium) => (
+                  <button
+                    key={medium.id}
+                    type="button"
+                    onClick={() => setMediumId(medium.id)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
+                      mediumId === medium.id ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
+                    )}
+                  >
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-semibold">
+                      {medium.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="text-sm font-medium">{medium.name}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-3 p-4">
               <h3 className="text-sm font-medium">Số lượng ảnh</h3>
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="icon" onClick={() => handleCountChange(imageCount - 1)} disabled={imageCount <= 1}>
@@ -189,6 +285,61 @@ export function AssistantCreateForm() {
               </p>
             </CardContent>
           </Card>
+
+          <Accordion>
+            <AccordionItem value="advanced-params">
+              <AccordionTrigger>Thông số nâng cao (tuỳ chọn)</AccordionTrigger>
+              <AccordionContent className="space-y-3 pt-2">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Width</Label>
+                    <Input
+                      type="number"
+                      min={64}
+                      max={4096}
+                      value={params.width}
+                      onChange={(e) => setParams((prev) => ({ ...prev, width: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Height</Label>
+                    <Input
+                      type="number"
+                      min={64}
+                      max={4096}
+                      value={params.height}
+                      onChange={(e) => setParams((prev) => ({ ...prev, height: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Steps</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={params.steps}
+                      onChange={(e) => setParams((prev) => ({ ...prev, steps: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CFG</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={30}
+                      step="0.1"
+                      value={params.cfg}
+                      onChange={(e) => setParams((prev) => ({ ...prev, cfg: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Mặc định điền sẵn theo workflow. Để trống một ô = giữ giá trị của workflow. Các thông số này chỉ áp cho
+                  bước gen chính; bước sửa tay (detailer) không đổi.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           <div className="flex items-center justify-end">
             <Button size="lg" onClick={handleSuggest} disabled={!canSuggest}>

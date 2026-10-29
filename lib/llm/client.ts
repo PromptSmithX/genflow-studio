@@ -30,7 +30,9 @@ export interface GeneratePromptsInput {
   expectedCount: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 60_000;
+// grok-build và các model nặng có thể sinh nhiều prompt chậm hơn 60s; để trần
+// cao hơn tránh bị huỷ sớm (biểu hiện là lỗi 502 code=timeout ở /suggest).
+const DEFAULT_TIMEOUT_MS = 180_000;
 
 /**
  * Thin server-only client for any OpenAI-compatible Chat Completions

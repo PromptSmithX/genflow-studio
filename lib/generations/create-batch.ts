@@ -178,6 +178,7 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Lỗi không xác định khi gửi job";
       const code = error instanceof ComfyApiError ? error.code : "submit_failed";
+      logSubmitError(job.id, error);
       await prisma.generationJob.update({
         where: { id: job.id },
         data: { status: "failed", errorCode: code, errorMessage: message, finishedAt: new Date() },
@@ -186,6 +187,22 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
   }
 
   return prisma.generationBatch.findUniqueOrThrow({ where: { id: batch.id }, include: { jobs: true } });
+}
+
+/**
+ * Logs a failed ComfyUI submit to the Next.js terminal for diagnosis. Only the
+ * error message + its structured `details` (node_errors) are logged -- never
+ * request headers, so the gateway token/authorization header is never printed.
+ */
+function logSubmitError(jobId: string, error: unknown): void {
+  if (error instanceof ComfyApiError) {
+    console.error(
+      `[ComfyUI submit] job=${jobId} code=${error.code} ${error.message}\n` +
+        `details=${JSON.stringify(error.details)}`,
+    );
+  } else {
+    console.error(`[ComfyUI submit] job=${jobId}`, error);
+  }
 }
 
 export interface RegenerateOptions {
@@ -277,6 +294,7 @@ export async function regenerateJob(sourceJobId: string, options: RegenerateOpti
   } catch (error) {
     const message = error instanceof Error ? error.message : "Lỗi không xác định khi gửi job";
     const code = error instanceof ComfyApiError ? error.code : "submit_failed";
+    logSubmitError(job.id, error);
     await prisma.generationJob.update({
       where: { id: job.id },
       data: { status: "failed", errorCode: code, errorMessage: message, finishedAt: new Date() },

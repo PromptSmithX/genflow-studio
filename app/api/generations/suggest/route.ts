@@ -7,6 +7,7 @@ import { LlmClient, LlmApiError } from "@/lib/llm/client";
 import {
   CALENDAR_SYSTEM_PROMPT,
   SINGLE_SUBJECT_QUALITY_TAGS,
+  ANIME_COVER_TYPOGRAPHY_HINT,
   composeUserMessage,
 } from "@/lib/llm/default-system-prompt";
 import { mergeTags } from "@/lib/prompts/merge-tags";
@@ -31,6 +32,13 @@ export async function POST(request: NextRequest) {
           `Phong cách BẮT BUỘC cho toàn bộ ảnh: "${medium.name}"` +
           (medium.description ? ` — ${medium.description}.` : ".") +
           ` Hệ thống đã tự chèn sẵn tag phong cách/chất lượng, nên KHÔNG lặp lại tag phong cách; hãy tập trung mô tả chủ thể, trang phục, bối cảnh, ánh sáng, tư thế cho khớp.`;
+
+        const isAnimeMedium =
+          medium.name.toLowerCase().includes("anime") ||
+          (medium.description?.toLowerCase().includes("anime") ?? false);
+        if (isAnimeMedium) {
+          styleHint += ` ${ANIME_COVER_TYPOGRAPHY_HINT}`;
+        }
       }
     }
 
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
           missingTags.push(`large bold cinematic title text "${title}"`);
         }
         if (!lowerPositive.includes(CALENDAR_LABEL.toLowerCase())) {
-          missingTags.push(`smaller text "${CALENDAR_LABEL}"`);
+          missingTags.push(`uppercase text "${CALENDAR_LABEL}", exact spelling, clearly legible`);
         }
         if (!lowerPositive.includes(year.toLowerCase())) {
           missingTags.push(`year text "${year}"`);

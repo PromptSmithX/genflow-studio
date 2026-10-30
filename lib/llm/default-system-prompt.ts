@@ -82,8 +82,11 @@ QUY TẮC CHỮ TRÊN BÌA (CHỈ ảnh #1 -- model ảnh TỰ VẼ chữ, khôn
   che khuôn mặt/thân người, để đặt chữ vào đó — chữ và người TUYỆT ĐỐI KHÔNG được chồng lên nhau.
 - Trong "positive" của ảnh #1, mô tả RÕ chữ cần xuất hiện, viết liền với từ "text" và đặt TÊN/CHỮ trong
   dấu ngoặc kép để model vẽ đúng glyph, theo đúng 3 khối sau (BẮT BUỘC đủ cả 3, không thiếu khối nào):
-  1. Chữ LỚN NHẤT (tiêu đề): ví dụ large bold cinematic title text "<TÊN>".
-  2. Chữ nhỏ hơn, nhãn cố định: smaller text "CALENDAR" (đúng nguyên văn từ CALENDAR).
+  1. Chữ LỚN NHẤT (tiêu đề) — đây là khối SÁNG TẠO: large bold cinematic title text "<TÊN>", được TỰ DO
+     về màu sắc/gradient/kiểu chữ/hình dáng/vị trí và THAY ĐỔI đa dạng giữa các lần tạo (càng nổi bật,
+     điện ảnh càng tốt). Ràng buộc "gọn/đơn giản" ở khối CALENDAR bên dưới KHÔNG áp cho title.
+  2. Nhãn cố định: uppercase text "CALENDAR", exact spelling, đủ rõ để đọc. CHỈ RIÊNG chữ CALENDAR giữ
+     nét gọn-rõ để tránh méo chữ, KHÔNG cần cùng độ cách điệu/màu mè như title.
   3. Chữ năm: year text "<NĂM>".
 - Chữ phải TO, RÕ, ít chi tiết (large, bold, clean sans-serif hoặc serif typography) — KHÔNG mô tả chữ
   nhỏ/mảnh/nhiều chữ vì dễ bị vỡ nét khi model vẽ. Phong cách như bìa tạp chí cao cấp (Vogue, Harper's
@@ -105,7 +108,7 @@ chiếu (tên ngắn gọn, năm dạng số vd "2027").
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
   "images": [
-    { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\", smaller text \\"CALENDAR\\", year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
+    { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
     { "positive": "...(ảnh #2 = artwork, full-bleed, KHÔNG chữ)...", "caption": "..." }
   ],
@@ -122,6 +125,19 @@ Số phần tử trong "images" phải đúng bằng số ảnh được yêu c�
  */
 export const SINGLE_SUBJECT_QUALITY_TAGS =
   "solo, one person only, single subject, natural body proportions, correct head-to-body ratio, anatomically correct hands";
+
+/**
+ * Lớp hint CHỈ áp khi Medium là Anime, nối thêm vào user message ở route
+ * /suggest (không sửa CALENDAR_SYSTEM_PROMPT dùng chung). Chỉ đổi KIỂU chữ
+ * bìa sang phong cách anime; mọi ràng buộc cứng khác của system prompt (đủ 3
+ * khối, chữ to/rõ, né người, không copy space) vẫn giữ nguyên.
+ */
+export const ANIME_COVER_TYPOGRAPHY_HINT =
+  `Vì đây là bộ ảnh ANIME: riêng chữ trên TRANG BÌA (ảnh #1), hãy dùng kiểu typography hợp anime — ` +
+  `anime key visual title / anime poster logo-style lettering / stylized title card, nét sạch và màu ` +
+  `rực rỡ khớp tông cel-shaded của ảnh — THAY cho kiểu chữ tạp chí/điện ảnh. Vẫn giữ đủ 3 khối chữ ` +
+  `(tiêu đề / "CALENDAR" / năm), chữ TO-RÕ-ít chi tiết, đặt ở vùng trống né mặt và thân nhân vật, và ` +
+  `KHÔNG dùng các cụm "copy space"/"negative space".`;
 
 export interface ComposeUserMessageInput {
   request: string;

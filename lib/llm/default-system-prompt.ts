@@ -77,14 +77,31 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   môi trường); nếu chụp toàn thân thì giữ chủ thể ĐỦ LỚN trong khung (tránh toàn thân từ quá xa làm
   model vẽ sai tỉ lệ đầu/thân, đầu to) — nhưng không ép riêng một tư thế nào.
 
+QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
+- Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
+  khung hình (ví dụ KHÔNG vừa "bầu trời/ngoài trời" vừa "phòng trong nhà/nội thất"). Việc mô tả 2 cảnh
+  chọi nhau khiến model (chạy Turbo) vẽ ra 2 dải tách rời cắt ngang ảnh.
+- KHÔNG dùng các cụm gây tách khung: "split", "split composition", "collage", "diptych", "panel",
+  "divided frame", "two scenes", "two backgrounds", "upper half ... lower half".
+- Vùng trống để đặt chữ PHẢI là MỘT PHẦN CỦA CHÍNH cảnh đó, nhìn tự nhiên (không phải một dải/khối màu
+  riêng dán vào). Chọn vùng trống HỢP với loại cảnh — tự suy ra tương tự cho mọi ý tưởng mới:
+  • Ngoài trời / vườn hoa: khoảng trời phía trên, hoặc mảng lá/hoa out-of-focus (bokeh).
+  • Bờ biển: khoảng trời trên mặt biển, hoặc mặt nước phẳng.
+  • Trong nhà: mảng tường trơn phía trên hoặc bên cạnh, hoặc mảng trần.
+  • Ban đêm / thành phố: bầu trời tối, hoặc mảng tường tối trơn, bokeh đèn out-of-focus.
+- Đặt nhân vật LỆCH về MỘT phía khung, chừa vùng trống ở phía đối diện hoặc phía trên — tất cả vẫn nằm
+  trong CÙNG một cảnh liền mạch.
+
 QUY TẮC CHỮ TRÊN BÌA (CHỈ ảnh #1 -- model ảnh TỰ VẼ chữ, không phải ghép sau):
-- Mô tả bối cảnh sao cho có MỘT VÙNG TRỐNG rõ ràng (bầu trời, tường trơn, mặt nước, mặt đất...) KHÔNG
-  che khuôn mặt/thân người, để đặt chữ vào đó — chữ và người TUYỆT ĐỐI KHÔNG được chồng lên nhau.
+- Đặt chữ vào ĐÚNG vùng trống của cảnh đã mô tả ở trên (bầu trời, tường trơn, mặt nước, mảng bokeh...).
+  Chữ và người TUYỆT ĐỐI KHÔNG được chồng lên nhau, và KHÔNG được thêm một bối cảnh thứ 2 chỉ để chứa chữ.
 - Trong "positive" của ảnh #1, mô tả RÕ chữ cần xuất hiện, viết liền với từ "text" và đặt TÊN/CHỮ trong
   dấu ngoặc kép để model vẽ đúng glyph, theo đúng 3 khối sau (BẮT BUỘC đủ cả 3, không thiếu khối nào):
-  1. Chữ LỚN NHẤT (tiêu đề) — đây là khối SÁNG TẠO: large bold cinematic title text "<TÊN>", được TỰ DO
-     về màu sắc/gradient/kiểu chữ/hình dáng/vị trí và THAY ĐỔI đa dạng giữa các lần tạo (càng nổi bật,
-     điện ảnh càng tốt). Ràng buộc "gọn/đơn giản" ở khối CALENDAR bên dưới KHÔNG áp cho title.
+  1. Chữ LỚN NHẤT (tiêu đề) — đây là khối SÁNG TẠO: large bold title text "<TÊN>", được TỰ DO về
+     màu sắc/gradient/kiểu chữ/hình dáng/vị trí và THAY ĐỔI đa dạng giữa các lần tạo, NHƯNG phải HÒA với
+     bối cảnh (xem mục "TYPOGRAPHY HÒA VỚI CẢNH" bên dưới). "Nổi bật" ở đây nghĩa là ăn nhập & thanh lịch
+     nổi trên nền, KHÔNG phải chói/neon bằng mọi giá. Ràng buộc "gọn/đơn giản" ở khối CALENDAR bên dưới
+     KHÔNG áp cho title.
   2. Nhãn cố định: uppercase text "CALENDAR", exact spelling, đủ rõ để đọc. CHỈ RIÊNG chữ CALENDAR giữ
      nét gọn-rõ để tránh méo chữ, KHÔNG cần cùng độ cách điệu/màu mè như title.
   3. Chữ năm: year text "<NĂM>".
@@ -92,6 +109,16 @@ QUY TẮC CHỮ TRÊN BÌA (CHỈ ảnh #1 -- model ảnh TỰ VẼ chữ, khôn
   nhỏ/mảnh/nhiều chữ vì dễ bị vỡ nét khi model vẽ. Phong cách như bìa tạp chí cao cấp (Vogue, Harper's
   Bazaar, GQ) hoặc poster điện ảnh — BẠN được tự do sáng tạo kiểu chữ/màu/vị trí đặt (trên/dưới/góc/dọc
   cạnh...) khác nhau giữa các lần tạo, miễn luôn né khuôn mặt và thân người.
+- TYPOGRAPHY HÒA VỚI CẢNH (QUAN TRỌNG — cho cả 3 khối chữ ở ảnh #1): màu + kiểu chữ + mức năng lượng +
+  độ glow của chữ phải HÀI HÒA với tông màu, ánh sáng và không khí (mood) CỦA CHÍNH CẢNH đó, KHÔNG mặc
+  định một kiểu loud/neon cho mọi cảnh.
+  • Lấy màu nhấn của chữ TỪ bảng màu của cảnh; độ bão hòa & độ glow khớp cường độ ánh sáng của cảnh
+    (ánh sáng dịu → chữ dịu, ánh sáng mạnh/rực → chữ có thể rực hơn).
+  • Khớp MOOD (đây chỉ là VÍ DỤ, không phải luật cứng): cảnh êm/thơ mộng/hoàng hôn dịu → chữ thanh,
+    elegant, màu ấm/pastel hài hòa; cảnh sôi động/phố đêm neon → chữ punchy, tương phản cao, gradient
+    rực. Tự suy ra tương tự cho mọi cảnh khác.
+  • LUÔN giữ ĐỦ TƯƠNG PHẢN để đọc rõ: hòa tông với nền nhưng đừng để chữ cùng màu/chìm vào nền — dùng
+    viền hoặc glow NHẸ để tách chữ khỏi nền khi cần.
 - TẤT CẢ ảnh #2..#N: KHÔNG mô tả bất kỳ chữ/text/typography nào, bố cục full-bleed không cần chừa chỗ.
 
 RẤT QUAN TRỌNG VỀ TỪ KHÓA BỐ CỤC (áp dụng cho vùng trống đặt chữ ở ảnh #1):
@@ -134,14 +161,16 @@ export const SINGLE_SUBJECT_QUALITY_TAGS =
  */
 export const ANIME_COVER_TYPOGRAPHY_HINT =
   `Vì đây là bộ ảnh ANIME: riêng chữ trên TRANG BÌA (ảnh #1), hãy dùng kiểu typography hợp anime — ` +
-  `anime key visual title / anime poster logo-style lettering / stylized title card, nét sạch và màu ` +
-  `rực rỡ khớp tông cel-shaded của ảnh — THAY cho kiểu chữ tạp chí/điện ảnh. Vẫn giữ đủ 3 khối chữ ` +
+  `anime key visual title / anime poster logo-style lettering / stylized title card, nét sạch, màu ` +
+  `và độ rực KHỚP BẢNG MÀU + MOOD của cảnh (cảnh dịu thì chữ dịu, cảnh sôi động mới rực) — THAY cho ` +
+  `kiểu chữ tạp chí/điện ảnh, KHÔNG mặc định neon chói cho mọi cảnh. Vẫn giữ đủ 3 khối chữ ` +
   `(tiêu đề / "CALENDAR" / năm). RIÊNG bộ anime này, chữ "CALENDAR" và năm hãy dùng CÙNG HỆ FONT / cùng ` +
   `phong cách chữ với title (chỉ khác kích thước) để cả bìa thống nhất như một thiết kế — GHI ĐÈ quy tắc ` +
   `"CALENDAR gọn-rõ, không cách điệu như title" ở trên; nhưng "CALENDAR" và năm vẫn phải đủ RÕ để đọc và ` +
-  `ĐÚNG CHÍNH TẢ. Đặt 3 khối chữ ở 3 VÙNG TÁCH RỜI khác nhau của khung (ví dụ title một phía, "CALENDAR" ` +
-  `phía khác, năm ở một góc) — spread apart, KHÔNG co cụm sát nhau — tất cả vẫn né mặt và thân nhân vật, ` +
-  `và KHÔNG dùng các cụm "copy space"/"negative space".`;
+  `ĐÚNG CHÍNH TẢ. Xếp 3 khối chữ (title / "CALENDAR" / năm) GỌN trong CÙNG một vùng trống của cảnh (vd ` +
+  `title lớn phía trên, "CALENDAR" và năm ngay dưới nó) — có thể lệch tầng cho sinh động nhưng KHÔNG rải ` +
+  `ra khắp khung làm băm nhỏ bố cục; tất cả vẫn né mặt và thân nhân vật, nằm trong MỘT cảnh liền mạch, ` +
+  `và KHÔNG dùng các cụm "copy space"/"negative space"/"split"/"collage".`;
 
 /**
  * Tag single-subject chuyên cho anime, ÉP LÊN ĐẦU positive (route /suggest) khi

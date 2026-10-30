@@ -83,6 +83,9 @@ export async function POST(request: NextRequest) {
     const BANNER_TAGS_REGEX =
       /\b(with\s+(plenty|ample)\s+of\s+)?(empty\s+)?(copy\s*space|negative\s*space)(\s+(at\s+the|at|in|on)\s+[a-z]+(\s+of\s+the\s+frame)?)?\b/gi;
     const FLOOR_TAGS_REGEX = /\bclean\s+simple\s+floor\b/gi;
+    // Các cụm khiến model băm khung thành nhiều cảnh/dải tách rời (ảnh bị chia đôi).
+    const SPLIT_TAGS_REGEX =
+      /\b(split\s*(composition|screen|frame)?|collage|diptych|triptych|(two|multiple|split)\s+(scenes|backgrounds|panels)|divided\s+frame|panel\s+layout|(upper|top|bottom|lower)\s+half\s+[a-z ]*?(lower|bottom|top|upper)\s+half)\b/gi;
     const CALENDAR_LABEL = "CALENDAR";
 
     result.images.forEach((image, index) => {
@@ -90,6 +93,7 @@ export async function POST(request: NextRequest) {
       image.positive = image.positive
         .replace(BANNER_TAGS_REGEX, "")
         .replace(FLOOR_TAGS_REGEX, "")
+        .replace(SPLIT_TAGS_REGEX, "")
         .replace(/,\s*,/g, ",")
         .trim();
 
@@ -127,12 +131,12 @@ export async function POST(request: NextRequest) {
               ANIME_SINGLE_SUBJECT_TAGS,
               image.positive,
               ...missingTags,
-              "large clear readable typography, text placed in empty background area away from the subject",
+              "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
             )
           : mergeTags(
               image.positive,
               ...missingTags,
-              "large clear readable typography, text placed in empty background area away from the subject",
+              "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
               SINGLE_SUBJECT_QUALITY_TAGS,
             );
       }

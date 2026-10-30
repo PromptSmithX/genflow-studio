@@ -8,6 +8,8 @@ import {
   CALENDAR_SYSTEM_PROMPT,
   SINGLE_SUBJECT_QUALITY_TAGS,
   ANIME_COVER_TYPOGRAPHY_HINT,
+  ANIME_SINGLE_SUBJECT_TAGS,
+  ANIME_SINGLE_SUBJECT_HINT,
   composeUserMessage,
 } from "@/lib/llm/default-system-prompt";
 import { mergeTags } from "@/lib/prompts/merge-tags";
@@ -25,6 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     let styleHint: string | undefined;
+    let isAnimeMedium = false;
     if (input.mediumId) {
       const medium = await prisma.mediumPreset.findUnique({ where: { id: input.mediumId } });
       if (medium && medium.isActive) {
@@ -33,11 +36,11 @@ export async function POST(request: NextRequest) {
           (medium.description ? ` — ${medium.description}.` : ".") +
           ` Hệ thống đã tự chèn sẵn tag phong cách/chất lượng, nên KHÔNG lặp lại tag phong cách; hãy tập trung mô tả chủ thể, trang phục, bối cảnh, ánh sáng, tư thế cho khớp.`;
 
-        const isAnimeMedium =
+        isAnimeMedium =
           medium.name.toLowerCase().includes("anime") ||
           (medium.description?.toLowerCase().includes("anime") ?? false);
         if (isAnimeMedium) {
-          styleHint += ` ${ANIME_COVER_TYPOGRAPHY_HINT}`;
+          styleHint += ` ${ANIME_COVER_TYPOGRAPHY_HINT} ${ANIME_SINGLE_SUBJECT_HINT}`;
         }
       }
     }
@@ -93,7 +96,11 @@ export async function POST(request: NextRequest) {
       if (index !== 0) {
         image.title = undefined;
         image.year = undefined;
-        image.positive = mergeTags(image.positive, SINGLE_SUBJECT_QUALITY_TAGS);
+        // Anime: ép single-subject lên ĐẦU positive (model đánh trọng số token
+        // đầu mạnh); nhánh người giữ nguyên tag chung ở cuối.
+        image.positive = isAnimeMedium
+          ? mergeTags(ANIME_SINGLE_SUBJECT_TAGS, image.positive)
+          : mergeTags(image.positive, SINGLE_SUBJECT_QUALITY_TAGS);
       } else {
         // Bìa lịch: model ảnh tự vẽ chữ. App chỉ đảm bảo 3 chuỗi bắt buộc
         // (title / "CALENDAR" / year) thật sự có mặt trong positive, không phụ
@@ -115,12 +122,19 @@ export async function POST(request: NextRequest) {
           missingTags.push(`year text "${year}"`);
         }
 
-        image.positive = mergeTags(
-          image.positive,
-          ...missingTags,
-          "large clear readable typography, text placed in empty background area away from the subject",
-          SINGLE_SUBJECT_QUALITY_TAGS,
-        );
+        image.positive = isAnimeMedium
+          ? mergeTags(
+              ANIME_SINGLE_SUBJECT_TAGS,
+              image.positive,
+              ...missingTags,
+              "large clear readable typography, text placed in empty background area away from the subject",
+            )
+          : mergeTags(
+              image.positive,
+              ...missingTags,
+              "large clear readable typography, text placed in empty background area away from the subject",
+              SINGLE_SUBJECT_QUALITY_TAGS,
+            );
       }
     });
 

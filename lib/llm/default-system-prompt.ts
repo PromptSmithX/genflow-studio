@@ -139,6 +139,27 @@ export const ANIME_COVER_TYPOGRAPHY_HINT =
   `(tiêu đề / "CALENDAR" / năm), chữ TO-RÕ-ít chi tiết, đặt ở vùng trống né mặt và thân nhân vật, và ` +
   `KHÔNG dùng các cụm "copy space"/"negative space".`;
 
+/**
+ * Tag single-subject chuyên cho anime, ÉP LÊN ĐẦU positive (route /suggest) khi
+ * medium là anime. Model anime chạy Turbo không dùng được negative nên hay sinh
+ * thừa người / đầu to; tag Danbooru đặt ở đầu (model đánh trọng số token đầu
+ * mạnh) để khoá về MỘT người + tỉ lệ đầu-thân tự nhiên. KHÔNG kèm tag framing
+ * (full/half body) để không khoá tư thế -- giữ đa dạng tư thế giữa các ảnh.
+ */
+export const ANIME_SINGLE_SUBJECT_TAGS =
+  "solo, solo focus, single character, one person only, no other people, no second person, balanced anatomy, correct head-to-body ratio, normal head size";
+
+/**
+ * Hint tiếng Việt nối vào user message khi medium là anime: hướng LLM mở đầu MỖI
+ * positive anime bằng count-tag Danbooru đúng giới tính nhân vật (chỉ LLM biết
+ * giới tính nên app không tự chèn được), bổ trợ cho ANIME_SINGLE_SUBJECT_TAGS.
+ */
+export const ANIME_SINGLE_SUBJECT_HINT =
+  `Vì model anime dễ sinh thừa người / sai tỉ lệ và negative prompt bị vô hiệu: MỖI "positive" của bộ ` +
+  `anime hãy MỞ ĐẦU bằng "solo, 1girl" hoặc "solo, 1boy" đúng theo giới tính nhân vật, mô tả CHÍNH XÁC ` +
+  `MỘT người, TUYỆT ĐỐI không người thứ hai/cặp đôi/đám đông/người ở hậu cảnh, và giữ tỉ lệ đầu-thân tự ` +
+  `nhiên (không đầu/mặt quá to).`;
+
 export interface ComposeUserMessageInput {
   request: string;
   count: number;

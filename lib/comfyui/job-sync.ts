@@ -3,8 +3,6 @@ import path from "node:path";
 import { prisma } from "@/lib/db";
 import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
 import { resolveSafePath, buildOutputFilename } from "@/lib/files/safe-output";
-import { overlaySpecSchema } from "@/lib/validations/llm";
-import { renderOverlay } from "@/lib/overlay/render";
 
 function mimeTypeFromFilename(filename: string): string {
   const ext = path.extname(filename).toLowerCase();
@@ -108,31 +106,15 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
 
   const existingFilenames = new Set(job.images.map((image) => image.filename));
 
-  // Khung chữ lịch/poster: vẽ chữ lên ảnh sau khi tải về (model chỉ gen ảnh sạch).
-  const overlaySpec = job.overlaySpecJson
-    ? overlaySpecSchema.safeParse(JSON.parse(job.overlaySpecJson))
-    : null;
-
   await fs.mkdir(outputRoot, { recursive: true });
 
   try {
     for (const imageRef of history.images) {
       if (existingFilenames.has(imageRef.filename)) continue;
 
-      let buffer: Buffer = Buffer.from(await client.viewImage(imageRef));
-      let outFilename = buildOutputFilename(job.id, imageRef.filename);
-      let mimeType = mimeTypeFromFilename(imageRef.filename);
-
-      // Best-effort: overlay lỗi thì vẫn lưu ảnh gốc, không fail job.
-      if (overlaySpec?.success) {
-        try {
-          buffer = await renderOverlay(buffer, overlaySpec.data);
-          outFilename = outFilename.replace(/\.[^.]+$/, ".png");
-          mimeType = "image/png";
-        } catch (overlayError) {
-          console.error(`[overlay] job=${job.id} file=${imageRef.filename}`, overlayError);
-        }
-      }
+      const buffer: Buffer = Buffer.from(await client.viewImage(imageRef));
+      const outFilename = buildOutputFilename(job.id, imageRef.filename);
+      const mimeType = mimeTypeFromFilename(imageRef.filename);
 
       const outPath = resolveSafePath(outputRoot, outFilename);
       await fs.writeFile(outPath, buffer);

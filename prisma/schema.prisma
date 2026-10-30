@@ -91,7 +91,10 @@ model AppSettings {
   defaultSeedMode   String   @default("random") // "random" | "fixed"
   defaultFixedSeed  BigInt?
   maxImagesPerBatch Int      @default(20)
-  outputDirectory   String   @default("data/outputs")
+  // Mặc định tương đối nằm NGOÀI project root (data/ là anh em của thư mục app,
+  // không phải con) để tránh Next.js dev watch thư mục này -- ảnh/DB được ghi
+  // liên tục trong đó sẽ trigger full-page reload nếu nằm trong vùng watch.
+  outputDirectory   String   @default("../data/outputs")
   llmBaseUrl        String?
   llmModel          String?
   llmSystemPrompt   String?

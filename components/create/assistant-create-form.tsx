@@ -29,11 +29,11 @@ import { cn } from "@/lib/utils";
 type AdvancedParamField = "width" | "height" | "steps" | "cfg";
 type AdvancedParams = Record<AdvancedParamField, string>;
 
-// Mặc định dọc (hợp bìa lịch) thay cho khung vuông của workflow -- khung vuông
-// khi chụp full-body dễ gây sai tỉ lệ đầu/thân (đầu to) trên model Turbo
-// CFG=1 không có negative để sửa.
-const COVER_DEFAULT_WIDTH = 896;
-const COVER_DEFAULT_HEIGHT = 1152;
+// Mặc định ngang 4:3 -- khung ngang hợp bố cục bìa tạp chí/điện ảnh (model ảnh
+// tự vẽ chữ vào ảnh #1), tránh full-body đứng khung dọc dễ gây sai tỉ lệ
+// đầu/thân trên Turbo CFG=1.
+const COVER_DEFAULT_WIDTH = 1152;
+const COVER_DEFAULT_HEIGHT = 864;
 
 /**
  * Reads a field's current literal value out of the imported workflow JSON via
@@ -138,10 +138,6 @@ export function AssistantCreateForm() {
         images: suggestions.images.map((image) => ({
           positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
           negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,
-          overlaySpec:
-            image.layout && image.textLayers?.length
-              ? { layout: image.layout, textLayers: image.textLayers }
-              : undefined,
         })),
         // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.
         width: params.width ? Number(params.width) : undefined,
@@ -402,15 +398,16 @@ export function AssistantCreateForm() {
                     </span>
                   </p>
                   <p className="text-sm text-muted-foreground">{image.caption}</p>
-                  {image.layout && image.textLayers?.length ? (
+                  {image.title && image.year ? (
                     <div className="rounded border bg-muted/50 p-2 text-xs">
-                      <p className="font-medium text-muted-foreground">Chữ sẽ chèn · {image.layout}</p>
+                      <p className="font-medium text-muted-foreground">Chữ do AI vẽ trong ảnh</p>
                       <ul className="mt-1 space-y-0.5">
-                        {image.textLayers.map((layer, i) => (
-                          <li key={i}>
-                            <span className="text-muted-foreground">{layer.role}:</span> {layer.text}
-                          </li>
-                        ))}
+                        <li>
+                          <span className="text-muted-foreground">title:</span> {image.title}
+                        </li>
+                        <li>
+                          <span className="text-muted-foreground">year:</span> {image.year}
+                        </li>
                       </ul>
                     </div>
                   ) : null}

@@ -67,12 +67,53 @@ export async function POST(request: NextRequest) {
     // Model đang chạy Turbo (CFG=1, negative bị ZeroOut vô hiệu hoá) nên không
     // có negative để loại trừ dị tật (2 người, sai tỉ lệ đầu/thân) -- ép thêm
     // tag kiểm soát số lượng người + tỉ lệ cơ thể vào MỌI positive.
+    // Đồng thời, loại bỏ triệt để các cụm từ copy space / negative space có thể khiến
+    // mô hình AI vẽ dải banner màu đặc cắt ngang người nhân vật.
+    const BANNER_TAGS_REGEX =
+      /\b(with\s+(plenty|ample)\s+of\s+)?(empty\s+)?(copy\s*space|negative\s*space)(\s+(at\s+the|at|in|on)\s+[a-z]+(\s+of\s+the\s+frame)?)?\b/gi;
+    const FLOOR_TAGS_REGEX = /\bclean\s+simple\s+floor\b/gi;
+    const CALENDAR_LABEL = "CALENDAR";
+
     result.images.forEach((image, index) => {
+      // Làm sạch bất kỳ từ khoá copy space nào mà LLM có thể đã sinh ra
+      image.positive = image.positive
+        .replace(BANNER_TAGS_REGEX, "")
+        .replace(FLOOR_TAGS_REGEX, "")
+        .replace(/,\s*,/g, ",")
+        .trim();
+
       if (index !== 0) {
-        image.layout = undefined;
-        image.textLayers = undefined;
+        image.title = undefined;
+        image.year = undefined;
+        image.positive = mergeTags(image.positive, SINGLE_SUBJECT_QUALITY_TAGS);
+      } else {
+        // Bìa lịch: model ảnh tự vẽ chữ. App chỉ đảm bảo 3 chuỗi bắt buộc
+        // (title / "CALENDAR" / year) thật sự có mặt trong positive, không phụ
+        // thuộc việc LLM có tuân thủ đúng chỉ dẫn hay không.
+        const title = image.title?.trim() || "THE COLLECTION";
+        const year = image.year?.trim() || String(new Date().getFullYear() + 1);
+        image.title = title;
+        image.year = year;
+
+        const missingTags: string[] = [];
+        const lowerPositive = image.positive.toLowerCase();
+        if (!lowerPositive.includes(title.toLowerCase())) {
+          missingTags.push(`large bold cinematic title text "${title}"`);
+        }
+        if (!lowerPositive.includes(CALENDAR_LABEL.toLowerCase())) {
+          missingTags.push(`smaller text "${CALENDAR_LABEL}"`);
+        }
+        if (!lowerPositive.includes(year.toLowerCase())) {
+          missingTags.push(`year text "${year}"`);
+        }
+
+        image.positive = mergeTags(
+          image.positive,
+          ...missingTags,
+          "large clear readable typography, text placed in empty background area away from the subject",
+          SINGLE_SUBJECT_QUALITY_TAGS,
+        );
       }
-      image.positive = mergeTags(image.positive, SINGLE_SUBJECT_QUALITY_TAGS);
     });
 
     console.log(

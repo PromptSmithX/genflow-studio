@@ -136,8 +136,12 @@ export const ANIME_COVER_TYPOGRAPHY_HINT =
   `Vì đây là bộ ảnh ANIME: riêng chữ trên TRANG BÌA (ảnh #1), hãy dùng kiểu typography hợp anime — ` +
   `anime key visual title / anime poster logo-style lettering / stylized title card, nét sạch và màu ` +
   `rực rỡ khớp tông cel-shaded của ảnh — THAY cho kiểu chữ tạp chí/điện ảnh. Vẫn giữ đủ 3 khối chữ ` +
-  `(tiêu đề / "CALENDAR" / năm), chữ TO-RÕ-ít chi tiết, đặt ở vùng trống né mặt và thân nhân vật, và ` +
-  `KHÔNG dùng các cụm "copy space"/"negative space".`;
+  `(tiêu đề / "CALENDAR" / năm). RIÊNG bộ anime này, chữ "CALENDAR" và năm hãy dùng CÙNG HỆ FONT / cùng ` +
+  `phong cách chữ với title (chỉ khác kích thước) để cả bìa thống nhất như một thiết kế — GHI ĐÈ quy tắc ` +
+  `"CALENDAR gọn-rõ, không cách điệu như title" ở trên; nhưng "CALENDAR" và năm vẫn phải đủ RÕ để đọc và ` +
+  `ĐÚNG CHÍNH TẢ. Đặt 3 khối chữ ở 3 VÙNG TÁCH RỜI khác nhau của khung (ví dụ title một phía, "CALENDAR" ` +
+  `phía khác, năm ở một góc) — spread apart, KHÔNG co cụm sát nhau — tất cả vẫn né mặt và thân nhân vật, ` +
+  `và KHÔNG dùng các cụm "copy space"/"negative space".`;
 
 /**
  * Tag single-subject chuyên cho anime, ÉP LÊN ĐẦU positive (route /suggest) khi

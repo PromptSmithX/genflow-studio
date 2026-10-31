@@ -5,7 +5,9 @@ import { getOrCreateSettings } from "@/lib/settings";
 import { suggestPromptsSchema } from "@/lib/validations/llm";
 import { LlmClient, LlmApiError } from "@/lib/llm/client";
 import {
-  CALENDAR_SYSTEM_PROMPT,
+  CALENDAR_SYSTEM_PROMPT_REAL,
+  CALENDAR_SYSTEM_PROMPT_ANIME,
+  SHARED_BIAS_PROMPT,
   SINGLE_SUBJECT_QUALITY_TAGS,
   ANIME_COVER_TYPOGRAPHY_HINT,
   ANIME_SINGLE_SUBJECT_TAGS,
@@ -51,7 +53,14 @@ export async function POST(request: NextRequest) {
       styleHint,
     });
     // Trợ lý AI luôn tạo bộ ảnh lịch (ảnh #1 = bìa có chữ, còn lại = artwork sạch).
-    const systemPrompt = CALENDAR_SYSTEM_PROMPT;
+    // Chọn system prompt tách riêng theo loại: anime vs người thực.
+    const baseSystemPrompt = isAnimeMedium ? CALENDAR_SYSTEM_PROMPT_ANIME : CALENDAR_SYSTEM_PROMPT_REAL;
+    // Khung dùng chung (SHARED_BIAS_PROMPT) được chèn ở ĐẦU system prompt, TRƯỚC
+    // khi gửi cho LLM -- chi phối cả REAL và ANIME. Khi còn rỗng, bỏ qua hoàn
+    // toàn để không đổi hành vi hiện tại.
+    const systemPrompt = SHARED_BIAS_PROMPT.trim()
+      ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}`
+      : baseSystemPrompt;
     const client = new LlmClient({ baseUrl: settings.llmBaseUrl, apiKey, model: settings.llmModel });
 
     let result;

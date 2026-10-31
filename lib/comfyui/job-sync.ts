@@ -3,6 +3,7 @@ import path from "node:path";
 import { prisma } from "@/lib/db";
 import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
 import { resolveSafePath, buildOutputFilename } from "@/lib/files/safe-output";
+import { padSafeMargin } from "@/lib/images/pad-safe-margin";
 
 function mimeTypeFromFilename(filename: string): string {
   const ext = path.extname(filename).toLowerCase();
@@ -112,9 +113,19 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
     for (const imageRef of history.images) {
       if (existingFilenames.has(imageRef.filename)) continue;
 
-      const buffer: Buffer = Buffer.from(await client.viewImage(imageRef));
+      const rawBuffer: Buffer = Buffer.from(await client.viewImage(imageRef));
       const outFilename = buildOutputFilename(job.id, imageRef.filename);
       const mimeType = mimeTypeFromFilename(imageRef.filename);
+
+      // Nới rộng canvas để đảm bảo tuyệt đối vùng sát mép (bị lò xo/lỗ
+      // treo/mã vạch/bleed che khi in lịch) không chứa nội dung do AI vẽ. Nếu
+      // ảnh hỏng/không decode được, dùng buffer gốc để không chặn cả batch.
+      let buffer = rawBuffer;
+      try {
+        buffer = await padSafeMargin(rawBuffer);
+      } catch (error) {
+        console.error(`[padSafeMargin] bỏ qua đệm viền cho ${imageRef.filename}:`, error);
+      }
 
       const outPath = resolveSafePath(outputRoot, outFilename);
       await fs.writeFile(outPath, buffer);

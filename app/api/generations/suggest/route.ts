@@ -9,6 +9,7 @@ import {
   CALENDAR_SYSTEM_PROMPT_ANIME,
   SHARED_BIAS_PROMPT,
   SINGLE_SUBJECT_QUALITY_TAGS,
+  FRAMING_MARGIN_TAGS,
   ANIME_COVER_TYPOGRAPHY_HINT,
   ANIME_SINGLE_SUBJECT_TAGS,
   ANIME_SINGLE_SUBJECT_HINT,
@@ -112,8 +113,8 @@ export async function POST(request: NextRequest) {
         // Anime: ép single-subject lên ĐẦU positive (model đánh trọng số token
         // đầu mạnh); nhánh người giữ nguyên tag chung ở cuối.
         image.positive = isAnimeMedium
-          ? mergeTags(ANIME_SINGLE_SUBJECT_TAGS, image.positive)
-          : mergeTags(image.positive, SINGLE_SUBJECT_QUALITY_TAGS);
+          ? mergeTags(ANIME_SINGLE_SUBJECT_TAGS, FRAMING_MARGIN_TAGS, image.positive)
+          : mergeTags(image.positive, FRAMING_MARGIN_TAGS, SINGLE_SUBJECT_QUALITY_TAGS);
       } else {
         // Bìa lịch: model ảnh tự vẽ chữ. App chỉ đảm bảo 3 chuỗi bắt buộc
         // (title / "CALENDAR" / year) thật sự có mặt trong positive, không phụ
@@ -138,12 +139,14 @@ export async function POST(request: NextRequest) {
         image.positive = isAnimeMedium
           ? mergeTags(
               ANIME_SINGLE_SUBJECT_TAGS,
+              FRAMING_MARGIN_TAGS,
               image.positive,
               ...missingTags,
               "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
             )
           : mergeTags(
               image.positive,
+              FRAMING_MARGIN_TAGS,
               ...missingTags,
               "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
               SINGLE_SUBJECT_QUALITY_TAGS,

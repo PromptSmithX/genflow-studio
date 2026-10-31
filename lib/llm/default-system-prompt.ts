@@ -250,6 +250,16 @@ export const SINGLE_SUBJECT_QUALITY_TAGS =
   "solo, one person only, single subject, natural body proportions, correct head-to-body ratio, anatomically correct hands";
 
 /**
+ * Tag khung ép qua mergeTags ở route /suggest (KHÔNG nằm trong system prompt →
+ * không tốn token context LLM). Giữ chủ thể nằm GỌN trong khung, chừa khoảng
+ * trống quanh mép để ĐƯỜNG NỐI của lớp bezel (pad-safe-margin) rơi vào NỀN thay
+ * vì cắt ngang qua người (lỗi "chôn chân"). Diễn đạt không khoá kiểu khung
+ * (không ép "full body") để vẫn giữ đa dạng góc máy/tư thế.
+ */
+export const FRAMING_MARGIN_TAGS =
+  "subject fully inside the frame with breathing room, background visible around the subject, clear space above the head and below the body, subject not cropped or touching the frame edges";
+
+/**
  * Lớp hint CHỈ áp khi Medium là Anime, nối thêm vào user message ở route
  * /suggest (bổ sung cho CALENDAR_SYSTEM_PROMPT_ANIME). Chỉ đổi KIỂU chữ
  * bìa sang phong cách anime; mọi ràng buộc cứng khác của system prompt (đủ 3

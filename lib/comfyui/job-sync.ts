@@ -112,17 +112,19 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
     for (const imageRef of history.images) {
       if (existingFilenames.has(imageRef.filename)) continue;
 
-      const buffer = await client.viewImage(imageRef);
+      const buffer: Buffer = Buffer.from(await client.viewImage(imageRef));
       const outFilename = buildOutputFilename(job.id, imageRef.filename);
+      const mimeType = mimeTypeFromFilename(imageRef.filename);
+
       const outPath = resolveSafePath(outputRoot, outFilename);
-      await fs.writeFile(outPath, Buffer.from(buffer));
+      await fs.writeFile(outPath, buffer);
 
       await prisma.generatedImage.create({
         data: {
           jobId: job.id,
           relativePath: outFilename,
           filename: imageRef.filename,
-          mimeType: mimeTypeFromFilename(imageRef.filename),
+          mimeType,
         },
       });
     }

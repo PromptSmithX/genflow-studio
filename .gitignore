@@ -58,3 +58,4 @@ next-env.d.ts
 # prisma
 /prisma/dev.db*
 
+/RICEE_Calendar_Reusable_Templates_6/*

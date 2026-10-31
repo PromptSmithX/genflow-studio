@@ -71,6 +71,35 @@ async function main() {
     });
     console.log("Seeded 3 style mẫu (có thể sửa/xóa).");
   }
+
+  const mediumCount = await prisma.mediumPreset.count();
+  if (mediumCount === 0) {
+    await prisma.mediumPreset.createMany({
+      data: [
+        {
+          name: "Người thực",
+          description: "Ảnh chụp người thật, da/ánh sáng tự nhiên.",
+          positivePrompt:
+            "photorealistic, real photography, raw photo, realistic skin texture with visible pores, subsurface scattering, natural skin imperfections, fine skin texture, subtle facial asymmetry, natural skin tones, soft natural window light, detailed eyes, sharp focus, high detail, depth of field, shot on Canon EOS R5, 85mm lens, film grain, 8k uhd",
+          negativePrompt:
+            "anime, cartoon, cel shading, illustration, painting, drawing, 3d render, cgi, doll, plastic skin, waxy skin",
+          isActive: true,
+          sortOrder: 0,
+        },
+        {
+          name: "Anime",
+          description: "Phong cách anime, nét vẽ sạch, màu sắc rực rỡ.",
+          positivePrompt:
+            "anime style, high quality anime key visual, clean lineart, cel shading, vibrant saturated colors, detailed anime eyes, soft anime shading, sharp focus, highly detailed",
+          negativePrompt:
+            "photorealistic, realistic photo, real life, 3d render, cgi, photograph, realistic skin texture",
+          isActive: true,
+          sortOrder: 1,
+        },
+      ],
+    });
+    console.log("Seeded 2 kiểu ảnh mẫu (có thể sửa/xóa).");
+  }
 }
 
 main()

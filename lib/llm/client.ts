@@ -30,7 +30,9 @@ export interface GeneratePromptsInput {
   expectedCount: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 60_000;
+// grok-build và các model nặng có thể sinh nhiều prompt chậm hơn 60s; để trần
+// cao hơn tránh bị huỷ sớm (biểu hiện là lỗi 502 code=timeout ở /suggest).
+const DEFAULT_TIMEOUT_MS = 180_000;
 
 /**
  * Thin server-only client for any OpenAI-compatible Chat Completions
@@ -76,6 +78,11 @@ export class LlmClient {
             { role: "user", content: userMessage },
           ],
           response_format: { type: "json_object" },
+          // Nhiều provider mặc định gần-deterministic (đặc biệt ở JSON mode) --
+          // không set temperature khiến cùng 1 ý tưởng luôn ra cùng style/layout
+          // chữ. Ép temperature/top_p cao để output đa dạng giữa các lần gen.
+          temperature: 1,
+          top_p: 1,
         }),
         signal: controller.signal,
       });

@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ImagePlus, BookText, History, Settings } from "lucide-react";
+import { ImagePlus, History, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/create", label: "Tạo ảnh", icon: ImagePlus },
-  { href: "/prompts", label: "Thư viện prompt", icon: BookText },
   { href: "/history", label: "Lịch sử", icon: History },
   { href: "/settings", label: "Cài đặt", icon: Settings },
 ];

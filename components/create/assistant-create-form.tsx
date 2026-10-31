@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BatchTracker } from "@/components/create/batch-tracker";
-import { useStyles } from "@/hooks/use-styles";
 import { useMediums } from "@/hooks/use-mediums";
 import { useSettings } from "@/hooks/use-settings";
 import { useWorkflow } from "@/hooks/use-workflow";
@@ -53,7 +52,6 @@ function readWorkflowNumber(workflow: WorkflowSummaryResponse | undefined, field
 }
 
 export function AssistantCreateForm() {
-  const { data: styles } = useStyles();
   const { data: mediums } = useMediums();
   const { data: settings } = useSettings();
   const { data: workflow } = useWorkflow();
@@ -61,12 +59,10 @@ export function AssistantCreateForm() {
   const suggestMutation = useSuggestPrompts();
   const createMutation = useCreateGeneration();
 
-  const activeStyles = useMemo(() => (styles ?? []).filter((s) => s.isActive), [styles]);
   const activeMediums = useMemo(() => (mediums ?? []).filter((m) => m.isActive), [mediums]);
 
   const [requestText, setRequestText] = useState("");
   const [imageCount, setImageCount] = useState(4);
-  const [styleId, setStyleId] = useState("");
   const [mediumId, setMediumId] = useState("");
   const [suggestions, setSuggestions] = useState<SuggestPromptsResponse | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
@@ -106,7 +102,6 @@ export function AssistantCreateForm() {
       {
         request: requestText.trim(),
         count: imageCount,
-        styleId: styleId || undefined,
         mediumId: mediumId || undefined,
       },
       {
@@ -133,7 +128,6 @@ export function AssistantCreateForm() {
     const medium = activeMediums.find((m) => m.id === mediumId);
     createMutation.mutate(
       {
-        styleId: styleId || undefined,
         ideaPrompt: requestText.trim(),
         images: suggestions.images.map((image) => ({
           positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
@@ -189,43 +183,6 @@ export function AssistantCreateForm() {
 
       {!suggestions ? (
         <>
-          <Card>
-            <CardContent className="space-y-3 p-4">
-              <h3 className="text-sm font-medium">Nhân vật</h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                <button
-                  type="button"
-                  onClick={() => setStyleId("")}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
-                    styleId === "" ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
-                  )}
-                >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg">
-                    <Wand2 className="h-5 w-5" />
-                  </span>
-                  <span className="text-sm font-medium">Để AI tự quyết</span>
-                </button>
-                {activeStyles.map((style) => (
-                  <button
-                    key={style.id}
-                    type="button"
-                    onClick={() => setStyleId(style.id)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
-                      styleId === style.id ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
-                    )}
-                  >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg font-semibold">
-                      {style.name.slice(0, 1).toUpperCase()}
-                    </span>
-                    <span className="text-sm font-medium">{style.name}</span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardContent className="space-y-3 p-4">
               <h3 className="text-sm font-medium">Kiểu ảnh</h3>

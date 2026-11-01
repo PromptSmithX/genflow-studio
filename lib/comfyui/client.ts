@@ -115,6 +115,15 @@ export class ComfyClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
+  /**
+   * The normalized base URL (trailing slashes stripped). Lets callers derive
+   * sibling endpoints served through the same tunnel/gateway -- e.g. the auto-
+   * censor service at `${getBaseUrl()}/censor` -- without re-reading settings.
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   private headers(): Record<string, string> {
     const headers: Record<string, string> = {
       "bypass-tunnel-reminder": "1",

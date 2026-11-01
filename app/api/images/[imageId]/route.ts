@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { apiError, handleApiError } from "@/lib/api/errors";
 import { resolveSafePath } from "@/lib/files/safe-output";
 import { getOrCreateSettings } from "@/lib/settings";
-import { resolveOutputRoot } from "@/lib/output-dir";
+import { resolveOutputRoot, resolveCensoredRoot } from "@/lib/output-dir";
 
 export const runtime = "nodejs";
 
@@ -16,17 +16,25 @@ interface Params {
  * Streams an image by its database id only -- it never accepts an
  * arbitrary filesystem path from the request, and resolveSafePath still
  * guards against the stored relativePath ever escaping the output root.
+ * `?variant=masked` serves the auto-censored copy instead of the original.
  */
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { imageId } = await params;
     const image = await prisma.generatedImage.findUnique({ where: { id: imageId } });
     if (!image) return apiError("not_found", "Không tìm thấy ảnh", 404);
 
+    const wantsMasked = request.nextUrl.searchParams.get("variant") === "masked";
+    if (wantsMasked && !image.maskedRelativePath) {
+      return apiError("not_found", "Chưa có bản đã che cho ảnh này", 404);
+    }
+
     const settings = await getOrCreateSettings();
     const outputRoot = resolveOutputRoot(settings);
 
-    const fullPath = resolveSafePath(outputRoot, image.relativePath);
+    const fullPath = wantsMasked
+      ? resolveSafePath(resolveCensoredRoot(outputRoot), image.maskedRelativePath!)
+      : resolveSafePath(outputRoot, image.relativePath);
     const buffer = await fs.readFile(fullPath);
 
     return new NextResponse(buffer, {

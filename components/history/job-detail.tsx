@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJobDetail, useRegenerateJob } from "@/hooks/use-history";
+import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Đang chờ",
@@ -17,6 +18,13 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Hoàn thành",
   failed: "Thất bại",
   unknown: "Không xác định",
+};
+
+const MASK_STATUS_LABEL: Record<string, string> = {
+  censored: "Đã che vùng nhạy cảm",
+  clean: "Ảnh sạch, không cần che",
+  failed: "Lỗi khi che ảnh",
+  skipped: "Chưa cấu hình che ảnh",
 };
 
 function copyToClipboard(text: string, label: string) {
@@ -30,10 +38,17 @@ export function JobDetail({ jobId }: { jobId: string }) {
   const { data: job, isLoading } = useJobDetail(jobId);
   const regenerateMutation = useRegenerateJob();
   const [seedMode, setSeedMode] = useState<"same" | "random">("random");
+  const [variant, setVariant] = useState<"original" | "masked">("original");
 
   if (isLoading || !job) {
     return <Skeleton className="h-96 w-full" />;
   }
+
+  const image = job.images[0];
+  const hasMasked = Boolean(image?.maskedRelativePath);
+  const activeVariant = hasMasked ? variant : "original";
+  const imageSrc = image ? `/api/images/${image.id}${activeVariant === "masked" ? "?variant=masked" : ""}` : null;
+  const downloadHref = image ? `/api/images/${image.id}/download${activeVariant === "masked" ? "?variant=masked" : ""}` : null;
 
   function handleRegenerate() {
     regenerateMutation.mutate(
@@ -48,18 +63,53 @@ export function JobDetail({ jobId }: { jobId: string }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-3">
-        {job.images[0] ? (
+        {imageSrc ? (
           <div className="relative aspect-square w-full overflow-hidden rounded-md border">
-            <Image src={`/api/images/${job.images[0].id}`} alt="Ảnh đã tạo" fill unoptimized className="object-contain bg-muted" />
+            <Image src={imageSrc} alt="Ảnh đã tạo" fill unoptimized className="object-contain bg-muted" />
           </div>
         ) : (
           <div className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
             {job.errorMessage ?? STATUS_LABEL[job.status]}
           </div>
         )}
-        {job.images[0] && (
-          <Button variant="outline" render={<a href={`/api/images/${job.images[0].id}/download`} download />}>
-            <Download className="h-4 w-4" /> Tải ảnh
+
+        {image && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
+              <button
+                type="button"
+                onClick={() => setVariant("original")}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  activeVariant === "original" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Bản gốc
+              </button>
+              <button
+                type="button"
+                onClick={() => hasMasked && setVariant("masked")}
+                disabled={!hasMasked}
+                title={hasMasked ? undefined : "Chưa có bản đã che cho ảnh này"}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                  activeVariant === "masked" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Bản đã che
+              </button>
+            </div>
+            {image.maskStatus && (
+              <Badge variant={image.maskStatus === "censored" ? "default" : image.maskStatus === "failed" ? "destructive" : "secondary"}>
+                {MASK_STATUS_LABEL[image.maskStatus] ?? image.maskStatus}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {downloadHref && (
+          <Button variant="outline" render={<a href={downloadHref} download />}>
+            <Download className="h-4 w-4" /> Tải {activeVariant === "masked" ? "bản đã che" : "ảnh"}
           </Button>
         )}
       </div>

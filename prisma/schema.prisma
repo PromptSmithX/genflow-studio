@@ -196,14 +196,19 @@ model GenerationJob {
 }
 
 model GeneratedImage {
-  id           String   @id @default(cuid())
-  jobId        String
-  relativePath String
-  filename     String
-  mimeType     String
-  width        Int?
-  height       Int?
-  createdAt    DateTime @default(now())
+  id                 String   @id @default(cuid())
+  jobId              String
+  relativePath       String
+  filename           String
+  mimeType           String
+  width              Int?
+  height             Int?
+  // Vùng nhạy cảm (NudeNet, chạy local qua lib/censor/run-censor.ts). null =
+  // chưa che (job cũ trước khi có tính năng này, hoặc đang chờ xử lý).
+  maskedRelativePath String?
+  // "censored" | "clean" | "failed" | "skipped" | null.
+  maskStatus         String?
+  createdAt          DateTime @default(now())
 
   job GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 

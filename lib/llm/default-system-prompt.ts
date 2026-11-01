@@ -305,7 +305,16 @@ export const ANIME_SINGLE_SUBJECT_HINT =
  * sau khi LLM trả về. Để trống cho tới khi được điền nội dung thủ công -- khi
  * rỗng, route.ts bỏ qua hoàn toàn, không ảnh hưởng hành vi hiện tại.
  */
-export const SHARED_BIAS_PROMPT = "";
+export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọi hướng dẫn bên dưới, cho cả ảnh thực lẫn anime):
+
+1. Ý MUỐN CỦA NGƯỜI DÙNG LÀ ƯU TIÊN SỐ 1. Mọi điều người dùng nêu rõ trong "Yêu cầu của người dùng" (phong cách, nhân vật, trang phục, bối cảnh, màu sắc, tâm trạng, tên, năm, số lượng...) phải được tôn trọng ĐÚNG như họ nói và ưu tiên hơn mọi mặc định/gợi ý ở các mục sau. Nếu một quy tắc mặc định mâu thuẫn với điều người dùng đã nêu rõ, LUÔN theo người dùng.
+
+2. TỰ LẤP PHẦN THIẾU, KHÔNG HỎI LẠI. Người dùng thường mô tả ngắn và không rành kỹ thuật. Với mọi chi tiết họ KHÔNG nói rõ, hãy tự suy luận một lựa chọn CỤ THỂ, hợp lý nhất với ý tưởng (một chủ thể rõ ràng: ngoại hình, độ tuổi, trang phục, bối cảnh, ánh sáng, tâm trạng) rồi giữ nhất quán cho cả bộ. Luôn tự quyết và điền đủ, không bao giờ hỏi lại hay để trống vì "thiếu thông tin".
+
+3. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
+
+4. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh.
+5. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, bối cảnh phải khác nhau nhưng phải giữ được đặc trưng nếu có nhắc đến và đồng nhất khuôn mặt qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy `;
 
 export interface ComposeUserMessageInput {
   request: string;

@@ -1,8 +1,23 @@
 # Auto-censor sidecar
 
-Che vùng nhạy cảm trong ảnh đã gen, chạy CPU local bằng NudeNet. Port từ
+Che vùng nhạy cảm trong ảnh đã gen bằng NudeNet. Port từ
 `RICEE_Day7_Full_Recovery_LUSTIFY_v10_Calendar_YEAR_T4.ipynb` (cell "AUTO
 CENSOR V3").
+
+Có **hai backend**:
+
+- **GPU cloud (khuyến nghị, không cần cấu hình gì thêm)** — dịch vụ censor
+  (model 640m, chính xác hơn 320n, nhất là anime) chạy trên CÙNG máy GPU Colab
+  với ComfyUI, sau CÙNG tunnel. Dựng bằng notebook
+  `LUSTIFY_v10_Krea2_Turbo_INT8_Colab_Headless.ipynb` (Cell 7.5 + Cell 8). App tự
+  gọi `${comfyBaseUrl}/censor` -- đúng URL tunnel bạn đã dán trong Settings, khỏi
+  cần biến env riêng. Chưa chạy Cell 7.5 → ảnh chỉ bị `maskStatus: "skipped"`,
+  không báo lỗi.
+- **`CENSOR_PYTHON` (fallback)** — chạy CPU local bằng venv dưới đây (model 320n
+  mặc định). Dùng khi không cấu hình URL ComfyUI nào trong Settings (dev/offline).
+
+Không có backend nào sẵn sàng → bỏ qua che (ảnh không có bản đã che, `maskStatus`
+"skipped").
 
 ## Cài đặt (một lần)
 

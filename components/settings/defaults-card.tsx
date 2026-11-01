@@ -22,7 +22,7 @@ export function DefaultsCard() {
     defaultCfg: 4,
     defaultSeedMode: "random" as "random" | "fixed",
     defaultFixedSeed: "" as string | number,
-    maxImagesPerBatch: 8,
+    maxImagesPerBatch: 15,
     outputDirectory: "data/outputs",
   });
 
@@ -137,7 +137,7 @@ export function DefaultsCard() {
             <Input
               type="number"
               min={1}
-              max={20}
+              max={15}
               value={form.maxImagesPerBatch}
               onChange={(e) => setForm((f) => ({ ...f, maxImagesPerBatch: Number(e.target.value) }))}
             />

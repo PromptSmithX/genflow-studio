@@ -162,15 +162,19 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   if (newImageIds.length > 0) {
     await fs.mkdir(censoredRoot, { recursive: true });
 
-    // Che vùng nhạy cảm (NudeNet, CPU local) cho cả job trong 1 lần gọi, để
-    // model chỉ nạp một lần. Lỗi/thiếu cấu hình không được chặn job hoàn
-    // tất -- ảnh vẫn xem/tải được bản gốc, chỉ thiếu bản đã che.
+    // Che vùng nhạy cảm cho cả job trong 1 lần gọi, để model chỉ nạp một lần.
+    // Dịch vụ censor (NudeNet 640m, GPU) chạy trên cùng máy Colab với ComfyUI,
+    // sau CÙNG tunnel -- không cần URL riêng, chỉ ghép thêm /censor vào base URL
+    // đã cấu hình. Lỗi/thiếu cấu hình không được chặn job hoàn tất -- ảnh vẫn
+    // xem/tải được bản gốc, chỉ thiếu bản đã che.
     try {
+      const censorUrl = `${client.getBaseUrl()}/censor`;
       const results = await censorImages(
         newImageIds.map((image) => ({
           input: resolveSafePath(outputRoot, image.relativePath),
           output: resolveSafePath(censoredRoot, image.relativePath),
         })),
+        censorUrl,
       );
 
       for (let i = 0; i < newImageIds.length; i += 1) {

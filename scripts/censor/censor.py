@@ -23,26 +23,50 @@ Ported from RICEE_Day7_Full_Recovery_LUSTIFY_v10_Calendar_YEAR_T4.ipynb, cell
 the notebook, an image with no detections is copied through unchanged
 ("clean") instead of being blurred wholesale -- the calendar has many clean
 cover/artwork images that should not come out blurred.
+
+The core `censor_image()` works on an in-memory PIL image + a loaded detector
+so the same logic can be reused by the GPU cloud sidecar (censor_server.py in
+the Colab notebook) without going through disk.
 """
 
 import json
 import sys
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
+# Balanced mode: only ever blur regions NudeNet reports as EXPOSED, never the
+# COVERED variants -- so a clothed / bikini image is not blurred by mistake.
 TARGET_CLASSES = {
     "FEMALE_BREAST_EXPOSED",
     "FEMALE_GENITALIA_EXPOSED",
+    "MALE_GENITALIA_EXPOSED",
+    "BUTTOCKS_EXPOSED",
     "ANUS_EXPOSED",
 }
 
+# Defaults tuned up from the first pass: wider padding + stronger blur so the
+# soft mask actually covers the edges of a detected region instead of leaving a
+# visible rim. Overridable per-call from the manifest.
+DEFAULT_THRESHOLD = 0.25
+DEFAULT_PADDING = 0.35
+DEFAULT_BLUR_RADIUS = 45
+DEFAULT_FEATHER = 8
 
-def censor_one(detector, input_path: Path, output_path: Path, threshold: float, padding: float,
-                blur_radius: float, feather: float) -> dict:
-    detections = detector.detect(str(input_path))
 
-    photo = Image.open(input_path).convert("RGB")
+def censor_image(detector, photo: Image.Image, threshold: float, padding: float,
+                 blur_radius: float, feather: float):
+    """Detect + soft-mask-blur sensitive regions on an in-memory RGB image.
+
+    Returns (result_image, status, regions). On "clean" the returned image is
+    the untouched input, so callers can always save/return one image.
+    """
+    # NudeNet's detect() takes a path/ndarray/bytes, not a PIL image, and mirrors
+    # cv2.imread (BGR) internally before swapRB. Feed it a BGR array so the model
+    # sees the same channel order as the proven file-path call.
+    bgr = np.asarray(photo)[:, :, ::-1].copy()
+    detections = detector.detect(bgr)
     width, height = photo.size
 
     selected = []
@@ -72,33 +96,49 @@ def censor_one(detector, input_path: Path, output_path: Path, threshold: float, 
         )
         selected.append({"class": label, "score": score, "box": [x1, y1, x2, y2]})
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
     if not selected:
-        # No sensitive region found -> pass the image through unchanged so the
-        # masked copy still exists on disk, mirroring the full output set.
-        photo.save(output_path)
-        return {"status": "clean", "regions": []}
+        return photo, "clean", []
 
     blurred_photo = photo.filter(ImageFilter.GaussianBlur(blur_radius))
     soft_mask = mask.filter(ImageFilter.GaussianBlur(feather))
     result = Image.composite(blurred_photo, photo, soft_mask)
+    return result, "censored", selected
+
+
+def censor_one(detector, input_path: Path, output_path: Path, threshold: float, padding: float,
+                blur_radius: float, feather: float) -> dict:
+    photo = Image.open(input_path).convert("RGB")
+    result, status, regions = censor_image(detector, photo, threshold, padding, blur_radius, feather)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Both "clean" (unchanged pass-through) and "censored" write a file, so the
+    # masked copy always exists on disk mirroring the full output set.
     result.save(output_path)
-    return {"status": "censored", "regions": selected}
+    return {"status": status, "regions": regions}
+
+
+def load_detector(model_path: str = "", inference_resolution: int = 320):
+    """Loads NudeDetector, optionally with a bigger model (e.g. 640m.onnx at
+    inference_resolution=640) for better recall on anime/stylized content."""
+    from nudenet import NudeDetector
+
+    if model_path:
+        return NudeDetector(model_path=model_path, inference_resolution=inference_resolution)
+    return NudeDetector()
 
 
 def main() -> int:
     manifest_path = Path(sys.argv[1])
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    threshold = float(manifest.get("threshold", 0.25))
-    padding = float(manifest.get("padding", 0.20))
-    blur_radius = float(manifest.get("blur_radius", 35))
-    feather = float(manifest.get("feather", 8))
+    threshold = float(manifest.get("threshold", DEFAULT_THRESHOLD))
+    padding = float(manifest.get("padding", DEFAULT_PADDING))
+    blur_radius = float(manifest.get("blur_radius", DEFAULT_BLUR_RADIUS))
+    feather = float(manifest.get("feather", DEFAULT_FEATHER))
+    model_path = str(manifest.get("model_path", "") or "")
+    inference_resolution = int(manifest.get("inference_resolution", 320))
 
-    from nudenet import NudeDetector
-
-    detector = NudeDetector()
+    detector = load_detector(model_path, inference_resolution)
 
     results = []
     for item in manifest.get("items", []):

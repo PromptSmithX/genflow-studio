@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
 import { resolveSafePath, buildOutputFilename } from "@/lib/files/safe-output";
 import { padSafeMargin } from "@/lib/images/pad-safe-margin";
+import { resolveCensoredRoot } from "@/lib/output-dir";
+import { censorImages } from "@/lib/censor/run-censor";
 
 function mimeTypeFromFilename(filename: string): string {
   const ext = path.extname(filename).toLowerCase();
@@ -106,8 +108,11 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   }
 
   const existingFilenames = new Set(job.images.map((image) => image.filename));
+  const censoredRoot = resolveCensoredRoot(outputRoot);
 
   await fs.mkdir(outputRoot, { recursive: true });
+
+  const newImageIds: { id: string; relativePath: string }[] = [];
 
   try {
     for (const imageRef of history.images) {
@@ -130,7 +135,7 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
       const outPath = resolveSafePath(outputRoot, outFilename);
       await fs.writeFile(outPath, buffer);
 
-      await prisma.generatedImage.create({
+      const created = await prisma.generatedImage.create({
         data: {
           jobId: job.id,
           relativePath: outFilename,
@@ -138,6 +143,7 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
           mimeType,
         },
       });
+      newImageIds.push({ id: created.id, relativePath: created.relativePath });
     }
   } catch (error) {
     // Tải/lưu ảnh thất bại (timeout, tunnel interstitial, lỗi đĩa...). Đánh
@@ -151,6 +157,37 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
       data: { status: "unknown", errorCode: code, errorMessage: message },
     });
     return;
+  }
+
+  if (newImageIds.length > 0) {
+    await fs.mkdir(censoredRoot, { recursive: true });
+
+    // Che vùng nhạy cảm (NudeNet, CPU local) cho cả job trong 1 lần gọi, để
+    // model chỉ nạp một lần. Lỗi/thiếu cấu hình không được chặn job hoàn
+    // tất -- ảnh vẫn xem/tải được bản gốc, chỉ thiếu bản đã che.
+    try {
+      const results = await censorImages(
+        newImageIds.map((image) => ({
+          input: resolveSafePath(outputRoot, image.relativePath),
+          output: resolveSafePath(censoredRoot, image.relativePath),
+        })),
+      );
+
+      for (let i = 0; i < newImageIds.length; i += 1) {
+        const result = results[i];
+        if (!result) continue;
+        const hasMaskedFile = result.status === "censored" || result.status === "clean";
+        await prisma.generatedImage.update({
+          where: { id: newImageIds[i].id },
+          data: {
+            maskStatus: result.status,
+            maskedRelativePath: hasMaskedFile ? newImageIds[i].relativePath : null,
+          },
+        });
+      }
+    } catch (error) {
+      console.error(`[censorImages] bỏ qua che ảnh cho job ${job.id}:`, error);
+    }
   }
 
   await prisma.generationJob.update({

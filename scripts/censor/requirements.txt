@@ -1,0 +1,5 @@
+nudenet==3.4.2
+numpy==1.26.4
+opencv-python-headless==4.11.0.86
+onnxruntime>=1.19,<2
+Pillow>=10,<12

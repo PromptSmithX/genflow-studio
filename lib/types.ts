@@ -1,11 +1,8 @@
-import type { StylePreset, ScenePreset, PosePreset, MediumPreset, GlobalPrompt, GeneratedImage } from "@prisma/client";
+import type { StylePreset, MediumPreset, GeneratedImage } from "@prisma/client";
 import type { NodeSummary, NodeMapping } from "@/lib/comfyui/workflow-mapper";
 
 export type StyleDTO = StylePreset;
-export type SceneDTO = ScenePreset;
-export type PoseDTO = PosePreset;
 export type MediumDTO = MediumPreset;
-export type GlobalPromptDTO = GlobalPrompt;
 export type GeneratedImageDTO = GeneratedImage;
 
 export interface SettingsDTO {

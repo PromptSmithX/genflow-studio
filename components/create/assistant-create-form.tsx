@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Wand2, Sparkles } from "lucide-react";
@@ -62,10 +62,18 @@ export function AssistantCreateForm() {
   const activeMediums = useMemo(() => (mediums ?? []).filter((m) => m.isActive), [mediums]);
 
   const [requestText, setRequestText] = useState("");
-  const [imageCount, setImageCount] = useState(4);
+  const [imageCount, setImageCount] = useState(12);
   const [mediumId, setMediumId] = useState("");
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [params, setParams] = useState<AdvancedParams>({ width: "", height: "", steps: "", cfg: "" });
+
+  // Không còn lựa chọn "để AI tự quyết" -- luôn chọn sẵn kiểu ảnh đầu tiên
+  // (sortOrder thấp nhất, API đã sắp xếp) ngay khi danh sách tải xong.
+  useEffect(() => {
+    if (!mediumId && activeMediums.length > 0) {
+      setMediumId(activeMediums[0].id);
+    }
+  }, [activeMediums, mediumId]);
 
   // Pre-fill the advanced params from the workflow's own values once per
   // (re)fetch, mirroring create-form's settings sync. We never re-sync on later
@@ -83,7 +91,10 @@ export function AssistantCreateForm() {
     }
   }
 
-  const maxImages = settings?.maxImagesPerBatch ?? 8;
+  const maxImages = settings?.maxImagesPerBatch ?? 15;
+  // Settings tải không đồng bộ, và trần có thể bị hạ trong Cài đặt -- kẹp lại
+  // để số hiển thị/gửi đi không bao giờ vượt trần (server sẽ từ chối batch).
+  const safeImageCount = Math.min(imageCount, maxImages);
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
   const isReady = connectionState === "connected" && workflowReady;
   const llmReady = Boolean(settings?.llmBaseUrl && settings?.llmModel && settings?.hasLlmKey);
@@ -106,7 +117,7 @@ export function AssistantCreateForm() {
     suggestMutation.mutate(
       {
         request: requestText.trim(),
-        count: imageCount,
+        count: safeImageCount,
         mediumId: mediumId || undefined,
       },
       {
@@ -203,23 +214,9 @@ export function AssistantCreateForm() {
         <CardContent className="space-y-3 p-4">
           <h3 className="text-sm font-medium">Kiểu ảnh</h3>
           <p className="text-xs text-muted-foreground">
-            Chọn một kiểu để app tự ghép tag phong cách/chất lượng chuẩn (ổn định, không phụ thuộc AI). Để trống
-            nếu muốn AI tự chọn phong cách.
+            Chọn một kiểu để app tự ghép tag phong cách/chất lượng chuẩn (ổn định, không phụ thuộc AI).
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            <button
-              type="button"
-              onClick={() => setMediumId("")}
-              className={cn(
-                "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
-                mediumId === "" ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
-              )}
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg">
-                <Wand2 className="h-5 w-5" />
-              </span>
-              <span className="text-sm font-medium">Để AI tự quyết</span>
-            </button>
             {activeMediums.map((medium) => (
               <button
                 key={medium.id}
@@ -244,11 +241,11 @@ export function AssistantCreateForm() {
         <CardContent className="space-y-3 p-4">
           <h3 className="text-sm font-medium">Số lượng ảnh</h3>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={() => handleCountChange(imageCount - 1)} disabled={imageCount <= 1}>
+            <Button variant="outline" size="icon" onClick={() => handleCountChange(safeImageCount - 1)} disabled={safeImageCount <= 1}>
               −
             </Button>
-            <span className="w-12 text-center text-lg font-semibold">{imageCount}</span>
-            <Button variant="outline" size="icon" onClick={() => handleCountChange(imageCount + 1)} disabled={imageCount >= maxImages}>
+            <span className="w-12 text-center text-lg font-semibold">{safeImageCount}</span>
+            <Button variant="outline" size="icon" onClick={() => handleCountChange(safeImageCount + 1)} disabled={safeImageCount >= maxImages}>
               +
             </Button>
             <span className="text-xs text-muted-foreground">Tối đa {maxImages} ảnh/lần</span>

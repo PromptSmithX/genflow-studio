@@ -31,7 +31,7 @@ async function main() {
         defaultSteps: 25,
         defaultCfg: 4.0,
         defaultSeedMode: "random",
-        maxImagesPerBatch: 20,
+        maxImagesPerBatch: 15,
         outputDirectory: "data/outputs",
       },
     });

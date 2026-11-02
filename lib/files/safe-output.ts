@@ -39,6 +39,22 @@ export function buildOutputFilename(jobId: string, originalFilename: string): st
   return `${timestamp}_${safeJobId}_${suffix}${ext}`;
 }
 
+/**
+ * Tên folder gom toàn bộ output của một batch (ảnh gen / censor / upscale), để
+ * dễ lấy đúng bộ ảnh của 1 batch đem lên template lịch. Định dạng:
+ * `YYYY-MM-DD_HH-mm_<nhãn>_<6 ký tự cuối id>`, thời gian theo local của máy chạy
+ * app, nhãn lấy từ ideaPrompt đã sanitize + cắt ~40 ký tự. Tính xác định với
+ * cùng input nên mọi job trong batch cùng ra một folder.
+ */
+export function buildBatchFolder(batch: { id: string; ideaPrompt: string; createdAt: Date }): string {
+  const d = batch.createdAt;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+  const label = sanitizeFilenameSegment(batch.ideaPrompt).slice(0, 40).replace(/_+$/, "");
+  const shortId = batch.id.slice(-6);
+  return [stamp, label, shortId].filter(Boolean).join("_");
+}
+
 export function buildWorkflowUploadFilename(originalFilename: string): string {
   const base = sanitizeFilenameSegment(path.basename(originalFilename, path.extname(originalFilename)));
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");

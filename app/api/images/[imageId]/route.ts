@@ -4,7 +4,13 @@ import { prisma } from "@/lib/db";
 import { apiError, handleApiError } from "@/lib/api/errors";
 import { resolveSafePath } from "@/lib/files/safe-output";
 import { getOrCreateSettings } from "@/lib/settings";
-import { resolveOutputRoot, resolveCensoredRoot } from "@/lib/output-dir";
+import {
+  resolveOutputRoot,
+  resolveCensoredRoot,
+  resolveUpscaledRoot,
+  resolveUpscaledCensoredRoot,
+} from "@/lib/output-dir";
+import { resolveImageVariant } from "@/lib/images/variant";
 
 export const runtime = "nodejs";
 
@@ -16,7 +22,7 @@ interface Params {
  * Streams an image by its database id only -- it never accepts an
  * arbitrary filesystem path from the request, and resolveSafePath still
  * guards against the stored relativePath ever escaping the output root.
- * `?variant=masked` serves the auto-censored copy instead of the original.
+ * `?variant=` picks masked / upscaled / upscaled-masked instead of the original.
  */
 export async function GET(request: NextRequest, { params }: Params) {
   try {
@@ -24,18 +30,17 @@ export async function GET(request: NextRequest, { params }: Params) {
     const image = await prisma.generatedImage.findUnique({ where: { id: imageId } });
     if (!image) return apiError("not_found", "Không tìm thấy ảnh", 404);
 
-    const wantsMasked = request.nextUrl.searchParams.get("variant") === "masked";
-    if (wantsMasked && !image.maskedRelativePath) {
-      return apiError("not_found", "Chưa có bản đã che cho ảnh này", 404);
-    }
-
     const settings = await getOrCreateSettings();
     const outputRoot = resolveOutputRoot(settings);
+    const resolved = resolveImageVariant(image, request.nextUrl.searchParams.get("variant"), {
+      outputRoot,
+      censoredRoot: resolveCensoredRoot(outputRoot),
+      upscaledRoot: resolveUpscaledRoot(outputRoot),
+      upscaledCensoredRoot: resolveUpscaledCensoredRoot(outputRoot),
+    });
+    if (!resolved) return apiError("not_found", "Chưa có bản ảnh này", 404);
 
-    const fullPath = wantsMasked
-      ? resolveSafePath(resolveCensoredRoot(outputRoot), image.maskedRelativePath!)
-      : resolveSafePath(outputRoot, image.relativePath);
-    const buffer = await fs.readFile(fullPath);
+    const buffer = await fs.readFile(resolveSafePath(resolved.root, resolved.relativePath));
 
     return new NextResponse(buffer, {
       headers: {

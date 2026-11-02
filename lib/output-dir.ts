@@ -23,3 +23,21 @@ export function resolveCensoredRoot(outputRoot: string): string {
   const base = path.basename(outputRoot);
   return path.join(parent, `${base}_censored`);
 }
+
+/**
+ * Where the print-ready upscaled copies of the ORIGINAL (unmasked) images live,
+ * as a sibling of the output root -- e.g. "../data/outputs" ->
+ * "../data/outputs_upscaled".
+ */
+export function resolveUpscaledRoot(outputRoot: string): string {
+  const parent = path.dirname(outputRoot);
+  const base = path.basename(outputRoot);
+  return path.join(parent, `${base}_upscaled`);
+}
+
+/** Sibling root for the upscaled copies of the MASKED (censored) images. */
+export function resolveUpscaledCensoredRoot(outputRoot: string): string {
+  const parent = path.dirname(outputRoot);
+  const base = path.basename(outputRoot);
+  return path.join(parent, `${base}_upscaled_censored`);
+}

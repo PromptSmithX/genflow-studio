@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { resolveSafePath, buildOutputFilename, sanitizeFilenameSegment } from "@/lib/files/safe-output";
+import { resolveSafePath, buildOutputFilename, sanitizeFilenameSegment, buildBatchFolder } from "@/lib/files/safe-output";
 
 describe("resolveSafePath", () => {
   const root = path.join(process.cwd(), "data", "outputs");
@@ -39,5 +39,32 @@ describe("buildOutputFilename", () => {
     const a = buildOutputFilename("job123", "out.png");
     const b = buildOutputFilename("job123", "out.png");
     expect(a).not.toBe(b);
+  });
+});
+
+describe("buildBatchFolder", () => {
+  const createdAt = new Date(2026, 10, 2, 14, 30);
+
+  it("formats as YYYY-MM-DD_HH-mm_label_shortId", () => {
+    const id = "clx9f8a2b";
+    const folder = buildBatchFolder({ id, ideaPrompt: "Trợ lý AI 15 ảnh", createdAt });
+    expect(folder.startsWith("2026-11-02_14-30_")).toBe(true);
+    expect(folder.endsWith(id.slice(-6))).toBe(true);
+    expect(folder).not.toContain("/");
+    expect(folder).not.toContain(" ");
+  });
+
+  it("is deterministic for the same input", () => {
+    const input = { id: "abc123", ideaPrompt: "Batch mẫu", createdAt };
+    expect(buildBatchFolder(input)).toBe(buildBatchFolder(input));
+  });
+
+  it("truncates a long label instead of producing an unbounded folder name", () => {
+    const folder = buildBatchFolder({
+      id: "abc123",
+      ideaPrompt: "a".repeat(200),
+      createdAt,
+    });
+    expect(folder.length).toBeLessThan(80);
   });
 });

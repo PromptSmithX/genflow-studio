@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db";
 import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
-import { resolveSafePath, buildOutputFilename } from "@/lib/files/safe-output";
+import { resolveSafePath, buildOutputFilename, buildBatchFolder } from "@/lib/files/safe-output";
 import { padSafeMargin } from "@/lib/images/pad-safe-margin";
 import { resolveCensoredRoot } from "@/lib/output-dir";
 import { censorImages } from "@/lib/censor/run-censor";
@@ -29,7 +29,7 @@ function mimeTypeFromFilename(filename: string): string {
  * GeneratedImage rows, since it checks existing rows by filename first.
  */
 export async function syncJob(jobId: string, client: ComfyClient, outputRoot: string): Promise<void> {
-  const job = await prisma.generationJob.findUnique({ where: { id: jobId }, include: { images: true } });
+  const job = await prisma.generationJob.findUnique({ where: { id: jobId }, include: { images: true, batch: true } });
   if (!job) return;
   if (job.status === "completed" || job.status === "failed") return;
   if (!job.promptId) return;
@@ -109,8 +109,7 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
 
   const existingFilenames = new Set(job.images.map((image) => image.filename));
   const censoredRoot = resolveCensoredRoot(outputRoot);
-
-  await fs.mkdir(outputRoot, { recursive: true });
+  const batchFolder = buildBatchFolder(job.batch);
 
   const newImageIds: { id: string; relativePath: string }[] = [];
 
@@ -119,7 +118,7 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
       if (existingFilenames.has(imageRef.filename)) continue;
 
       const rawBuffer: Buffer = Buffer.from(await client.viewImage(imageRef));
-      const outFilename = buildOutputFilename(job.id, imageRef.filename);
+      const outRelativePath = `${batchFolder}/${buildOutputFilename(job.id, imageRef.filename)}`;
       const mimeType = mimeTypeFromFilename(imageRef.filename);
 
       // Nới rộng canvas để đảm bảo tuyệt đối vùng sát mép (bị lò xo/lỗ
@@ -132,13 +131,14 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
         console.error(`[padSafeMargin] bỏ qua đệm viền cho ${imageRef.filename}:`, error);
       }
 
-      const outPath = resolveSafePath(outputRoot, outFilename);
+      const outPath = resolveSafePath(outputRoot, outRelativePath);
+      await fs.mkdir(path.dirname(outPath), { recursive: true });
       await fs.writeFile(outPath, buffer);
 
       const created = await prisma.generatedImage.create({
         data: {
           jobId: job.id,
-          relativePath: outFilename,
+          relativePath: outRelativePath,
           filename: imageRef.filename,
           mimeType,
         },
@@ -160,7 +160,10 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   }
 
   if (newImageIds.length > 0) {
-    await fs.mkdir(censoredRoot, { recursive: true });
+    // Mọi ảnh của job này đều ghi vào cùng folder batch, nên 1 mkdir là đủ
+    // (resolveSafePath(censoredRoot, relativePath) chỉ ổn khi folder cha tồn tại
+    // -- censorImages/run-censor.ts tự writeFile, không tự mkdir).
+    await fs.mkdir(path.dirname(resolveSafePath(censoredRoot, newImageIds[0].relativePath)), { recursive: true });
 
     // Che vùng nhạy cảm cho cả job trong 1 lần gọi, để model chỉ nạp một lần.
     // Dịch vụ censor (NudeNet 640m, GPU) chạy trên cùng máy Colab với ComfyUI,

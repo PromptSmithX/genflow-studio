@@ -9,15 +9,19 @@ import {
   resolveCensoredRoot,
   resolveUpscaledRoot,
   resolveUpscaledCensoredRoot,
+  resolveBackCoverRoot,
 } from "@/lib/output-dir";
 import { upscaleToSize } from "@/lib/images/upscale";
 import { listCalendarFormats, type CalendarFormat } from "@/lib/calendar/formats";
+import { loadBackCoverGeometry } from "@/lib/calendar/back-cover-format";
+import { composeBackCover } from "@/lib/images/back-cover";
 
 interface UpscaleRoots {
   outputRoot: string;
   censoredRoot: string;
   upscaledRoot: string;
   upscaledCensoredRoot: string;
+  backCoverRoot: string;
 }
 
 /**
@@ -84,7 +88,62 @@ async function buildRoots(): Promise<UpscaleRoots> {
     censoredRoot: resolveCensoredRoot(outputRoot),
     upscaledRoot: resolveUpscaledRoot(outputRoot),
     upscaledCensoredRoot: resolveUpscaledCensoredRoot(outputRoot),
+    backCoverRoot: resolveBackCoverRoot(outputRoot),
   };
+}
+
+/**
+ * Ghép bìa sau từ 12 artwork (job.indexInBatch 1-12) của batch, đọc từ ảnh
+ * GỐC (không dùng bản đã che). Đây là bước phụ cộng thêm cuối `upscaleBatch`:
+ * lỗi ở đây chỉ đánh dấu `backCoverStatus:"failed"` trên batch, không bao giờ
+ * ném ra ngoài -- không được phép làm hỏng kết quả upscale của 13 ảnh chính.
+ * Batch không có artwork nào (0 job indexInBatch >= 1) -> bỏ qua, trả "skipped".
+ */
+async function buildBackCover(
+  batchId: string,
+  format: CalendarFormat,
+  roots: UpscaleRoots,
+): Promise<"done" | "failed" | "skipped"> {
+  try {
+    const images = await prisma.generatedImage.findMany({
+      where: { job: { batchId, indexInBatch: { gte: 1 } } },
+      include: { job: true },
+      orderBy: { job: { indexInBatch: "asc" } },
+    });
+    if (images.length === 0) return "skipped";
+
+    const geom = await loadBackCoverGeometry(format.id);
+    if (!geom) return "skipped";
+
+    const buffers = await Promise.all(
+      images.map((image) => fs.readFile(resolveSafePath(roots.outputRoot, image.relativePath))),
+    );
+    const composed = await composeBackCover(buffers, geom);
+
+    const relativePath = path.posix.join(batchId, "back_cover.png");
+    const outPath = resolveSafePath(roots.backCoverRoot, relativePath);
+    await fs.mkdir(path.dirname(outPath), { recursive: true });
+    await fs.writeFile(outPath, composed);
+
+    await prisma.generationBatch.update({
+      where: { id: batchId },
+      data: {
+        backCoverRelativePath: relativePath,
+        backCoverStatus: "done",
+        backCoverFormat: format.id,
+        backCoverWidth: geom.widthPx,
+        backCoverHeight: geom.heightPx,
+      },
+    });
+    return "done";
+  } catch (error) {
+    console.error(`[buildBackCover] lỗi ở batch ${batchId}:`, error);
+    await prisma.generationBatch.update({
+      where: { id: batchId },
+      data: { backCoverStatus: "failed", backCoverFormat: format.id },
+    });
+    return "failed";
+  }
 }
 
 /**
@@ -106,6 +165,7 @@ export interface UpscaleBatchResult {
   total: number;
   done: number;
   failed: number;
+  backCover: "done" | "failed" | "skipped";
 }
 
 /**
@@ -135,5 +195,7 @@ export async function upscaleBatch(batchId: string, formatId: string): Promise<U
     }
   }
 
-  return { total: images.length, done, failed };
+  const backCover = await buildBackCover(batchId, format, roots);
+
+  return { total: images.length, done, failed, backCover };
 }

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHistoryList, useResyncBatch, type HistoryFilters } from "@/hooks/use-history";
 import { QuickUpscaleButton } from "@/components/history/quick-upscale-button";
 import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
+import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Đang chờ",
@@ -32,13 +33,25 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
 
   const jobs = data?.pages.flatMap((page) => page.jobs) ?? [];
 
-  const groups: { batchId: string; ideaPrompt: string; createdAt: string; jobs: typeof jobs }[] = [];
+  const groups: {
+    batchId: string;
+    ideaPrompt: string;
+    createdAt: string;
+    backCoverStatus: "done" | "failed" | null;
+    jobs: typeof jobs;
+  }[] = [];
   for (const job of jobs) {
     const last = groups[groups.length - 1];
     if (last && last.batchId === job.batchId) {
       last.jobs.push(job);
     } else {
-      groups.push({ batchId: job.batchId, ideaPrompt: job.batch.ideaPrompt, createdAt: job.batch.createdAt, jobs: [job] });
+      groups.push({
+        batchId: job.batchId,
+        ideaPrompt: job.batch.ideaPrompt,
+        createdAt: job.batch.createdAt,
+        backCoverStatus: job.batch.backCoverStatus,
+        jobs: [job],
+      });
     }
   }
 
@@ -64,6 +77,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
             <p className="text-sm font-medium">{group.ideaPrompt}</p>
             <div className="flex flex-wrap items-center gap-2">
               <BatchUpscaleButton batchId={group.batchId} />
+              <BackCoverDownloadButton batchId={group.batchId} status={group.backCoverStatus} />
               {group.jobs.some((job) => job.status !== "completed") && (
                 <Button
                   variant="ghost"

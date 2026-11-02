@@ -12,7 +12,7 @@ export function useUpscaleImage() {
 }
 
 export interface UpscaleBatchResponse extends GenerationBatchDTO {
-  upscaleResult: { total: number; done: number; failed: number };
+  upscaleResult: { total: number; done: number; failed: number; backCover: "done" | "failed" | "skipped" };
 }
 
 export function useUpscaleBatch() {

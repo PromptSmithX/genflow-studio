@@ -162,7 +162,10 @@ TÊN + NĂM in trên trang bìa:
 
 RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
-  ánh sáng + góc máy, phong cách editorial/tạp chí.
+  ánh sáng + góc máy, chất ảnh editorial/điện ảnh cao cấp. NHƯNG mỗi ảnh LUÔN là MỘT tấm ảnh chụp
+  DUY NHẤT, LIỀN MẠCH — TUYỆT ĐỐI KHÔNG phải trang tạp chí trải đôi / dàn 2 trang / ảnh ghép so sánh /
+  cận mặt + toàn thân ghép cạnh nhau. KHÔNG dùng cụm "magazine spread", "magazine layout",
+  "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
 - Giữ CÙNG MỘT nhân vật/phong cách cho cả bộ; giữa các ảnh chỉ đổi bối cảnh/tư thế/góc máy/trang phục.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
@@ -172,6 +175,11 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - Vì khung ngang, ưu tiên khung hình lấp đầy tự nhiên (medium shot / half-body / cận cảnh / toàn cảnh
   môi trường); nếu chụp toàn thân thì giữ chủ thể ĐỦ LỚN trong khung (tránh toàn thân từ quá xa làm
   model vẽ sai tỉ lệ đầu/thân, đầu to) — nhưng không ép riêng một tư thế nào.
+- KHÔNG TRỘN 2 CỰ LY CHỤP trong CÙNG một ảnh: mô tả độ chi tiết + ống kính phải KHỚP với một cự ly duy
+  nhất. Nếu chụp TOÀN THÂN (full-body, head-to-toe) → dùng ống rộng (vd "35mm"), tả dáng người + bối
+  cảnh, và BỎ các token macro khuôn mặt ("visible pores", "subsurface scattering", "detailed eyes",
+  "85mm"). Chỉ khi chụp CẬN MẶT mới dùng macro da/"85mm". Trộn cả hai khiến model tách ảnh thành 2 khung
+  (một cận mặt, một toàn thân).
 
 QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
 - Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
@@ -179,6 +187,10 @@ QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống 
   chọi nhau khiến model (chạy Turbo) vẽ ra 2 dải tách rời cắt ngang ảnh.
 - KHÔNG dùng các cụm gây tách khung: "split", "split composition", "collage", "diptych", "panel",
   "divided frame", "two scenes", "two backgrounds", "upper half ... lower half".
+- KHÔNG dùng từ so sánh/nhân đôi trong "positive" của MỘT ảnh: "the same", "identical", "twin", "again",
+  "side by side" — các từ này khiến model vẽ lại nhân vật thành 2 bản cạnh nhau. Sự NHẤT QUÁN nhân vật
+  qua cả bộ đạt được bằng cách LẶP LẠI các ĐẶC ĐIỂM cố định (màu & kiểu tóc, màu mắt, khuôn mặt, dáng
+  người, độ tuổi), KHÔNG bằng chữ "the same".
 - Vùng trống để đặt chữ PHẢI là MỘT PHẦN CỦA CHÍNH cảnh đó, nhìn tự nhiên (không phải một dải/khối màu
   riêng dán vào). Chọn vùng trống HỢP với loại cảnh — tự suy ra tương tự cho mọi ý tưởng mới:
   • Ngoài trời / vườn hoa: khoảng trời phía trên, hoặc mảng lá/hoa out-of-focus (bokeh).
@@ -247,7 +259,7 @@ Số phần tử trong "images" phải đúng bằng số ảnh được yêu c�
  * việc LLM có tự viết hay không.
  */
 export const SINGLE_SUBJECT_QUALITY_TAGS =
-  "solo, one person only, single subject, natural body proportions, correct head-to-body ratio, anatomically correct hands";
+  "solo, one person only, single subject, natural body proportions, correct head-to-body ratio, anatomically correct hands, single uninterrupted photograph, one seamless full-frame shot";
 
 /**
  * Tag khung ép qua mergeTags ở route /suggest (KHÔNG nằm trong system prompt →

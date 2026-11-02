@@ -11,6 +11,7 @@ import { useBatch } from "@/hooks/use-generations";
 import { useRegenerateJob } from "@/hooks/use-history";
 import { QuickUpscaleButton } from "@/components/history/quick-upscale-button";
 import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
+import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 import type { JobStatusDTO } from "@/lib/types";
 
 const STATUS_LABEL: Record<JobStatusDTO, string> = {
@@ -70,6 +71,7 @@ export function BatchTracker({ batchId, onReset }: { batchId: string; onReset: (
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <BatchUpscaleButton batchId={batchId} />
+            <BackCoverDownloadButton batchId={batchId} status={batch.backCoverStatus} />
             <Button variant="outline" size="sm" render={<Link href="/history">Mở lịch sử</Link>} />
             <Button variant="ghost" size="sm" onClick={onReset}>
               Tạo batch mới

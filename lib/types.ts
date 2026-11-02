@@ -102,9 +102,21 @@ export interface GenerationBatchDTO {
   createdAt: string;
   updatedAt: string;
   jobs: GenerationJobDTO[];
+  backCoverRelativePath: string | null;
+  backCoverStatus: "done" | "failed" | null;
+  backCoverFormat: string | null;
+  backCoverWidth: number | null;
+  backCoverHeight: number | null;
 }
 
 export interface HistoryListResponse {
-  jobs: (GenerationJobDTO & { batch: { id: string; ideaPrompt: string; createdAt: string } })[];
+  jobs: (GenerationJobDTO & {
+    batch: {
+      id: string;
+      ideaPrompt: string;
+      createdAt: string;
+      backCoverStatus: "done" | "failed" | null;
+    };
+  })[];
   nextCursor: string | null;
 }

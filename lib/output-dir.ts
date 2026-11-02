@@ -41,3 +41,15 @@ export function resolveUpscaledCensoredRoot(outputRoot: string): string {
   const base = path.basename(outputRoot);
   return path.join(parent, `${base}_upscaled_censored`);
 }
+
+/**
+ * Where the composited back-cover image of a batch (12 artworks collaged into
+ * one print-page) lives, as a sibling of the output root -- e.g.
+ * "../data/outputs" -> "../data/outputs_backcovers". One file per batch, at
+ * "<batchId>/back_cover.png".
+ */
+export function resolveBackCoverRoot(outputRoot: string): string {
+  const parent = path.dirname(outputRoot);
+  const base = path.basename(outputRoot);
+  return path.join(parent, `${base}_backcovers`);
+}

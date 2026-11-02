@@ -138,6 +138,17 @@ model GenerationBatch {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  // Bìa sau ghép từ 12 artwork (indexInBatch 1-12) của chính batch này, tạo
+  // tự động cuối lib/generations/upscale-image.ts::upscaleBatch. null = chưa
+  // tạo (batch cũ trước khi có tính năng này, hoặc batch chưa upscale lần nào).
+  backCoverRelativePath String?
+  // "done" | "failed" | null.
+  backCoverStatus       String?
+  // id khổ template lịch đã ghép theo, vd "premade_wall_11x8_5".
+  backCoverFormat       String?
+  backCoverWidth        Int?
+  backCoverHeight       Int?
+
   jobs GenerationJob[]
 
   @@index([createdAt])

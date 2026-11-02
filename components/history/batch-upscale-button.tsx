@@ -43,12 +43,14 @@ export function BatchUpscaleButton({ batchId, className }: { batchId: string; cl
       { batchId, formatId },
       {
         onSuccess: (data) => {
-          const { total, done, failed } = data.upscaleResult;
+          const { total, done, failed, backCover } = data.upscaleResult;
           if (failed > 0) {
             toast.error(`Hoàn thiện ${done}/${total} ảnh, ${failed} ảnh lỗi`);
           } else {
             toast.success(`Đã hoàn thiện ${done}/${total} ảnh để in`);
           }
+          if (backCover === "done") toast.success("Đã tạo bìa sau");
+          else if (backCover === "failed") toast.error("Tạo bìa sau thất bại");
         },
         onError: (e) => toast.error(e instanceof Error ? e.message : "Hoàn thiện thất bại"),
       },

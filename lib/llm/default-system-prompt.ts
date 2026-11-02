@@ -314,7 +314,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 3. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
 
 4. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh.
-5. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, bối cảnh phải khác nhau nhưng phải giữ được đặc trưng nếu có nhắc đến và đồng nhất khuôn mặt qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy `;
+5. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy `;
 
 export interface ComposeUserMessageInput {
   request: string;

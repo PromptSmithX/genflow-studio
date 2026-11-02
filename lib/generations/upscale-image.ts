@@ -30,7 +30,7 @@ interface UpscaleRoots {
 async function upscaleOneImage(image: GeneratedImage, format: CalendarFormat, roots: UpscaleRoots): Promise<GeneratedImage> {
   try {
     const src = await fs.readFile(resolveSafePath(roots.outputRoot, image.relativePath));
-    const out = await upscaleToSize(src, format.widthPx, format.heightPx);
+    const out = await upscaleToSize(src, format);
     const outPath = resolveSafePath(roots.upscaledRoot, image.relativePath);
     await fs.mkdir(path.dirname(outPath), { recursive: true });
     await fs.writeFile(outPath, out);
@@ -46,7 +46,7 @@ async function upscaleOneImage(image: GeneratedImage, format: CalendarFormat, ro
   if (image.maskedRelativePath) {
     try {
       const srcMasked = await fs.readFile(resolveSafePath(roots.censoredRoot, image.maskedRelativePath));
-      const outMasked = await upscaleToSize(srcMasked, format.widthPx, format.heightPx);
+      const outMasked = await upscaleToSize(srcMasked, format);
       const outMaskedPath = resolveSafePath(roots.upscaledCensoredRoot, image.maskedRelativePath);
       await fs.mkdir(path.dirname(outMaskedPath), { recursive: true });
       await fs.writeFile(outMaskedPath, outMasked);

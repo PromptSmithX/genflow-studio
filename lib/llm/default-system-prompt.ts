@@ -252,9 +252,10 @@ export const SINGLE_SUBJECT_QUALITY_TAGS =
 /**
  * Tag khung ép qua mergeTags ở route /suggest (KHÔNG nằm trong system prompt →
  * không tốn token context LLM). Giữ chủ thể nằm GỌN trong khung, chừa khoảng
- * trống quanh mép để ĐƯỜNG NỐI của lớp bezel (pad-safe-margin) rơi vào NỀN thay
- * vì cắt ngang qua người (lỗi "chôn chân"). Diễn đạt không khoá kiểu khung
- * (không ép "full body") để vẫn giữ đa dạng góc máy/tư thế.
+ * trống quanh mép để phần bị lò xo/lỗ treo/bleed/cover-crop (upscale lên khổ
+ * lịch) ăn vào rơi vào NỀN thay vì cắt ngang qua người (lỗi "chôn chân"). Diễn
+ * đạt không khoá kiểu khung (không ép "full body") để vẫn giữ đa dạng góc
+ * máy/tư thế.
  */
 export const FRAMING_MARGIN_TAGS =
   "subject fully inside the frame with breathing room, background visible around the subject, clear space above the head and below the body, subject not cropped or touching the frame edges";

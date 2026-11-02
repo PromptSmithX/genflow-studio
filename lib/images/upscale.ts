@@ -1,18 +1,24 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
+import type { CalendarFormat } from "@/lib/calendar/formats";
 
 /**
  * Phóng ảnh về ĐÚNG kích thước trang in của template lịch (ví dụ 3375×2625 cho
  * khổ 11×8.5 ở 300 DPI) bằng nội suy cục bộ -- không cần GPU/ComfyUI. Dùng
  * "cover + center-crop": scale theo cạnh lớn hơn rồi căn giữa, nên kết quả khít
- * đúng khổ, không méo tỉ lệ và không để lại viền trống. Vùng sát mép của ảnh
- * đầu vào đã là bezel mờ do padSafeMargin tạo ra, nên phần bị crop không ăn vào
- * nội dung thật.
+ * đúng khổ, không méo tỉ lệ và không để lại viền trống.
+ *
+ * Ảnh gen ra ở tỉ lệ ~1.21 (xem COVER_DEFAULT_WIDTH/HEIGHT ở
+ * assistant-create-form.tsx), cố ý chọn bằng-hoặc-vuông-hơn mọi khổ lịch hiện
+ * có -- nên cover-crop luôn cắt trên/dưới (không bao giờ cắt 2 bên, nơi chữ
+ * bìa nằm), và vì ảnh gốc không còn viền đệm nào (đã bỏ padSafeMargin), kết
+ * quả không có dải mờ.
  *
  * Đây là engine mặc định (nội suy). Nếu chất lượng chưa đủ nét khi in, có thể
  * thêm nhánh engine GPU (ComfyUI UpscaleModelLoader + ImageUpscaleWithModel) và
  * chọn engine qua settings -- chữ ký hàm này giữ nguyên để nơi gọi không đổi.
  */
-export async function upscaleToSize(input: Buffer, targetW: number, targetH: number): Promise<Buffer> {
+export async function upscaleToSize(input: Buffer, format: CalendarFormat): Promise<Buffer> {
+  const { widthPx: targetW, heightPx: targetH } = format;
   const image = await loadImage(input);
   const { width, height } = image;
 

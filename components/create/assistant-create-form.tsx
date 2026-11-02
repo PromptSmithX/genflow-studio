@@ -28,11 +28,13 @@ import { cn } from "@/lib/utils";
 type AdvancedParamField = "width" | "height" | "steps" | "cfg";
 type AdvancedParams = Record<AdvancedParamField, string>;
 
-// Mặc định ngang 4:3 -- khung ngang hợp bố cục bìa tạp chí/điện ảnh (model ảnh
-// tự vẽ chữ vào ảnh #1), tránh full-body đứng khung dọc dễ gây sai tỉ lệ
-// đầu/thân trên Turbo CFG=1.
+// Tỉ lệ ~1.21 (1152×952) khớp đúng khổ trang lịch (14×11.5"=1.213, 11×8.5"=1.286)
+// nên upscale chỉ là phóng to thuần: không viền mờ, không bao giờ cắt 2 bên (chữ
+// bìa an toàn), khổ rộng hơn chỉ hao một tí trên/dưới. Vẫn là khung NGANG hợp bố
+// cục bìa tạp chí/điện ảnh (model tự vẽ chữ vào ảnh #1), tránh full-body khung
+// dọc dễ sai tỉ lệ đầu/thân trên Turbo CFG=1. Áp cho cả batch (bìa + mọi trang).
 const COVER_DEFAULT_WIDTH = 1152;
-const COVER_DEFAULT_HEIGHT = 864;
+const COVER_DEFAULT_HEIGHT = 952;
 
 /**
  * Reads a field's current literal value out of the imported workflow JSON via

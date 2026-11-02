@@ -80,7 +80,7 @@ async function main() {
           name: "Người thực",
           description: "Ảnh chụp người thật, da/ánh sáng tự nhiên.",
           positivePrompt:
-            "photorealistic, real photography, raw photo, realistic skin texture with visible pores, subsurface scattering, natural skin imperfections, fine skin texture, subtle facial asymmetry, natural skin tones, soft natural window light, detailed eyes, sharp focus, high detail, depth of field, shot on Canon EOS R5, 85mm lens, film grain, 8k uhd",
+            "photorealistic, real photography, raw photo, realistic skin texture with visible pores, subsurface scattering, natural skin imperfections, fine skin texture, subtle facial asymmetry, natural skin tones, soft natural window light, detailed eyes, sharp focus, high detail, depth of field, film grain, 8k uhd",
           negativePrompt:
             "anime, cartoon, cel shading, illustration, painting, drawing, 3d render, cgi, doll, plastic skin, waxy skin",
           isActive: true,

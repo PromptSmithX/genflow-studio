@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHistoryList, useResyncBatch, type HistoryFilters } from "@/hooks/use-history";
+import { QuickUpscaleButton } from "@/components/history/quick-upscale-button";
+import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
+import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Đang chờ",
@@ -30,13 +33,25 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
 
   const jobs = data?.pages.flatMap((page) => page.jobs) ?? [];
 
-  const groups: { batchId: string; ideaPrompt: string; createdAt: string; jobs: typeof jobs }[] = [];
+  const groups: {
+    batchId: string;
+    ideaPrompt: string;
+    createdAt: string;
+    backCoverStatus: "done" | "failed" | null;
+    jobs: typeof jobs;
+  }[] = [];
   for (const job of jobs) {
     const last = groups[groups.length - 1];
     if (last && last.batchId === job.batchId) {
       last.jobs.push(job);
     } else {
-      groups.push({ batchId: job.batchId, ideaPrompt: job.batch.ideaPrompt, createdAt: job.batch.createdAt, jobs: [job] });
+      groups.push({
+        batchId: job.batchId,
+        ideaPrompt: job.batch.ideaPrompt,
+        createdAt: job.batch.createdAt,
+        backCoverStatus: job.batch.backCoverStatus,
+        jobs: [job],
+      });
     }
   }
 
@@ -58,9 +73,11 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
     <div className="space-y-6">
       {groups.map((group) => (
         <div key={group.batchId} className="space-y-2">
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
             <p className="text-sm font-medium">{group.ideaPrompt}</p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <BatchUpscaleButton batchId={group.batchId} />
+              <BackCoverDownloadButton batchId={group.batchId} status={group.backCoverStatus} />
               {group.jobs.some((job) => job.status !== "completed") && (
                 <Button
                   variant="ghost"
@@ -77,28 +94,36 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {group.jobs.map((job) => (
-              <Link
+              <div
                 key={job.id}
-                href={`/history/${job.id}`}
-                className="group relative block aspect-square overflow-hidden rounded-md border bg-muted"
+                className="group relative aspect-square overflow-hidden rounded-md border bg-muted"
               >
-                {job.images[0] ? (
-                  <Image
-                    src={`/api/images/${job.images[0].id}`}
-                    alt={job.styleNameSnapshot ?? "Ảnh đã tạo"}
-                    fill
-                    unoptimized
-                    className="object-cover transition-transform group-hover:scale-105"
+                <Link href={`/history/${job.id}`} className="block h-full w-full">
+                  {job.images[0] ? (
+                    <Image
+                      src={`/api/images/${job.images[0].id}`}
+                      alt={job.styleNameSnapshot ?? "Ảnh đã tạo"}
+                      fill
+                      unoptimized
+                      className="object-cover transition-transform group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                      {STATUS_LABEL[job.status]}
+                    </div>
+                  )}
+                  <Badge variant="secondary" className="absolute bottom-1.5 left-1.5 text-[10px]">
+                    {job.styleNameSnapshot ?? "—"}
+                  </Badge>
+                </Link>
+                {job.images[0] && (
+                  <QuickUpscaleButton
+                    imageId={job.images[0].id}
+                    done={job.images[0].upscaleStatus === "done"}
+                    className="absolute right-1.5 top-1.5"
                   />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    {STATUS_LABEL[job.status]}
-                  </div>
                 )}
-                <Badge variant="secondary" className="absolute bottom-1.5 left-1.5 text-[10px]">
-                  {job.styleNameSnapshot ?? "—"}
-                </Badge>
-              </Link>
+              </div>
             ))}
           </div>
         </div>

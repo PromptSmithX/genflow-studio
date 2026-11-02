@@ -138,6 +138,17 @@ model GenerationBatch {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  // Bìa sau ghép từ 12 artwork (indexInBatch 1-12) của chính batch này, tạo
+  // tự động cuối lib/generations/upscale-image.ts::upscaleBatch. null = chưa
+  // tạo (batch cũ trước khi có tính năng này, hoặc batch chưa upscale lần nào).
+  backCoverRelativePath String?
+  // "done" | "failed" | null.
+  backCoverStatus       String?
+  // id khổ template lịch đã ghép theo, vd "premade_wall_11x8_5".
+  backCoverFormat       String?
+  backCoverWidth        Int?
+  backCoverHeight       Int?
+
   jobs GenerationJob[]
 
   @@index([createdAt])
@@ -208,6 +219,17 @@ model GeneratedImage {
   maskedRelativePath String?
   // "censored" | "clean" | "failed" | "skipped" | null.
   maskStatus         String?
+  // Bản phóng to để in lịch (upscale cục bộ, lib/images/upscale.ts). Bản gốc
+  // nằm trong *_upscaled, bản đã che nằm trong *_upscaled_censored. null = chưa
+  // upscale.
+  upscaledRelativePath       String?
+  upscaledMaskedRelativePath String?
+  // "done" | "failed" | null.
+  upscaleStatus              String?
+  upscaledWidth              Int?
+  upscaledHeight             Int?
+  // id khổ template lịch đã upscale theo, vd "premade_wall_11x8_5".
+  upscaleFormat              String?
   createdAt          DateTime @default(now())
 
   job GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)

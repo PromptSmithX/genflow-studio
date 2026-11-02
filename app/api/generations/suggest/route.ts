@@ -96,6 +96,13 @@ export async function POST(request: NextRequest) {
     // Các cụm khiến model băm khung thành nhiều cảnh/dải tách rời (ảnh bị chia đôi).
     const SPLIT_TAGS_REGEX =
       /\b(split\s*(composition|screen|frame)?|collage|diptych|triptych|(two|multiple|split)\s+(scenes|backgrounds|panels)|divided\s+frame|panel\s+layout|(upper|top|bottom|lower)\s+half\s+[a-z ]*?(lower|bottom|top|upper)\s+half)\b/gi;
+    // CHỈ REAL: các cụm "nhân đôi chủ thể" mà LLM có thể lỡ viết (vd "same
+    // consistent face and body") khiến model vẽ 2 bản người y hệt cạnh nhau.
+    // Negative bị ZeroOut (Turbo) nên phải xoá ở positive. KHÔNG dùng "same" trần
+    // để giữ các cụm tốt như "same outfit"/"same hairstyle"; chỉ nhắm "same + danh
+    // từ chỉ người/khuôn mặt" và các từ nhân đôi tường minh.
+    const DUP_SUBJECT_REGEX =
+      /\b((the\s+)?same\s+(consistent\s+)?(faces?(\s+and\s+body)?|bodies|body|woman|women|girl|girls|person|people|model|models|character|characters|subject|subjects)|consistent\s+faces?(\s+and\s+body)?|identical|twins?|side\s+by\s+side|duplicated?|mirror(ed)?(\s+image)?|cloned?)\b/gi;
     const CALENDAR_LABEL = "CALENDAR";
 
     result.images.forEach((image, index) => {
@@ -106,6 +113,17 @@ export async function POST(request: NextRequest) {
         .replace(SPLIT_TAGS_REGEX, "")
         .replace(/,\s*,/g, ",")
         .trim();
+
+      // Real-only: xoá cụm nhân đôi chủ thể (anime giữ nguyên hành vi cũ).
+      if (!isAnimeMedium) {
+        image.positive = image.positive
+          .replace(DUP_SUBJECT_REGEX, "")
+          .replace(/,(\s*,)+/g, ",")
+          .replace(/\s{2,}/g, " ")
+          .replace(/^\s*,\s*/g, "")
+          .replace(/,\s*$/g, "")
+          .trim();
+      }
 
       if (index !== 0) {
         image.title = undefined;

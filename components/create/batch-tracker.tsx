@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBatch } from "@/hooks/use-generations";
 import { useRegenerateJob } from "@/hooks/use-history";
+import { QuickUpscaleButton } from "@/components/history/quick-upscale-button";
+import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
+import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 import type { JobStatusDTO } from "@/lib/types";
 
 const STATUS_LABEL: Record<JobStatusDTO, string> = {
@@ -66,7 +69,9 @@ export function BatchTracker({ batchId, onReset }: { batchId: string; onReset: (
             <p className="font-medium">Batch: {batch.ideaPrompt}</p>
             <p className="text-xs text-muted-foreground">{batch.jobs.length} ảnh · trạng thái: {batch.status}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <BatchUpscaleButton batchId={batchId} />
+            <BackCoverDownloadButton batchId={batchId} status={batch.backCoverStatus} />
             <Button variant="outline" size="sm" render={<Link href="/history">Mở lịch sử</Link>} />
             <Button variant="ghost" size="sm" onClick={onReset}>
               Tạo batch mới
@@ -86,16 +91,23 @@ export function BatchTracker({ batchId, onReset }: { batchId: string; onReset: (
               {job.images.length > 0 ? (
                 <div className="grid grid-cols-2 gap-1">
                   {job.images.map((image) => (
-                    <Link key={image.id} href={`/history/${job.id}`} className="block overflow-hidden rounded-sm border">
-                      <Image
-                        src={`/api/images/${image.id}`}
-                        alt={job.styleNameSnapshot ?? "Ảnh đã tạo"}
-                        width={200}
-                        height={200}
-                        className="aspect-square w-full object-cover"
-                        unoptimized
+                    <div key={image.id} className="relative overflow-hidden rounded-sm border">
+                      <Link href={`/history/${job.id}`} className="block">
+                        <Image
+                          src={`/api/images/${image.id}`}
+                          alt={job.styleNameSnapshot ?? "Ảnh đã tạo"}
+                          width={200}
+                          height={200}
+                          className="aspect-square w-full object-cover"
+                          unoptimized
+                        />
+                      </Link>
+                      <QuickUpscaleButton
+                        imageId={image.id}
+                        done={image.upscaleStatus === "done"}
+                        className="absolute right-1 top-1"
                       />
-                    </Link>
+                    </div>
                   ))}
                 </div>
               ) : job.status === "failed" || job.status === "unknown" ? (

@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { AppSettings } from "@prisma/client";
+import { getDataRoot } from "@/lib/paths";
 
 /**
  * The output directory is a user-configurable DB value, so Turbopack
@@ -10,7 +11,7 @@ import type { AppSettings } from "@prisma/client";
 export function resolveOutputRoot(settings: AppSettings): string {
   return path.isAbsolute(settings.outputDirectory)
     ? settings.outputDirectory
-    : path.join(/* turbopackIgnore: true */ process.cwd(), settings.outputDirectory);
+    : path.join(/* turbopackIgnore: true */ getDataRoot(), settings.outputDirectory);
 }
 
 /**

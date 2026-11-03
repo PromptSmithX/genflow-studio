@@ -4,8 +4,9 @@ import { prisma } from "@/lib/db";
 import { resolveSafePath, buildWorkflowUploadFilename } from "@/lib/files/safe-output";
 import { guessNodeMapping, validateMapping } from "@/lib/comfyui/workflow-mapper";
 import type { NodeMapping, WorkflowApiJson } from "@/lib/comfyui/workflow-mapper";
+import { getDataRoot } from "@/lib/paths";
 
-export const WORKFLOW_ROOT = path.join(process.cwd(), "data", "workflows");
+export const WORKFLOW_ROOT = path.join(getDataRoot(), "workflows");
 
 export async function getWorkflowConfig() {
   return prisma.workflowConfig.findUnique({ where: { id: "main" } });

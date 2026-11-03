@@ -58,6 +58,14 @@ next-env.d.ts
 # prisma
 /prisma/dev.db*
 
+# Electron packaging: built/downloaded, never committed
+/resources/app/
+/resources/node/
+/resources/template/
+/resources/node-download.zip
+/dist-electron/
+/electron/secrets.json
+
 /RICEE_Calendar_Reusable_Templates_6/*
 /Printify_Premade_Grid_Calendar_Templates/*
 

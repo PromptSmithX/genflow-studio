@@ -32,7 +32,7 @@ async function main() {
         defaultCfg: 4.0,
         defaultSeedMode: "random",
         maxImagesPerBatch: 15,
-        outputDirectory: "data/outputs",
+        outputDirectory: "outputs",
       },
     });
     console.log("Seeded AppSettings.");

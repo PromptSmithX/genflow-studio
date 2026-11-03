@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { ConnectionBadge } from "@/components/app-shell/connection-badge";
+import { ConnectOnboarding } from "@/components/app-shell/connect-onboarding";
 
 const TITLES: Record<string, string> = {
   "/create": "Tạo ảnh",
@@ -27,6 +28,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           <h1 className="text-lg font-semibold tracking-tight">{titleFor(pathname ?? "")}</h1>
           <ConnectionBadge />
         </header>
+        <ConnectOnboarding />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>

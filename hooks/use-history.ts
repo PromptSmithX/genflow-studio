@@ -53,6 +53,18 @@ export function useRegenerateJob() {
   });
 }
 
+/**
+ * "Sửa lại" một ảnh lỗi TẠI CHỖ: LLM sinh prompt mới đúng vai trò (bìa/artwork),
+ * giữ seed chung batch. Xem app/api/history/[jobId]/regenerate-fresh/route.ts.
+ */
+export function useRegenerateFresh() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) => apiPost<GenerationBatchDTO>(`/api/history/${jobId}/regenerate-fresh`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["history"] }),
+  });
+}
+
 export function useResyncBatch() {
   const queryClient = useQueryClient();
   return useMutation({

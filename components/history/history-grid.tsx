@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHistoryList, useResyncBatch, type HistoryFilters } from "@/hooks/use-history";
 import { QuickUpscaleButton } from "@/components/history/quick-upscale-button";
+import { RegenerateButton } from "@/components/history/regenerate-button";
 import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
 import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 import { OpenFolderButton } from "@/components/history/open-folder-button";
@@ -126,11 +127,17 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
                   </Badge>
                 </Link>
                 {job.images[0] && (
-                  <QuickUpscaleButton
-                    imageId={job.images[0].id}
-                    done={job.images[0].upscaleStatus === "done"}
-                    className="absolute right-1.5 top-1.5"
-                  />
+                  <>
+                    <QuickUpscaleButton
+                      imageId={job.images[0].id}
+                      done={job.images[0].upscaleStatus === "done"}
+                      className="absolute right-1.5 top-1.5"
+                    />
+                    <RegenerateButton
+                      jobId={job.id}
+                      className="absolute left-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100"
+                    />
+                  </>
                 )}
               </div>
             ))}

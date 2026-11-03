@@ -142,6 +142,7 @@ export function AssistantCreateForm() {
     createMutation.mutate(
       {
         ideaPrompt: requestText.trim(),
+        mediumId: mediumId || undefined,
         images: suggestions.images.map((image) => ({
           positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
           negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,

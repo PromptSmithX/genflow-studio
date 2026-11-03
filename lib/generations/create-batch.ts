@@ -98,6 +98,7 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
       ideaPrompt: batchLabel,
       requestedCount: input.images.length,
       status: "queued",
+      mediumId: input.mediumId ?? null,
     },
   });
 

@@ -9,6 +9,7 @@ export const imageRequestSchema = z.object({
 
 export const createGenerationSchema = z.object({
   styleId: z.string().min(1).optional().nullable(),
+  mediumId: z.string().min(1).optional().nullable(),
   ideaPrompt: z.string().trim().max(2000).optional(),
   images: z.array(imageRequestSchema).min(1).max(15),
   width: z.number().int().min(64).max(4096).optional(),

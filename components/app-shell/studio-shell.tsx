@@ -7,7 +7,7 @@ import { ConnectionBadge } from "@/components/app-shell/connection-badge";
 const TITLES: Record<string, string> = {
   "/create": "Tạo ảnh",
   "/prompts": "Thư viện prompt",
-  "/history": "Lịch sử",
+  "/history": "Kết quả",
   "/settings": "Cài đặt",
 };
 

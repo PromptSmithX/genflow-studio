@@ -149,6 +149,20 @@ model GenerationBatch {
   backCoverWidth        Int?
   backCoverHeight       Int?
 
+  // Bản export gọn (2 thư mục khong-che/da-che) tạo cuối upscaleBatch, xem
+  // lib/generations/upscale-image.ts::exportBatchFolders. null = chưa xuất.
+  // "done" | "failed" | null.
+  finalExportStatus         String?
+  // Slug thư mục con dưới finalRoot (từ buildBatchFolder), vd
+  // "2026-11-02_22-29_..._sf4u7b". null nếu chưa xuất hoặc xuất thất bại.
+  finalExportRelativePath   String?
+
+  // Medium (Người thực/Anime...) đã chọn khi tạo batch qua Trợ lý AI -- quyết
+  // định system prompt REAL vs ANIME. null = batch cũ trước khi có trường này,
+  // hoặc không tạo qua Trợ lý AI. Dùng lại ở lib/generations/regenerate-fresh.ts
+  // để "Sửa lại" 1 ảnh sinh đúng phong cách gốc của batch.
+  mediumId String?
+
   jobs GenerationJob[]
 
   @@index([createdAt])

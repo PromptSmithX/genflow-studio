@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Wand2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { BatchTracker } from "@/components/create/batch-tracker";
 import { useMediums } from "@/hooks/use-mediums";
 import { useSettings } from "@/hooks/use-settings";
 import { useWorkflow } from "@/hooks/use-workflow";
@@ -60,13 +60,13 @@ export function AssistantCreateForm() {
   const { state: connectionState } = useHeaderConnectionState();
   const suggestMutation = useSuggestPrompts();
   const createMutation = useCreateGeneration();
+  const router = useRouter();
 
   const activeMediums = useMemo(() => (mediums ?? []).filter((m) => m.isActive), [mediums]);
 
   const [requestText, setRequestText] = useState("");
   const [imageCount, setImageCount] = useState(12);
   const [mediumId, setMediumId] = useState("");
-  const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [params, setParams] = useState<AdvancedParams>({ width: "", height: "", steps: "", cfg: "" });
 
   // Không còn lựa chọn "để AI tự quyết" -- luôn chọn sẵn kiểu ảnh đầu tiên
@@ -142,6 +142,7 @@ export function AssistantCreateForm() {
     createMutation.mutate(
       {
         ideaPrompt: requestText.trim(),
+        mediumId: mediumId || undefined,
         images: suggestions.images.map((image) => ({
           positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
           negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,
@@ -157,18 +158,14 @@ export function AssistantCreateForm() {
       },
       {
         onSuccess: (batch) => {
-          setActiveBatchId(batch.id);
           toast.success(`Đã gửi ${batch.jobs.length} ảnh để tạo`);
+          router.push("/history");
         },
         onError: (error) => {
           toast.error(error instanceof ApiRequestError ? error.message : "Tạo ảnh thất bại");
         },
       },
     );
-  }
-
-  if (activeBatchId) {
-    return <BatchTracker batchId={activeBatchId} onReset={() => setActiveBatchId(null)} />;
   }
 
   return (

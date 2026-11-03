@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/create", label: "Tạo ảnh", icon: ImagePlus },
-  { href: "/history", label: "Lịch sử", icon: History },
+  { href: "/history", label: "Kết quả", icon: History },
   { href: "/settings", label: "Cài đặt", icon: Settings },
 ];
 

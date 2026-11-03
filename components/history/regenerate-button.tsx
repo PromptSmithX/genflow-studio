@@ -29,17 +29,17 @@ export function RegenerateButton({ jobId, className }: { jobId: string; classNam
   return (
     <Button
       type="button"
-      size="icon-sm"
-      variant="secondary"
+      size="icon-lg"
+      variant="default"
       onClick={handleClick}
       disabled={regenerateMutation.isPending}
       title="Sửa lại — tạo prompt mới"
-      className={cn("shadow-sm", className)}
+      className={cn("h-14 w-14 rounded-full shadow-lg", className)}
     >
       {regenerateMutation.isPending ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <Loader2 className="size-6 animate-spin" />
       ) : (
-        <RotateCcw className="h-3.5 w-3.5" />
+        <RotateCcw className="size-6" />
       )}
     </Button>
   );

@@ -128,6 +128,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
                 </Link>
                 {job.images[0] && (
                   <>
+                    <div className="pointer-events-none absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
                     <QuickUpscaleButton
                       imageId={job.images[0].id}
                       done={job.images[0].upscaleStatus === "done"}
@@ -135,7 +136,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
                     />
                     <RegenerateButton
                       jobId={job.id}
-                      className="absolute left-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 scale-90 opacity-0 transition-all duration-150 group-hover:scale-100 group-hover:opacity-100"
                     />
                   </>
                 )}

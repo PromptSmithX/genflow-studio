@@ -3,13 +3,14 @@ import path from "node:path";
 import type { GeneratedImage } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getOrCreateSettings } from "@/lib/settings";
-import { resolveSafePath } from "@/lib/files/safe-output";
+import { resolveSafePath, buildBatchFolder } from "@/lib/files/safe-output";
 import {
   resolveOutputRoot,
   resolveCensoredRoot,
   resolveUpscaledRoot,
   resolveUpscaledCensoredRoot,
   resolveBackCoverRoot,
+  resolveFinalRoot,
 } from "@/lib/output-dir";
 import { upscaleToSize } from "@/lib/images/upscale";
 import { listCalendarFormats, type CalendarFormat } from "@/lib/calendar/formats";
@@ -22,6 +23,7 @@ interface UpscaleRoots {
   upscaledRoot: string;
   upscaledCensoredRoot: string;
   backCoverRoot: string;
+  finalRoot: string;
 }
 
 /**
@@ -89,6 +91,7 @@ async function buildRoots(): Promise<UpscaleRoots> {
     upscaledRoot: resolveUpscaledRoot(outputRoot),
     upscaledCensoredRoot: resolveUpscaledCensoredRoot(outputRoot),
     backCoverRoot: resolveBackCoverRoot(outputRoot),
+    finalRoot: resolveFinalRoot(outputRoot),
   };
 }
 
@@ -146,6 +149,89 @@ async function buildBackCover(
   }
 }
 
+function finalExportSlotName(indexInBatch: number): string {
+  return indexInBatch === 0 ? "00_bia-truoc.png" : `${String(indexInBatch).padStart(2, "0")}.png`;
+}
+
+/**
+ * Xuất bản COPY gọn gàng, sẵn sàng đem in cho một batch, thành 2 thư mục con
+ * dưới `finalRoot/<slug>/`:
+ * - `khong-che/`: 14 ảnh KHÔNG che (bìa trước + 12 artwork + bìa sau).
+ * - `da-che/`: 13 ảnh ĐÃ che (bìa trước + 12 artwork) + bìa sau KHÔNG che.
+ * `slug` tái tạo bằng `buildBatchFolder` (xác định, khớp đúng folder ComfyUI đã
+ * ghi khi sync -- xem lib/comfyui/job-sync.ts). Đây là bước phụ CỘNG THÊM cuối
+ * `upscaleBatch`, chỉ đọc dữ liệu đã có (không đụng upscale/censor/back-cover
+ * logic); lỗi chỉ đánh dấu `finalExportStatus:"failed"`, không ném ra ngoài.
+ * Thư mục con bị xoá sạch trước khi ghi lại để bấm lại không để lại rác.
+ */
+async function exportBatchFolders(batchId: string, roots: UpscaleRoots): Promise<"done" | "failed" | "skipped"> {
+  try {
+    const batch = await prisma.generationBatch.findUnique({ where: { id: batchId } });
+    if (!batch) return "skipped";
+
+    const images = await prisma.generatedImage.findMany({
+      where: { job: { batchId } },
+      include: { job: true },
+      orderBy: { job: { indexInBatch: "asc" } },
+    });
+    if (images.length === 0) return "skipped";
+
+    const slug = buildBatchFolder(batch);
+    const uncensoredDir = path.join(roots.finalRoot, slug, "khong-che");
+    const censoredDir = path.join(roots.finalRoot, slug, "da-che");
+
+    await fs.rm(uncensoredDir, { recursive: true, force: true });
+    await fs.rm(censoredDir, { recursive: true, force: true });
+    await fs.mkdir(uncensoredDir, { recursive: true });
+    await fs.mkdir(censoredDir, { recursive: true });
+
+    for (const image of images) {
+      const name = finalExportSlotName(image.job.indexInBatch);
+
+      if (image.upscaledRelativePath) {
+        try {
+          const src = resolveSafePath(roots.upscaledRoot, image.upscaledRelativePath);
+          await fs.copyFile(src, path.join(uncensoredDir, name));
+        } catch (error) {
+          console.error(`[exportBatchFolders] bỏ qua bản không che của ảnh ${image.id}:`, error);
+        }
+      }
+
+      if (image.upscaledMaskedRelativePath) {
+        try {
+          const src = resolveSafePath(roots.upscaledCensoredRoot, image.upscaledMaskedRelativePath);
+          await fs.copyFile(src, path.join(censoredDir, name));
+        } catch (error) {
+          console.error(`[exportBatchFolders] bỏ qua bản đã che của ảnh ${image.id}:`, error);
+        }
+      }
+    }
+
+    if (batch.backCoverStatus === "done" && batch.backCoverRelativePath) {
+      try {
+        const src = resolveSafePath(roots.backCoverRoot, batch.backCoverRelativePath);
+        await fs.copyFile(src, path.join(uncensoredDir, "13_bia-sau.png"));
+        await fs.copyFile(src, path.join(censoredDir, "13_bia-sau.png"));
+      } catch (error) {
+        console.error(`[exportBatchFolders] bỏ qua bìa sau của batch ${batchId}:`, error);
+      }
+    }
+
+    await prisma.generationBatch.update({
+      where: { id: batchId },
+      data: { finalExportStatus: "done", finalExportRelativePath: slug },
+    });
+    return "done";
+  } catch (error) {
+    console.error(`[exportBatchFolders] lỗi ở batch ${batchId}:`, error);
+    await prisma.generationBatch.update({
+      where: { id: batchId },
+      data: { finalExportStatus: "failed" },
+    });
+    return "failed";
+  }
+}
+
 /**
  * Phóng một ảnh đã tạo về đúng khổ trang in của template lịch `formatId`, cho
  * CẢ hai bản: bản gốc (relativePath -> *_upscaled) và bản đã che nếu có
@@ -166,6 +252,7 @@ export interface UpscaleBatchResult {
   done: number;
   failed: number;
   backCover: "done" | "failed" | "skipped";
+  finalExport: "done" | "failed" | "skipped";
 }
 
 /**
@@ -196,6 +283,7 @@ export async function upscaleBatch(batchId: string, formatId: string): Promise<U
   }
 
   const backCover = await buildBackCover(batchId, format, roots);
+  const finalExport = await exportBatchFolders(batchId, roots);
 
-  return { total: images.length, done, failed, backCover };
+  return { total: images.length, done, failed, backCover, finalExport };
 }

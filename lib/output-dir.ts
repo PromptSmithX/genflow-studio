@@ -53,3 +53,16 @@ export function resolveBackCoverRoot(outputRoot: string): string {
   const base = path.basename(outputRoot);
   return path.join(parent, `${base}_backcovers`);
 }
+
+/**
+ * Where the tidy, ready-to-deliver export of a batch lives, as a sibling of the
+ * output root -- e.g. "../data/outputs" -> "../data/outputs_final". Per batch:
+ * "<slug>/khong-che/" (14 uncensored) and "<slug>/da-che/" (13 censored + the
+ * uncensored back cover), files renamed to print order. This is a COPY of the
+ * upscaled/censored/back-cover roots; those stay the internal source of truth.
+ */
+export function resolveFinalRoot(outputRoot: string): string {
+  const parent = path.dirname(outputRoot);
+  const base = path.basename(outputRoot);
+  return path.join(parent, `${base}_final`);
+}

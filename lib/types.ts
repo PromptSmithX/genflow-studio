@@ -107,6 +107,8 @@ export interface GenerationBatchDTO {
   backCoverFormat: string | null;
   backCoverWidth: number | null;
   backCoverHeight: number | null;
+  finalExportStatus: "done" | "failed" | null;
+  finalExportRelativePath: string | null;
 }
 
 export interface HistoryListResponse {
@@ -116,6 +118,7 @@ export interface HistoryListResponse {
       ideaPrompt: string;
       createdAt: string;
       backCoverStatus: "done" | "failed" | null;
+      finalExportStatus: "done" | "failed" | null;
     };
   })[];
   nextCursor: string | null;

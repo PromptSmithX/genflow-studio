@@ -12,7 +12,13 @@ export function useUpscaleImage() {
 }
 
 export interface UpscaleBatchResponse extends GenerationBatchDTO {
-  upscaleResult: { total: number; done: number; failed: number; backCover: "done" | "failed" | "skipped" };
+  upscaleResult: {
+    total: number;
+    done: number;
+    failed: number;
+    backCover: "done" | "failed" | "skipped";
+    finalExport: "done" | "failed" | "skipped";
+  };
 }
 
 export function useUpscaleBatch() {
@@ -24,5 +30,12 @@ export function useUpscaleBatch() {
       queryClient.invalidateQueries({ queryKey: ["history"] });
       queryClient.invalidateQueries({ queryKey: ["generations", variables.batchId] });
     },
+  });
+}
+
+/** Mở Windows Explorer đúng thư mục file in đã xuất của batch (xem app/api/generations/[batchId]/reveal-folder). */
+export function useRevealFolder() {
+  return useMutation({
+    mutationFn: (batchId: string) => apiPost<{ ok: true }>(`/api/generations/${batchId}/reveal-folder`),
   });
 }

@@ -11,6 +11,7 @@ import { useHistoryList, useResyncBatch, type HistoryFilters } from "@/hooks/use
 import { QuickUpscaleButton } from "@/components/history/quick-upscale-button";
 import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
 import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
+import { OpenFolderButton } from "@/components/history/open-folder-button";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Đang chờ",
@@ -38,6 +39,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
     ideaPrompt: string;
     createdAt: string;
     backCoverStatus: "done" | "failed" | null;
+    finalExportStatus: "done" | "failed" | null;
     jobs: typeof jobs;
   }[] = [];
   for (const job of jobs) {
@@ -50,6 +52,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
         ideaPrompt: job.batch.ideaPrompt,
         createdAt: job.batch.createdAt,
         backCoverStatus: job.batch.backCoverStatus,
+        finalExportStatus: job.batch.finalExportStatus,
         jobs: [job],
       });
     }
@@ -66,7 +69,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
   }
 
   if (groups.length === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">Chưa có lịch sử tạo ảnh.</p>;
+    return <p className="py-10 text-center text-sm text-muted-foreground">Chưa có kết quả nào.</p>;
   }
 
   return (
@@ -74,10 +77,16 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
       {groups.map((group) => (
         <div key={group.batchId} className="space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <p className="text-sm font-medium">{group.ideaPrompt}</p>
+            <div>
+              <p className="text-sm font-medium">{group.ideaPrompt}</p>
+              <p className="text-xs text-muted-foreground">
+                Xem kỹ ảnh bên dưới. Ưng ý thì chọn khổ lịch rồi bấm &quot;Hoàn thiện &amp; xuất file in&quot;.
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <BatchUpscaleButton batchId={group.batchId} />
               <BackCoverDownloadButton batchId={group.batchId} status={group.backCoverStatus} />
+              <OpenFolderButton batchId={group.batchId} status={group.finalExportStatus} />
               {group.jobs.some((job) => job.status !== "completed") && (
                 <Button
                   variant="ghost"

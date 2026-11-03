@@ -149,6 +149,14 @@ model GenerationBatch {
   backCoverWidth        Int?
   backCoverHeight       Int?
 
+  // Bản export gọn (2 thư mục khong-che/da-che) tạo cuối upscaleBatch, xem
+  // lib/generations/upscale-image.ts::exportBatchFolders. null = chưa xuất.
+  // "done" | "failed" | null.
+  finalExportStatus         String?
+  // Slug thư mục con dưới finalRoot (từ buildBatchFolder), vd
+  // "2026-11-02_22-29_..._sf4u7b". null nếu chưa xuất hoặc xuất thất bại.
+  finalExportRelativePath   String?
+
   jobs GenerationJob[]
 
   @@index([createdAt])

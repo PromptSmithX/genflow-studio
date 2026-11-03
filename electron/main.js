@@ -19,6 +19,7 @@ function getPaths() {
       nodeBinary: path.join(resourcesDir, "node", "node.exe"),
       serverDir: path.join(resourcesDir, "app"),
       templateDb: path.join(resourcesDir, "template", "anima.sqlite"),
+      templateWorkflowDir: path.join(resourcesDir, "template", "workflows"),
     };
   }
   // Dev convenience path: `npm run build` then `npm run electron:dev`, using
@@ -31,6 +32,7 @@ function getPaths() {
     nodeBinary: "node",
     serverDir: path.join(root, ".next", "standalone"),
     templateDb: path.join(root, "resources", "template", "anima.sqlite"),
+    templateWorkflowDir: path.join(root, "resources", "template", "workflows"),
   };
 }
 
@@ -56,6 +58,18 @@ function ensureUserData(paths) {
       throw new Error(`Template DB not found at ${paths.templateDb}`);
     }
     fs.copyFileSync(paths.templateDb, dbPath);
+  }
+
+  // Mirror of the DB copy above: the seeded WorkflowConfig row (in the
+  // template DB) points at a filename that must exist under
+  // userData/workflows/ on first run, or the default workflow row would be
+  // orphaned (loadWorkflowJson throws ENOENT) -- see Feature 2 in the plan.
+  const workflowDir = path.join(dataRoot, "workflows");
+  if (!fs.existsSync(workflowDir) && fs.existsSync(paths.templateWorkflowDir)) {
+    fs.mkdirSync(workflowDir, { recursive: true });
+    for (const filename of fs.readdirSync(paths.templateWorkflowDir)) {
+      fs.copyFileSync(path.join(paths.templateWorkflowDir, filename), path.join(workflowDir, filename));
+    }
   }
 
   return { dataRoot, dbPath };
@@ -88,20 +102,10 @@ async function startServer() {
   const { dataRoot, dbPath } = ensureUserData(paths);
   const port = await getFreePort();
 
-  // The LLM key is embedded at build time into electron/secrets.json
-  // (gitignored, never committed -- copy electron/secrets.example.json and
-  // fill it in) and baked into the installer via electron-builder's
-  // extraResources -- see electron-builder.yml.
-  let llmApiKey = "";
-  try {
-    const secretsPath = app.isPackaged
-      ? path.join(process.resourcesPath, "secrets.json")
-      : path.join(__dirname, "secrets.json");
-    llmApiKey = JSON.parse(fs.readFileSync(secretsPath, "utf-8")).llmApiKey ?? "";
-  } catch {
-    // No secrets file -- the AI assistant will be disabled server-side.
-  }
-
+  // The LLM API key is NEVER embedded in this installer -- it lives only on
+  // the Colab gateway process (entered there via getpass), and the app calls
+  // it through the same ComfyUI tunnel URL (route "/llm"). See
+  // lib/llm/resolve-config.ts and the notebook's Cell 7.6/Cell 8.
   serverProcess = spawn(paths.nodeBinary, [path.join(paths.serverDir, "server.js")], {
     cwd: paths.serverDir,
     env: {
@@ -111,7 +115,6 @@ async function startServer() {
       PORT: String(port),
       ANIMA_DATA_DIR: dataRoot,
       DATABASE_URL: `file:${dbPath.replace(/\\/g, "/")}`,
-      LLM_API_KEY: llmApiKey,
     },
     windowsHide: true,
   });

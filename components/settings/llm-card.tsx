@@ -10,89 +10,46 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
 
-interface ProviderPreset {
-  id: string;
-  label: string;
-  baseUrl: string | null;
-  modelHint: string;
-}
-
-const PROVIDER_PRESETS: ProviderPreset[] = [
-  { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", modelHint: "vd: gpt-4o-mini, gpt-4o" },
-  { id: "xai", label: "xAI Grok", baseUrl: "https://api.x.ai/v1", modelHint: "vd: grok-4, grok-3, grok-3-mini (kiểm tra console xAI để biết model có sẵn)" },
-  { id: "groq", label: "Groq", baseUrl: "https://api.groq.com/openai/v1", modelHint: "vd: llama-3.3-70b-versatile" },
-  { id: "ollama", label: "Local — Ollama", baseUrl: "http://localhost:11434/v1", modelHint: "vd: llama3.1, qwen2.5 (tên model đã tải về)" },
-  { id: "lmstudio", label: "Local — LM Studio", baseUrl: "http://localhost:1234/v1", modelHint: "tên model đang load trong LM Studio" },
-  { id: "custom", label: "Tùy chỉnh", baseUrl: null, modelHint: "nhập base URL và model theo nhà cung cấp của bạn" },
-];
-
-const CUSTOM_PROVIDER = PROVIDER_PRESETS[PROVIDER_PRESETS.length - 1];
-
-function providerForBaseUrl(baseUrl: string): ProviderPreset {
-  return PROVIDER_PRESETS.find((p) => p.baseUrl && p.baseUrl === baseUrl.trim()) ?? CUSTOM_PROVIDER;
-}
-
+/**
+ * Trợ lý AI KHÔNG còn base URL/API key riêng -- nó đi qua cùng gateway Colab
+ * với ComfyUI (route "/llm" cạnh "/censor"); key thật chỉ nằm ở Colab (nhập
+ * bằng getpass, Cell 7.6 trong notebook), nên không bao giờ lộ khi app release
+ * lên GitHub hoặc đóng gói installer. Xem lib/llm/resolve-config.ts.
+ */
 export function LlmCard() {
   const { data, isLoading } = useSettings();
   const updateMutation = useUpdateSettings();
 
-  const [form, setForm] = useState({
-    llmBaseUrl: "",
-    llmModel: "",
-    llmSystemPrompt: "",
-    llmApiKey: "",
-  });
+  const [form, setForm] = useState({ llmModel: "", llmSystemPrompt: "" });
 
   const [syncedData, setSyncedData] = useState<typeof data>(undefined);
   if (data !== syncedData) {
     setSyncedData(data);
     if (data) {
-      setForm((f) => ({
-        ...f,
-        llmBaseUrl: data.llmBaseUrl ?? "",
+      setForm({
         llmModel: data.llmModel ?? "",
         llmSystemPrompt: data.llmSystemPrompt ?? "",
-      }));
+      });
     }
   }
 
   const hasUnsavedChanges =
     Boolean(data) &&
-    (form.llmBaseUrl !== (data!.llmBaseUrl ?? "") ||
-      form.llmModel !== (data!.llmModel ?? "") ||
-      form.llmSystemPrompt !== (data!.llmSystemPrompt ?? "") ||
-      form.llmApiKey !== "");
+    (form.llmModel !== (data!.llmModel ?? "") || form.llmSystemPrompt !== (data!.llmSystemPrompt ?? ""));
 
   function handleSave() {
     updateMutation.mutate(
       {
-        llmBaseUrl: form.llmBaseUrl || null,
         llmModel: form.llmModel || null,
         llmSystemPrompt: form.llmSystemPrompt || null,
-        ...(form.llmApiKey ? { llmApiKey: form.llmApiKey } : {}),
       },
       {
-        onSuccess: () => {
-          setForm((f) => ({ ...f, llmApiKey: "" }));
-          toast.success("Đã lưu cấu hình Trợ lý AI");
-        },
+        onSuccess: () => toast.success("Đã lưu cấu hình Trợ lý AI"),
         onError: (e) => toast.error(e instanceof Error ? e.message : "Lưu thất bại"),
       },
     );
-  }
-
-  const selectedProvider = providerForBaseUrl(form.llmBaseUrl);
-
-  function handleProviderChange(id: string) {
-    const preset = PROVIDER_PRESETS.find((p) => p.id === id);
-    if (preset && preset.baseUrl) {
-      setForm((f) => ({ ...f, llmBaseUrl: preset.baseUrl! }));
-    } else if (preset?.id === "custom") {
-      setForm((f) => ({ ...f, llmBaseUrl: "" }));
-    }
   }
 
   if (isLoading) {
@@ -109,76 +66,37 @@ export function LlmCard() {
       <CardHeader>
         <CardTitle>Trợ lý AI (chế độ tạo ảnh bằng mô tả)</CardTitle>
         <CardDescription>
-          Dùng một LLM theo chuẩn OpenAI (OpenAI, xAI Grok, Groq, hoặc server local như Ollama/LM Studio) để tự
-          viết yêu cầu chi tiết cho từng ảnh.
+          Dùng chung URL ComfyUI đã cấu hình ở trên để gọi LLM qua gateway Colab -- không cần nhập base URL hay API
+          key riêng ở đây; API key thật chỉ nằm ở Colab.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Nhà cung cấp</Label>
-          <Select value={selectedProvider.id} onValueChange={(v) => { if (typeof v === "string") handleProviderChange(v); }}>
-            <SelectTrigger className="w-full sm:w-72"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {PROVIDER_PRESETS.map((preset) => (
-                <SelectItem key={preset.id} value={preset.id}>
-                  {preset.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">Chọn nhà cung cấp để tự điền Base URL, hoặc chọn &quot;Tùy chỉnh&quot; để nhập tay.</p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="llm-base-url">Base URL (chuẩn OpenAI Chat Completions)</Label>
-            <Input
-              id="llm-base-url"
-              value={form.llmBaseUrl}
-              onChange={(e) => setForm((f) => ({ ...f, llmBaseUrl: e.target.value }))}
-              placeholder="https://api.openai.com/v1"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="llm-model">Model</Label>
-            <Input
-              id="llm-model"
-              value={form.llmModel}
-              onChange={(e) => setForm((f) => ({ ...f, llmModel: e.target.value }))}
-              placeholder="gpt-4o-mini"
-            />
-            <p className="text-xs text-muted-foreground">{selectedProvider.modelHint}</p>
-          </div>
+        <div className="flex items-center gap-1.5 text-xs">
+          {data?.hasLlmKey ? (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="text-emerald-700">Sẵn sàng (đã có URL ComfyUI)</span>
+            </>
+          ) : (
+            <>
+              <XCircle className="h-3.5 w-3.5 text-red-600" />
+              <span className="text-red-700">Chưa có URL ComfyUI -- cấu hình ở thẻ &quot;Kết nối ComfyUI&quot; phía trên</span>
+            </>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="llm-api-key">API key</Label>
+          <Label htmlFor="llm-model">Model (tuỳ chọn)</Label>
           <Input
-            id="llm-api-key"
-            type="password"
-            value={form.llmApiKey}
-            onChange={(e) => setForm((f) => ({ ...f, llmApiKey: e.target.value }))}
-            placeholder={data?.hasLlmKey ? "••••••••  (đã cấu hình qua biến môi trường)" : "Chưa cấu hình"}
+            id="llm-model"
+            value={form.llmModel}
+            onChange={(e) => setForm((f) => ({ ...f, llmModel: e.target.value }))}
+            placeholder="grok-4-fast-non-reasoning (mặc định phía Colab)"
           />
           <p className="text-xs text-muted-foreground">
-            API key không được lưu vào database. Đặt biến môi trường{" "}
-            <code className="rounded bg-muted px-1">LLM_API_KEY</code> trên server rồi khởi động lại ứng dụng. Key này
-            phải khớp với nhà cung cấp đang chọn ở trên — đổi nhà cung cấp thì nhớ đổi key trong{" "}
-            <code className="rounded bg-muted px-1">.env</code>.
+            Để trống để dùng model mặc định đã cấu hình phía Colab. Chỉ điền nếu bạn đã đổi model khác ở Cell 7.6
+            của notebook (biến <code className="rounded bg-muted px-1">LLM_MODEL</code>) và muốn app gửi đúng tên đó.
           </p>
-          <div className="flex items-center gap-1.5 text-xs">
-            {data?.hasLlmKey ? (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                <span className="text-emerald-700">Đã phát hiện API key trên server</span>
-              </>
-            ) : (
-              <>
-                <XCircle className="h-3.5 w-3.5 text-red-600" />
-                <span className="text-red-700">Chưa có API key trên server</span>
-              </>
-            )}
-          </div>
         </div>
 
         <div className="space-y-2">

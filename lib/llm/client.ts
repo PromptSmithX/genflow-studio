@@ -69,6 +69,10 @@ export class LlmClient {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // Bỏ qua trang interstitial của LocalTunnel/Cloudflare khi baseUrl đi
+          // qua gateway Colab -- mirror ComfyClient.headers() và
+          // censorViaHttp() (lib/comfyui/client.ts, lib/censor/run-censor.ts).
+          "bypass-tunnel-reminder": "1",
           ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
         },
         body: JSON.stringify({

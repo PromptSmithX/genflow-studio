@@ -30,10 +30,12 @@ export function redactSettings(settings: AppSettings) {
     defaultFixedSeed: settings.defaultFixedSeed ? Number(settings.defaultFixedSeed) : null,
     maxImagesPerBatch: settings.maxImagesPerBatch,
     outputDirectory: settings.outputDirectory,
-    llmBaseUrl: settings.llmBaseUrl,
     llmModel: settings.llmModel,
     llmSystemPrompt: settings.llmSystemPrompt,
-    hasLlmKey: Boolean(process.env.LLM_API_KEY),
+    // Trợ lý AI đi qua cùng tunnel ComfyUI (gateway Colab route "/llm", key
+    // thật giữ phía Colab) -- "sẵn sàng" chỉ còn phụ thuộc comfyBaseUrl, không
+    // còn base URL/API key riêng của app. Xem lib/llm/resolve-config.ts.
+    hasLlmKey: Boolean(settings.comfyBaseUrl),
     updatedAt: settings.updatedAt,
   };
 }

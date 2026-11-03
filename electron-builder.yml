@@ -12,8 +12,6 @@ extraResources:
     to: node
   - from: resources/template
     to: template
-  - from: electron/secrets.json
-    to: secrets.json
 win:
   target: nsis
   artifactName: "AnimaStudio-Setup-${version}.${ext}"

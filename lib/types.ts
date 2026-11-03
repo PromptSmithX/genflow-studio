@@ -16,7 +16,6 @@ export interface SettingsDTO {
   defaultFixedSeed: number | null;
   maxImagesPerBatch: number;
   outputDirectory: string;
-  llmBaseUrl: string | null;
   llmModel: string | null;
   llmSystemPrompt: string | null;
   hasLlmKey: boolean;
@@ -109,6 +108,9 @@ export interface GenerationBatchDTO {
   backCoverHeight: number | null;
   finalExportStatus: "done" | "failed" | null;
   finalExportRelativePath: string | null;
+  etsyTitle: string | null;
+  etsyDescription: string | null;
+  etsyTagsJson: string | null;
 }
 
 export interface HistoryListResponse {
@@ -119,6 +121,9 @@ export interface HistoryListResponse {
       createdAt: string;
       backCoverStatus: "done" | "failed" | null;
       finalExportStatus: "done" | "failed" | null;
+      etsyTitle: string | null;
+      etsyDescription: string | null;
+      etsyTagsJson: string | null;
     };
   })[];
   nextCursor: string | null;

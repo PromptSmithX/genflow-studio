@@ -37,4 +37,16 @@ function run(cmd, args) {
 run("npx", ["prisma", "migrate", "deploy"]);
 run("npx", ["prisma", "db", "seed"]);
 
+// prisma/seed.ts writes the default workflow JSON into the repo's own
+// data/workflows/ (ANIMA_DATA_DIR isn't set during this build script, so
+// getDataRoot() falls back to "<cwd>/data"). Copy that file alongside the
+// template DB so electron/main.js can bake + copy it into userData/workflows
+// on first run -- see Feature 2 (ship default workflow) in the plan.
+const workflowFilename = "default-workflow.json";
+const workflowSrc = path.join(root, "data", "workflows", workflowFilename);
+const workflowOutDir = path.join(outDir, "workflows");
+fs.mkdirSync(workflowOutDir, { recursive: true });
+fs.copyFileSync(workflowSrc, path.join(workflowOutDir, workflowFilename));
+
 console.log(`\nTemplate DB written to ${dbPath}`);
+console.log(`Default workflow written to ${path.join(workflowOutDir, workflowFilename)}`);

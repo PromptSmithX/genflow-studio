@@ -18,7 +18,7 @@
     "build:template-db": "node scripts/build-template-db.mjs",
     "build:node": "node scripts/download-node.mjs",
     "build:electron-resources": "node scripts/prepare-electron-resources.mjs",
-    "dist": "node -e \"const fs=require('fs');if(!fs.existsSync('electron/secrets.json'))fs.copyFileSync('electron/secrets.example.json','electron/secrets.json')\" && npm run build && npm run build:electron-resources && npm run build:template-db && electron-builder --win"
+    "dist": "npm run build && npm run build:electron-resources && npm run build:template-db && electron-builder --win"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

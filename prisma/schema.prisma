@@ -163,6 +163,14 @@ model GenerationBatch {
   // để "Sửa lại" 1 ảnh sinh đúng phong cách gốc của batch.
   mediumId String?
 
+  // Metadata Etsy (title/description/13 tags) cho CẢ bộ lịch này, do Trợ lý AI
+  // sinh kèm lúc /api/generations/suggest -- xem lib/llm/finalize-suggestion.ts
+  // ::finalizeEtsy. etsyTagsJson lưu mảng string dạng JSON. null = batch cũ
+  // trước khi có tính năng này, hoặc tạo không qua Trợ lý AI.
+  etsyTitle       String?
+  etsyDescription String?
+  etsyTagsJson    String?
+
   jobs GenerationJob[]
 
   @@index([createdAt])

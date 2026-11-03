@@ -13,6 +13,7 @@ import { RegenerateButton } from "@/components/history/regenerate-button";
 import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
 import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 import { OpenFolderButton } from "@/components/history/open-folder-button";
+import { EtsyMetadataCard } from "@/components/history/etsy-metadata-card";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Đang chờ",
@@ -41,6 +42,9 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
     createdAt: string;
     backCoverStatus: "done" | "failed" | null;
     finalExportStatus: "done" | "failed" | null;
+    etsyTitle: string | null;
+    etsyDescription: string | null;
+    etsyTagsJson: string | null;
     jobs: typeof jobs;
   }[] = [];
   for (const job of jobs) {
@@ -54,6 +58,9 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
         createdAt: job.batch.createdAt,
         backCoverStatus: job.batch.backCoverStatus,
         finalExportStatus: job.batch.finalExportStatus,
+        etsyTitle: job.batch.etsyTitle,
+        etsyDescription: job.batch.etsyDescription,
+        etsyTagsJson: job.batch.etsyTagsJson,
         jobs: [job],
       });
     }
@@ -102,6 +109,11 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
               <p className="shrink-0 text-xs text-muted-foreground">{new Date(group.createdAt).toLocaleString("vi-VN")}</p>
             </div>
           </div>
+          <EtsyMetadataCard
+            title={group.etsyTitle}
+            description={group.etsyDescription}
+            tagsJson={group.etsyTagsJson}
+          />
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {group.jobs.map((job) => (
               <div

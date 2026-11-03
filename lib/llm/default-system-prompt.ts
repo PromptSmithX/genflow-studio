@@ -130,6 +130,20 @@ TUYỆT ĐỐI KHÔNG dùng các từ: "copy space", "negative space", "clean si
 "title"/"year" (CHỈ ảnh #1): trả lại ĐÚNG tên và năm bạn đã dùng trong "positive" ở trên, để app đối
 chiếu (tên ngắn gọn, năm dạng số vd "2027").
 
+"etsy" (metadata để đăng bán CẢ BỘ LỊCH này trên Etsy -- VIẾT BẰNG TIẾNG ANH, văn phong marketplace
+sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm dù positive/negative có gì):
+- "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
+  Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
+  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
+- "description": khoảng 300-500 từ tiếng Anh. 2-3 câu đầu hook người đọc (mô tả sản phẩm + lợi ích),
+  sau đó bullet point các đặc điểm (số trang/tháng, kích thước, định dạng file...), kết thúc bằng một
+  câu kêu gọi hành động (call to action) mời mua.
+  "description" KHÔNG xuống dòng cứng mà dùng ký tự "\\n" để phân đoạn/bullet.
+- "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
+  nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
+  điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
+  mùa/dịp (vd "2027 calendar").
+
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
   "images": [
@@ -137,7 +151,8 @@ Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, kh
       "caption": "...", "title": "...", "year": "2027" },
     { "positive": "...(ảnh #2 = artwork, full-bleed, KHÔNG chữ)...", "caption": "..." }
   ],
-  "negative": "..."
+  "negative": "...",
+  "etsy": { "title": "...", "description": "...", "tags": ["...", "... (đúng 13 phần tử)"] }
 }
 Số phần tử trong "images" phải đúng bằng số ảnh được yêu cầu. CHỈ ảnh ĐẦU TIÊN có title/year.`;
 
@@ -240,6 +255,20 @@ TUYỆT ĐỐI KHÔNG dùng các từ: "copy space", "negative space", "clean si
 "title"/"year" (CHỈ ảnh #1): trả lại ĐÚNG tên và năm bạn đã dùng trong "positive" ở trên, để app đối
 chiếu (tên ngắn gọn, năm dạng số vd "2027").
 
+"etsy" (metadata để đăng bán CẢ BỘ LỊCH này trên Etsy -- VIẾT BẰNG TIẾNG ANH, văn phong marketplace
+sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm dù positive/negative có gì):
+- "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
+  Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
+  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
+- "description": khoảng 300-500 từ tiếng Anh. 2-3 câu đầu hook người đọc (mô tả sản phẩm + lợi ích),
+  sau đó bullet point các đặc điểm (số trang/tháng, kích thước, định dạng file...), kết thúc bằng một
+  câu kêu gọi hành động (call to action) mời mua.
+  "description" KHÔNG xuống dòng cứng mà dùng ký tự "\\n" để phân đoạn/bullet.
+- "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
+  nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
+  điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
+  mùa/dịp (vd "2027 calendar").
+
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
   "images": [
@@ -247,7 +276,8 @@ Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, kh
       "caption": "...", "title": "...", "year": "2027" },
     { "positive": "...(ảnh #2 = artwork, full-bleed, KHÔNG chữ)...", "caption": "..." }
   ],
-  "negative": "..."
+  "negative": "...",
+  "etsy": { "title": "...", "description": "...", "tags": ["...", "... (đúng 13 phần tử)"] }
 }
 Số phần tử trong "images" phải đúng bằng số ảnh được yêu cầu. CHỈ ảnh ĐẦU TIÊN có title/year.`;
 

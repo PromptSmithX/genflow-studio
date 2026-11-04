@@ -57,13 +57,14 @@ describe("finalizeSuggestedImage", () => {
     expect(result.year).toBe("2027");
   });
 
-  it("artwork (isCover=false): strips title/year and adds single-subject tags", () => {
+  it("artwork (isCover=false): strips title/year and front-loads single-subject tags", () => {
     const image = makeImage({ positive: "a scene", title: "LUNA", year: "2027" });
     const result = finalizeSuggestedImage(image, { isCover: false, isAnimeMedium: false });
 
     expect(result.title).toBeUndefined();
     expect(result.year).toBeUndefined();
-    expect(result.positive).toContain("solo, one person only");
+    // Giống nhánh anime: cụm single-subject nằm ở ĐẦU positive.
+    expect(result.positive.startsWith("solo, one person only")).toBe(true);
   });
 
   it("artwork + anime: prepends anime single-subject tags", () => {

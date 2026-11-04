@@ -85,11 +85,12 @@ export function finalizeSuggestedImage(
   if (!isCover) {
     image.title = undefined;
     image.year = undefined;
-    // Anime: ép single-subject lên ĐẦU positive (model đánh trọng số token đầu
-    // mạnh); nhánh người giữ tag chung ở cuối.
+    // Cả anime lẫn người đều ép single-subject lên ĐẦU positive (model đánh
+    // trọng số token đầu mạnh) để giảm lỗi nhân đôi chủ thể ở Turbo (negative
+    // bị ZeroOut nên không có lớp chặn duplicate).
     image.positive = isAnimeMedium
       ? mergeTags(ANIME_SINGLE_SUBJECT_TAGS, FRAMING_MARGIN_TAGS, image.positive)
-      : mergeTags(image.positive, FRAMING_MARGIN_TAGS, SINGLE_SUBJECT_QUALITY_TAGS);
+      : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, FRAMING_MARGIN_TAGS, image.positive);
     return image;
   }
 
@@ -126,11 +127,11 @@ export function finalizeSuggestedImage(
         "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
       )
     : mergeTags(
-        image.positive,
+        SINGLE_SUBJECT_QUALITY_TAGS,
         FRAMING_MARGIN_TAGS,
+        image.positive,
         ...missingTags,
         "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-        SINGLE_SUBJECT_QUALITY_TAGS,
       );
   return image;
 }

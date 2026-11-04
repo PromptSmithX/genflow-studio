@@ -94,7 +94,7 @@ model AppSettings {
   // Mặc định tương đối nằm NGOÀI project root (data/ là anh em của thư mục app,
   // không phải con) để tránh Next.js dev watch thư mục này -- ảnh/DB được ghi
   // liên tục trong đó sẽ trigger full-page reload nếu nằm trong vùng watch.
-  outputDirectory   String   @default("../data/outputs")
+  outputDirectory   String   @default("outputs")
   llmBaseUrl        String?
   llmModel          String?
   llmSystemPrompt   String?
@@ -162,6 +162,14 @@ model GenerationBatch {
   // hoặc không tạo qua Trợ lý AI. Dùng lại ở lib/generations/regenerate-fresh.ts
   // để "Sửa lại" 1 ảnh sinh đúng phong cách gốc của batch.
   mediumId String?
+
+  // Metadata Etsy (title/description/13 tags) cho CẢ bộ lịch này, do Trợ lý AI
+  // sinh kèm lúc /api/generations/suggest -- xem lib/llm/finalize-suggestion.ts
+  // ::finalizeEtsy. etsyTagsJson lưu mảng string dạng JSON. null = batch cũ
+  // trước khi có tính năng này, hoặc tạo không qua Trợ lý AI.
+  etsyTitle       String?
+  etsyDescription String?
+  etsyTagsJson    String?
 
   jobs GenerationJob[]
 

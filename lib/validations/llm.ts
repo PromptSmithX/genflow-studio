@@ -20,13 +20,26 @@ export const llmImageSuggestionSchema = z.object({
   year: z.string().trim().max(20).optional(),
 });
 
+// --- Metadata Etsy (per bộ lịch / per batch) ---
+// LLM trả thêm 1 object "etsy" ở top-level mô tả CẢ bộ lịch như một listing Etsy
+// (title/description/tags SEO). Giữ schema LỎNG (không ép độ dài) để Etsy lỡ sai
+// shape không làm hỏng việc gen ảnh; độ dài chuẩn Etsy được clamp ở finalizeEtsy
+// (title ≤140, đúng 13 tags, mỗi tag ≤20 ký tự).
+export const etsySuggestionSchema = z.object({
+  title: z.string().trim().default(""),
+  description: z.string().trim().default(""),
+  tags: z.array(z.string().trim()).default([]),
+});
+
 export const llmSuggestionResultSchema = z.object({
   images: z.array(llmImageSuggestionSchema),
   negative: z.string().trim().default(""),
+  etsy: etsySuggestionSchema.optional(),
 });
 
 export type LlmSuggestionResult = z.infer<typeof llmSuggestionResultSchema>;
 export type LlmImageSuggestion = z.infer<typeof llmImageSuggestionSchema>;
+export type EtsySuggestion = z.infer<typeof etsySuggestionSchema>;
 
 export interface TokenUsage {
   promptTokens: number | null;

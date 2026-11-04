@@ -7,11 +7,20 @@ export const imageRequestSchema = z.object({
   negativeOverride: z.string().trim().max(2000).optional().nullable(),
 });
 
+// Metadata Etsy cho CẢ bộ lịch (per batch), do Trợ lý AI gợi ý ở /api/generations/suggest
+// và được form tạo ảnh forward thẳng vào request create này -- xem lib/generations/create-batch.ts.
+export const etsyMetadataSchema = z.object({
+  title: z.string().trim().max(140).optional(),
+  description: z.string().trim().optional(),
+  tags: z.array(z.string().trim().max(20)).max(13).optional(),
+});
+
 export const createGenerationSchema = z.object({
   styleId: z.string().min(1).optional().nullable(),
   mediumId: z.string().min(1).optional().nullable(),
   ideaPrompt: z.string().trim().max(2000).optional(),
   images: z.array(imageRequestSchema).min(1).max(15),
+  etsy: etsyMetadataSchema.optional().nullable(),
   width: z.number().int().min(64).max(4096).optional(),
   height: z.number().int().min(64).max(4096).optional(),
   steps: z.number().int().min(1).max(200).optional(),

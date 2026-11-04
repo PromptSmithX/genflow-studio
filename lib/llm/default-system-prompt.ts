@@ -135,10 +135,15 @@ sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm
 - "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
   Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
   Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
-- "description": khoảng 300-500 từ tiếng Anh. 2-3 câu đầu hook người đọc (mô tả sản phẩm + lợi ích),
-  sau đó bullet point các đặc điểm (số trang/tháng, kích thước, định dạng file...), kết thúc bằng một
-  câu kêu gọi hành động (call to action) mời mua.
-  "description" KHÔNG xuống dòng cứng mà dùng ký tự "\\n" để phân đoạn/bullet.
+- "description": Viết bằng tiếng Anh theo đúng cấu trúc 4 phần dưới đây, dùng "\\n\\n" ngăn các đoạn/phần, dùng "\\n" ngăn các bullet. TUYỆT ĐỐI KHÔNG viết phần "Details" (app tự thêm vào sau):
+  PHẦN 1 — Hook (2-3 câu): Nêu rõ năm 2027, số artwork ĐÚNG BẰNG số ảnh được yêu cầu, chủ đề/nhân vật/mood tổng thể. Kết bằng 1 câu mô tả cảm xúc/lợi ích mang lại cho người xem.
+  PHẦN 2 — Nội dung chi tiết (2-3 câu): Mô tả các loại cảnh/khoảnh khắc tiêu biểu trải qua các tháng, visual style đặc trưng (ánh sáng, màu sắc, texture, mood).
+  PHẦN 3 — Audience + gift (2-3 câu): Dành cho ai, phù hợp không gian nào (nhà/phòng ngủ/văn phòng/không gian sáng tạo), lý do mua làm quà.
+  PHẦN 4 — "What's inside" section: Dòng header "What's inside", tiếp theo "\\n\\n", rồi 4 bullet ngăn nhau bằng "\\n" (không dấu gạch đầu dòng, không indent):
+    Bullet 1: "[số lượng] unique [loại/style] artworks, one for every month"
+    Bullet 2: Mix các loại cảnh/khoảnh khắc/bối cảnh đặc trưng của bộ
+    Bullet 3: Palette màu, style, texture và visual experience nổi bật
+    Bullet 4: Câu tổng kết cảm xúc + năm 2027
 - "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
   nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
   điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
@@ -260,10 +265,15 @@ sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm
 - "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
   Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
   Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
-- "description": khoảng 300-500 từ tiếng Anh. 2-3 câu đầu hook người đọc (mô tả sản phẩm + lợi ích),
-  sau đó bullet point các đặc điểm (số trang/tháng, kích thước, định dạng file...), kết thúc bằng một
-  câu kêu gọi hành động (call to action) mời mua.
-  "description" KHÔNG xuống dòng cứng mà dùng ký tự "\\n" để phân đoạn/bullet.
+- "description": Viết bằng tiếng Anh theo đúng cấu trúc 4 phần dưới đây, dùng "\\n\\n" ngăn các đoạn/phần, dùng "\\n" ngăn các bullet. TUYỆT ĐỐI KHÔNG viết phần "Details" (app tự thêm vào sau):
+  PHẦN 1 — Hook (2-3 câu): Nêu rõ năm 2027, số artwork ĐÚNG BẰNG số ảnh được yêu cầu, chủ đề/nhân vật/mood tổng thể. Kết bằng 1 câu mô tả cảm xúc/lợi ích mang lại cho người xem.
+  PHẦN 2 — Nội dung chi tiết (2-3 câu): Mô tả các loại cảnh/khoảnh khắc tiêu biểu trải qua các tháng, visual style đặc trưng (ánh sáng, màu sắc, texture, mood).
+  PHẦN 3 — Audience + gift (2-3 câu): Dành cho ai, phù hợp không gian nào (nhà/phòng ngủ/văn phòng/không gian sáng tạo), lý do mua làm quà.
+  PHẦN 4 — "What's inside" section: Dòng header "What's inside", tiếp theo "\\n\\n", rồi 4 bullet ngăn nhau bằng "\\n" (không dấu gạch đầu dòng, không indent):
+    Bullet 1: "[số lượng] unique [loại/style] artworks, one for every month"
+    Bullet 2: Mix các loại cảnh/khoảnh khắc/bối cảnh đặc trưng của bộ
+    Bullet 3: Palette màu, style, texture và visual experience nổi bật
+    Bullet 4: Câu tổng kết cảm xúc + năm 2027
 - "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
   nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
   điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo

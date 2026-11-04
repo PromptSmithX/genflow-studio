@@ -7,6 +7,8 @@ import {
 } from "@/lib/llm/default-system-prompt";
 
 const ETSY_TITLE_MAX = 140;
+const ETSY_DETAILS_SECTION =
+  "\n\nDetails\n\nSizes:\n   11 x 8.5 in (opens to 11 x 17 in)\n   14 x 11.5 in (opens to 14 x 23 in)\nBinding: wire-bound, with a hanging hole\nPaper: Matte or Glossy\nPrinting: printed on demand and shipped to you";
 const ETSY_TAG_MAX = 20;
 const ETSY_TAG_COUNT = 13;
 const ETSY_FALLBACK_TAGS = [
@@ -133,7 +135,7 @@ export function finalizeSuggestedImage(
  */
 export function finalizeEtsy(etsy: EtsySuggestion): EtsySuggestion {
   const title = etsy.title.trim().slice(0, ETSY_TITLE_MAX);
-  const description = etsy.description.trim();
+  const description = etsy.description.trim() + ETSY_DETAILS_SECTION;
 
   const seen = new Set<string>();
   const tags: string[] = [];

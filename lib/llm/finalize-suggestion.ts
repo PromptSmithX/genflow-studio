@@ -6,13 +6,20 @@ import {
   ANIME_SINGLE_SUBJECT_TAGS,
 } from "@/lib/llm/default-system-prompt";
 
+const CALENDAR_YEAR = "2027";
+// Ép mọi năm 20xx (vd "2025" LLM tự chọn) về năm lịch cố định. Chỉ bắt dạng
+// 20xx để tránh đụng các số không phải năm.
+const YEAR_REGEX = /\b20\d{2}\b/g;
+function forceYear(text: string): string {
+  return text.replace(YEAR_REGEX, CALENDAR_YEAR);
+}
 const ETSY_TITLE_MAX = 140;
 const ETSY_DETAILS_SECTION =
   "\n\nDetails\n\nSizes:\n   11 x 8.5 in (opens to 11 x 17 in)\n   14 x 11.5 in (opens to 14 x 23 in)\nBinding: wire-bound, with a hanging hole\nPaper: Matte or Glossy\nPrinting: printed on demand and shipped to you";
 const ETSY_TAG_MAX = 20;
 const ETSY_TAG_COUNT = 13;
 const ETSY_FALLBACK_TAGS = [
-  "calendar 2025",
+  `calendar ${CALENDAR_YEAR}`,
   "wall calendar",
   "printable art",
   "digital download",
@@ -89,8 +96,12 @@ export function finalizeSuggestedImage(
   // Bìa lịch: model ảnh tự vẽ chữ. App chỉ đảm bảo 3 chuỗi bắt buộc (title /
   // "CALENDAR" / year) thật sự có mặt trong positive, không phụ thuộc việc LLM
   // có tuân thủ đúng chỉ dẫn hay không.
-  const title = image.title?.trim() || "THE COLLECTION";
-  const year = image.year?.trim() || String(new Date().getFullYear() + 1);
+  const title = forceYear(image.title?.trim() || "THE COLLECTION");
+  const year = CALENDAR_YEAR;
+  // Ép mọi năm LLM tự viết trong positive (vd year text "2025") về 2027 TRƯỚC
+  // khi dò khối năm: nhờ đó "2027" đã có sẵn, guard không append khối năm thứ 2
+  // -> bìa chỉ còn MỘT năm 2027, bỏ được số năm dư thừa.
+  image.positive = forceYear(image.positive);
   image.title = title;
   image.year = year;
 
@@ -134,13 +145,13 @@ export function finalizeSuggestedImage(
  * hỏng việc gen ảnh), nên hàm này là lớp bảo đảm cuối cùng trước khi lưu DB.
  */
 export function finalizeEtsy(etsy: EtsySuggestion): EtsySuggestion {
-  const title = etsy.title.trim().slice(0, ETSY_TITLE_MAX);
-  const description = etsy.description.trim() + ETSY_DETAILS_SECTION;
+  const title = forceYear(etsy.title.trim()).slice(0, ETSY_TITLE_MAX);
+  const description = forceYear(etsy.description.trim()) + ETSY_DETAILS_SECTION;
 
   const seen = new Set<string>();
   const tags: string[] = [];
   for (const raw of etsy.tags) {
-    const tag = raw.trim().slice(0, ETSY_TAG_MAX);
+    const tag = forceYear(raw.trim()).slice(0, ETSY_TAG_MAX);
     const key = tag.toLowerCase();
     if (!tag || seen.has(key)) continue;
     seen.add(key);

@@ -38,9 +38,9 @@ describe("finalizeSuggestedImage", () => {
     });
     const result = finalizeSuggestedImage(image, { isCover: true, isAnimeMedium: false });
 
+    // Năm sai (2025) bị chuẩn hoá hết; chỉ còn ĐÚNG MỘT "2027" (chống vẽ lặp).
     expect(result.positive).not.toContain("2025");
     expect(result.positive.toLowerCase()).toContain('year text "2027"');
-    // Không còn khối năm dư thừa: "2027" chỉ xuất hiện đúng một lần.
     expect(result.positive.match(/2027/g)?.length).toBe(1);
   });
 
@@ -121,5 +121,39 @@ describe("finalizeEtsy", () => {
     expect(result.description).toContain("2027");
     expect(result.tags).toContain("2027 calendar");
     expect(result.tags.some((t) => t.includes("2025") || t.includes("2026"))).toBe(false);
+  });
+
+  it("strips all digital-delivery wording (lịch in vật lý, không phải file tải)", () => {
+    const result = finalizeEtsy(
+      makeEtsy({
+        title: "Tokyo Wall Calendar 2027 | Printable Digital Download | Gift for Him",
+        description:
+          "A printable digital download calendar.\n\nWhat's inside\n\nInstant download PDF ready to print at home",
+        tags: [
+          "digital download",
+          "printable calendar",
+          "instant download",
+          "downloadable art",
+          "wall calendar",
+          "tokyo photography",
+        ],
+      }),
+    );
+
+    const banned = /digital download|printable|downloadable|instant download|pdf|print at home/i;
+    expect(banned.test(result.title)).toBe(false);
+    expect(banned.test(result.description)).toBe(false);
+    expect(result.tags.every((t) => !banned.test(t))).toBe(true);
+    // Title không còn đoạn rỗng giữa 2 dấu gạch.
+    expect(result.title).not.toMatch(/\|\s*\|/);
+    expect(result.title).toContain("Tokyo Wall Calendar 2027");
+    expect(result.title).toContain("Gift for Him");
+    // Vẫn đủ 13 tag (bù bằng fallback) và giữ tag sạch do LLM cung cấp.
+    expect(result.tags).toHaveLength(13);
+    expect(result.tags).toContain("wall calendar");
+    expect(result.tags).toContain("tokyo photography");
+    // Description giữ cấu trúc xuống dòng.
+    expect(result.description).toContain("What's inside");
+    expect(result.description).toContain("\n\n");
   });
 });

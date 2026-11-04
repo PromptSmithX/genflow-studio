@@ -4,7 +4,7 @@
 // a BrowserWindow pointed at it. No code here runs in the renderer; it only
 // manages the child process and the window.
 const { app, BrowserWindow } = require("electron");
-const { spawn } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const net = require("node:net");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -20,6 +20,8 @@ function getPaths() {
       serverDir: path.join(resourcesDir, "app"),
       templateDb: path.join(resourcesDir, "template", "anima.sqlite"),
       templateWorkflowDir: path.join(resourcesDir, "template", "workflows"),
+      migrationsDir: path.join(resourcesDir, "template", "migrations"),
+      migrateScript: path.join(__dirname, "migrate.js"),
     };
   }
   // Dev convenience path: `npm run build` then `npm run electron:dev`, using
@@ -33,6 +35,8 @@ function getPaths() {
     serverDir: path.join(root, ".next", "standalone"),
     templateDb: path.join(root, "resources", "template", "anima.sqlite"),
     templateWorkflowDir: path.join(root, "resources", "template", "workflows"),
+    migrationsDir: path.join(root, "prisma", "migrations"),
+    migrateScript: path.join(__dirname, "migrate.js"),
   };
 }
 
@@ -58,6 +62,20 @@ function ensureUserData(paths) {
       throw new Error(`Template DB not found at ${paths.templateDb}`);
     }
     fs.copyFileSync(paths.templateDb, dbPath);
+  } else if (fs.existsSync(paths.migrationsDir) && fs.existsSync(paths.migrateScript)) {
+    // Existing DB: run automatic migrations to apply any schema updates from the new version
+    console.log("Checking for database migrations...");
+    try {
+      const result = spawnSync(paths.nodeBinary, [paths.migrateScript, dbPath, paths.migrationsDir], {
+        stdio: "inherit",
+        windowsHide: true,
+      });
+      if (result.status !== 0) {
+        console.error("Auto-migration process exited with code:", result.status);
+      }
+    } catch (err) {
+      console.error("Failed to run auto-migration:", err);
+    }
   }
 
   // Mirror of the DB copy above: the seeded WorkflowConfig row (in the
@@ -139,12 +157,27 @@ async function createWindow() {
   mainWindow.loadURL(`http://127.0.0.1:${port}`);
 }
 
-app.whenReady().then(() => {
-  createWindow().catch((error) => {
-    console.error("Failed to start Anima Studio:", error);
-    app.quit();
+// Single-instance lock: ensure running the app/exe twice focuses the existing instance
+// instead of creating multiple conflicting server processes.
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
   });
-});
+
+  app.whenReady().then(() => {
+    createWindow().catch((error) => {
+      console.error("Failed to start Anima Studio:", error);
+      app.quit();
+    });
+  });
+}
 
 app.on("window-all-closed", () => {
   app.quit();

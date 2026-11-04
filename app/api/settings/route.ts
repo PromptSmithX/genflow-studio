@@ -51,22 +51,18 @@ export async function PUT(request: NextRequest) {
           : {}),
         ...(body.maxImagesPerBatch !== undefined ? { maxImagesPerBatch: body.maxImagesPerBatch } : {}),
         ...(body.outputDirectory !== undefined ? { outputDirectory: body.outputDirectory } : {}),
-        ...(body.llmBaseUrl !== undefined ? { llmBaseUrl: body.llmBaseUrl || null } : {}),
         ...(body.llmModel !== undefined ? { llmModel: body.llmModel || null } : {}),
         ...(body.llmSystemPrompt !== undefined ? { llmSystemPrompt: body.llmSystemPrompt || null } : {}),
       },
     });
 
-    // Gateway/LLM API keys are never persisted to the DB or returned to the
-    // client; they are only ever read from server-side env vars at request time.
+    // Gateway token is never persisted to the DB or returned to the client;
+    // it is only ever read from the server-side env var at request time. The
+    // LLM API key no longer passes through this app at all -- it lives only
+    // on the Colab gateway process (entered via getpass, Cell 7.6).
     if (body.gatewayToken) {
       console.warn(
         "A gateway token was submitted via the API but is not persisted. Set COMFY_GATEWAY_TOKEN in the server environment instead.",
-      );
-    }
-    if (body.llmApiKey) {
-      console.warn(
-        "An LLM API key was submitted via the API but is not persisted. Set LLM_API_KEY in the server environment instead.",
       );
     }
 

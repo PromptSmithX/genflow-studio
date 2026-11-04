@@ -13,10 +13,11 @@ export const settingsUpdateSchema = z.object({
   defaultFixedSeed: z.number().int().min(0).optional().nullable(),
   maxImagesPerBatch: z.number().int().min(1).max(15).optional(),
   outputDirectory: z.string().trim().min(1).optional(),
-  llmBaseUrl: z.string().trim().optional().nullable(),
+  // Trợ lý AI đi qua cùng gateway Colab với ComfyUI (route "/llm") -- không
+  // còn base URL/API key riêng để nhập ở app. llmModel vẫn tuỳ chọn override
+  // nếu model mặc định phía Colab (Cell 7.6) khác. Xem lib/llm/resolve-config.ts.
   llmModel: z.string().trim().optional().nullable(),
   llmSystemPrompt: z.string().trim().max(8000).optional().nullable(),
-  llmApiKey: z.string().trim().optional().nullable(),
 });
 
 export const connectionTestSchema = z.object({

@@ -1,0 +1,21 @@
+appId: com.animastudio.app
+productName: Anima Studio
+directories:
+  output: dist-electron
+files:
+  - electron/**/*
+  - package.json
+extraResources:
+  - from: resources/app
+    to: app
+  - from: resources/node
+    to: node
+  - from: resources/template
+    to: template
+win:
+  target: nsis
+  artifactName: "AnimaStudio-Setup-${version}.${ext}"
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always

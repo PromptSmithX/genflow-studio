@@ -12,7 +12,8 @@ import {
   ANIME_SINGLE_SUBJECT_HINT,
   composeUserMessage,
 } from "@/lib/llm/default-system-prompt";
-import { finalizeSuggestedImage } from "@/lib/llm/finalize-suggestion";
+import { finalizeSuggestedImage, finalizeEtsy } from "@/lib/llm/finalize-suggestion";
+import { resolveLlmConfig } from "@/lib/llm/resolve-config";
 
 export const runtime = "nodejs";
 
@@ -20,10 +21,12 @@ export async function POST(request: NextRequest) {
   try {
     const input = suggestPromptsSchema.parse(await request.json());
     const settings = await getOrCreateSettings();
-    const apiKey = process.env.LLM_API_KEY;
-
-    if (!settings.llmBaseUrl || !settings.llmModel || !apiKey) {
-      throw new LlmApiError("Chưa cấu hình Trợ lý AI, vui lòng cấu hình ở trang Cài đặt", "no_config");
+    // LLM chạy qua gateway Colab (route "/llm" cạnh "/censor"), KHÔNG còn base
+    // URL/API key riêng -- xem lib/llm/resolve-config.ts. Key thật chỉ nằm ở
+    // Colab, app không gửi Authorization.
+    const llmConfig = resolveLlmConfig(settings);
+    if (!llmConfig) {
+      throw new LlmApiError("Chưa cấu hình URL ComfyUI, vui lòng cấu hình ở trang Cài đặt", "no_config");
     }
 
     let styleHint: string | undefined;
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
     const systemPrompt = SHARED_BIAS_PROMPT.trim()
       ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}`
       : baseSystemPrompt;
-    const client = new LlmClient({ baseUrl: settings.llmBaseUrl, apiKey, model: settings.llmModel });
+    const client = new LlmClient({ baseUrl: llmConfig.baseUrl, model: llmConfig.model });
 
     let result;
     try {
@@ -71,7 +74,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       if (error instanceof LlmApiError) {
         console.error(
-          `[LLM suggest error] model=${settings.llmModel} code=${error.code} message=${error.message}\n` +
+          `[LLM suggest error] model=${llmConfig.model} code=${error.code} message=${error.message}\n` +
             `--- user message ---\n${userMessage}\n` +
             `--- raw LLM details ---\n${JSON.stringify(error.details, null, 2)}`,
         );
@@ -85,9 +88,12 @@ export async function POST(request: NextRequest) {
     result.images.forEach((image, index) => {
       finalizeSuggestedImage(image, { isCover: index === 0, isAnimeMedium });
     });
+    if (result.etsy) {
+      finalizeEtsy(result.etsy);
+    }
 
     console.log(
-      `[LLM suggest] model=${settings.llmModel} usage=${JSON.stringify(result.usage)}\n` +
+      `[LLM suggest] model=${llmConfig.model} usage=${JSON.stringify(result.usage)}\n` +
         `--- user message ---\n${userMessage}\n` +
         `--- negative ---\n${result.negative}\n` +
         result.images.map((image, index) => `--- positive #${index + 1} ---\n${image.positive}`).join("\n"),

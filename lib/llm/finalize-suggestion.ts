@@ -1,10 +1,29 @@
 import { mergeTags } from "@/lib/prompts/merge-tags";
-import type { LlmImageSuggestion } from "@/lib/validations/llm";
+import type { EtsySuggestion, LlmImageSuggestion } from "@/lib/validations/llm";
 import {
   SINGLE_SUBJECT_QUALITY_TAGS,
   FRAMING_MARGIN_TAGS,
   ANIME_SINGLE_SUBJECT_TAGS,
 } from "@/lib/llm/default-system-prompt";
+
+const ETSY_TITLE_MAX = 140;
+const ETSY_TAG_MAX = 20;
+const ETSY_TAG_COUNT = 13;
+const ETSY_FALLBACK_TAGS = [
+  "calendar 2025",
+  "wall calendar",
+  "printable art",
+  "digital download",
+  "home decor",
+  "gift idea",
+  "art print",
+  "desk calendar",
+  "monthly planner",
+  "wall art",
+  "seasonal gift",
+  "photo calendar",
+  "unique calendar",
+];
 
 // Model đang chạy Turbo (CFG=1, negative bị ZeroOut vô hiệu hoá) nên không có
 // negative để loại trừ dị tật -- phải diễn đạt DƯƠNG + làm sạch ở positive.
@@ -101,4 +120,41 @@ export function finalizeSuggestedImage(
         SINGLE_SUBJECT_QUALITY_TAGS,
       );
   return image;
+}
+
+/**
+ * Chuẩn hoá metadata Etsy (title/description/tags) do LLM gợi ý về đúng giới
+ * hạn ký tự của Etsy, SỬA TẠI CHỖ `etsy` và trả lại chính nó:
+ * - title: cắt về tối đa 140 ký tự.
+ * - tags: đúng 13 phần tử, mỗi tag tối đa 20 ký tự, loại trùng lặp/rỗng; nếu
+ *   thiếu thì bù bằng tag mặc định, nếu dư thì cắt.
+ * LLM có thể lỡ sai số lượng/độ dài (schema Zod không ép cứng để không làm
+ * hỏng việc gen ảnh), nên hàm này là lớp bảo đảm cuối cùng trước khi lưu DB.
+ */
+export function finalizeEtsy(etsy: EtsySuggestion): EtsySuggestion {
+  const title = etsy.title.trim().slice(0, ETSY_TITLE_MAX);
+  const description = etsy.description.trim();
+
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  for (const raw of etsy.tags) {
+    const tag = raw.trim().slice(0, ETSY_TAG_MAX);
+    const key = tag.toLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag);
+    if (tags.length >= ETSY_TAG_COUNT) break;
+  }
+  for (const fallback of ETSY_FALLBACK_TAGS) {
+    if (tags.length >= ETSY_TAG_COUNT) break;
+    const key = fallback.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tags.push(fallback);
+  }
+
+  etsy.title = title;
+  etsy.description = description;
+  etsy.tags = tags;
+  return etsy;
 }

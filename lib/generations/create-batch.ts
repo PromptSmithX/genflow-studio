@@ -99,6 +99,9 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
       requestedCount: input.images.length,
       status: "queued",
       mediumId: input.mediumId ?? null,
+      etsyTitle: input.etsy?.title ?? null,
+      etsyDescription: input.etsy?.description ?? null,
+      etsyTagsJson: input.etsy?.tags ? JSON.stringify(input.etsy.tags) : null,
     },
   });
 

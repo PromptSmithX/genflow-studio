@@ -99,7 +99,10 @@ export function AssistantCreateForm() {
   const safeImageCount = Math.min(imageCount, maxImages);
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
   const isReady = connectionState === "connected" && workflowReady;
-  const llmReady = Boolean(settings?.llmBaseUrl && settings?.llmModel && settings?.hasLlmKey);
+  // Trợ lý AI đi qua cùng gateway Colab với ComfyUI -- "sẵn sàng" chỉ còn phụ
+  // thuộc comfyBaseUrl đã cấu hình (settings.hasLlmKey), không có base
+  // URL/API key riêng của app nữa. Xem lib/llm/resolve-config.ts.
+  const llmReady = Boolean(settings?.hasLlmKey);
   // Một nút "Tạo ảnh" chạy cả soạn prompt (LLM) lẫn gửi gen (ComfyUI) nên cần
   // đủ cả hai sẵn sàng ngay từ đầu.
   const canGenerate =
@@ -147,6 +150,13 @@ export function AssistantCreateForm() {
           positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
           negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,
         })),
+        etsy: suggestions.etsy
+          ? {
+              title: suggestions.etsy.title || undefined,
+              description: suggestions.etsy.description || undefined,
+              tags: suggestions.etsy.tags.length ? suggestions.etsy.tags : undefined,
+            }
+          : undefined,
         // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.
         width: params.width ? Number(params.width) : undefined,
         height: params.height ? Number(params.height) : undefined,
@@ -186,7 +196,7 @@ export function AssistantCreateForm() {
             <Link href="/settings" className="underline underline-offset-4">
               trang Cài đặt
             </Link>{" "}
-            để kết nối Trợ lý AI (base URL, model, API key). Cần có trước khi tạo ảnh.
+            để dán URL ComfyUI (Trợ lý AI dùng chung URL này). Cần có trước khi tạo ảnh.
           </AlertDescription>
         </Alert>
       )}

@@ -130,6 +130,25 @@ TUYỆT ĐỐI KHÔNG dùng các từ: "copy space", "negative space", "clean si
 "title"/"year" (CHỈ ảnh #1): trả lại ĐÚNG tên và năm bạn đã dùng trong "positive" ở trên, để app đối
 chiếu (tên ngắn gọn, năm dạng số vd "2027").
 
+"etsy" (metadata để đăng bán CẢ BỘ LỊCH này trên Etsy -- VIẾT BẰNG TIẾNG ANH, văn phong marketplace
+sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm dù positive/negative có gì):
+- "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
+  Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
+  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
+- "description": Viết bằng tiếng Anh theo đúng cấu trúc 4 phần dưới đây, dùng "\\n\\n" ngăn các đoạn/phần, dùng "\\n" ngăn các bullet. TUYỆT ĐỐI KHÔNG viết phần "Details" (app tự thêm vào sau):
+  PHẦN 1 — Hook (2-3 câu): Nêu rõ năm 2027, số artwork ĐÚNG BẰNG số ảnh được yêu cầu, chủ đề/nhân vật/mood tổng thể. Kết bằng 1 câu mô tả cảm xúc/lợi ích mang lại cho người xem.
+  PHẦN 2 — Nội dung chi tiết (2-3 câu): Mô tả các loại cảnh/khoảnh khắc tiêu biểu trải qua các tháng, visual style đặc trưng (ánh sáng, màu sắc, texture, mood).
+  PHẦN 3 — Audience + gift (2-3 câu): Dành cho ai, phù hợp không gian nào (nhà/phòng ngủ/văn phòng/không gian sáng tạo), lý do mua làm quà.
+  PHẦN 4 — "What's inside" section: Dòng header "What's inside", tiếp theo "\\n\\n", rồi 4 bullet ngăn nhau bằng "\\n" (không dấu gạch đầu dòng, không indent):
+    Bullet 1: "[số lượng] unique [loại/style] artworks, one for every month"
+    Bullet 2: Mix các loại cảnh/khoảnh khắc/bối cảnh đặc trưng của bộ
+    Bullet 3: Palette màu, style, texture và visual experience nổi bật
+    Bullet 4: Câu tổng kết cảm xúc + năm 2027
+- "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
+  nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
+  điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
+  mùa/dịp (vd "2027 calendar").
+
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
   "images": [
@@ -137,7 +156,8 @@ Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, kh
       "caption": "...", "title": "...", "year": "2027" },
     { "positive": "...(ảnh #2 = artwork, full-bleed, KHÔNG chữ)...", "caption": "..." }
   ],
-  "negative": "..."
+  "negative": "...",
+  "etsy": { "title": "...", "description": "...", "tags": ["...", "... (đúng 13 phần tử)"] }
 }
 Số phần tử trong "images" phải đúng bằng số ảnh được yêu cầu. CHỈ ảnh ĐẦU TIÊN có title/year.`;
 
@@ -240,6 +260,25 @@ TUYỆT ĐỐI KHÔNG dùng các từ: "copy space", "negative space", "clean si
 "title"/"year" (CHỈ ảnh #1): trả lại ĐÚNG tên và năm bạn đã dùng trong "positive" ở trên, để app đối
 chiếu (tên ngắn gọn, năm dạng số vd "2027").
 
+"etsy" (metadata để đăng bán CẢ BỘ LỊCH này trên Etsy -- VIẾT BẰNG TIẾNG ANH, văn phong marketplace
+sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm dù positive/negative có gì):
+- "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
+  Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
+  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
+- "description": Viết bằng tiếng Anh theo đúng cấu trúc 4 phần dưới đây, dùng "\\n\\n" ngăn các đoạn/phần, dùng "\\n" ngăn các bullet. TUYỆT ĐỐI KHÔNG viết phần "Details" (app tự thêm vào sau):
+  PHẦN 1 — Hook (2-3 câu): Nêu rõ năm 2027, số artwork ĐÚNG BẰNG số ảnh được yêu cầu, chủ đề/nhân vật/mood tổng thể. Kết bằng 1 câu mô tả cảm xúc/lợi ích mang lại cho người xem.
+  PHẦN 2 — Nội dung chi tiết (2-3 câu): Mô tả các loại cảnh/khoảnh khắc tiêu biểu trải qua các tháng, visual style đặc trưng (ánh sáng, màu sắc, texture, mood).
+  PHẦN 3 — Audience + gift (2-3 câu): Dành cho ai, phù hợp không gian nào (nhà/phòng ngủ/văn phòng/không gian sáng tạo), lý do mua làm quà.
+  PHẦN 4 — "What's inside" section: Dòng header "What's inside", tiếp theo "\\n\\n", rồi 4 bullet ngăn nhau bằng "\\n" (không dấu gạch đầu dòng, không indent):
+    Bullet 1: "[số lượng] unique [loại/style] artworks, one for every month"
+    Bullet 2: Mix các loại cảnh/khoảnh khắc/bối cảnh đặc trưng của bộ
+    Bullet 3: Palette màu, style, texture và visual experience nổi bật
+    Bullet 4: Câu tổng kết cảm xúc + năm 2027
+- "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
+  nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
+  điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
+  mùa/dịp (vd "2027 calendar").
+
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
   "images": [
@@ -247,7 +286,8 @@ Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, kh
       "caption": "...", "title": "...", "year": "2027" },
     { "positive": "...(ảnh #2 = artwork, full-bleed, KHÔNG chữ)...", "caption": "..." }
   ],
-  "negative": "..."
+  "negative": "...",
+  "etsy": { "title": "...", "description": "...", "tags": ["...", "... (đúng 13 phần tử)"] }
 }
 Số phần tử trong "images" phải đúng bằng số ảnh được yêu cầu. CHỈ ảnh ĐẦU TIÊN có title/year.`;
 
@@ -322,12 +362,14 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 
 1. Ý MUỐN CỦA NGƯỜI DÙNG LÀ ƯU TIÊN SỐ 1. Mọi điều người dùng nêu rõ trong "Yêu cầu của người dùng" (phong cách, nhân vật, trang phục, bối cảnh, màu sắc, tâm trạng, tên, năm, số lượng...) phải được tôn trọng ĐÚNG như họ nói và ưu tiên hơn mọi mặc định/gợi ý ở các mục sau. Nếu một quy tắc mặc định mâu thuẫn với điều người dùng đã nêu rõ, LUÔN theo người dùng.
 
-2. TỰ LẤP PHẦN THIẾU, KHÔNG HỎI LẠI. Người dùng thường mô tả ngắn và không rành kỹ thuật. Với mọi chi tiết họ KHÔNG nói rõ, hãy tự suy luận một lựa chọn CỤ THỂ, hợp lý nhất với ý tưởng (một chủ thể rõ ràng: ngoại hình, độ tuổi, trang phục, bối cảnh, ánh sáng, tâm trạng) rồi giữ nhất quán cho cả bộ. Luôn tự quyết và điền đủ, không bao giờ hỏi lại hay để trống vì "thiếu thông tin".
+2. BÁM SÁT MÔ TẢ NGOẠI HÌNH CHỦ THỂ (KỂ CẢ TIẾNG LÓNG/THÔNG TỤC). Người dùng có thể tả vóc dáng, thân hình, độ tuổi, chiều cao, khuôn mặt, làn da, vòng eo/ngực/mông/hông... bằng từ thông tục hoặc tiếng lóng (ví dụ "mũm mĩm/chuppy", "bốc lửa", "gầy/mình dây", "đô con/cơ bắp", "bánh bèo", "da bánh mật"...). Hãy HIỂU đúng ý nghĩa thực sự của từ đó rồi DỊCH thành tag tiếng Anh RÕ RÀNG, và LẶP LẠI GIỐNG HỆT trong MỌI ảnh vì đây là đặc điểm cố định của nhân vật. TUYỆT ĐỐI KHÔNG bỏ sót, làm nhạt hay thay thế bất kỳ đặc điểm ngoại hình nào người dùng đã nêu bằng mặc định của bạn. Khi một đặc điểm đi NGƯỢC xu hướng mặc định của model ảnh (ví dụ model hay tự vẽ dáng thon/gầy, da quá mịn/hoàn hảo, ngực/mông nhỏ...), hãy CỦNG CỐ đặc điểm đó bằng NHIỀU tag bổ trợ nhau thay vì một tag yếu lẻ loi — ví dụ "mũm mĩm" → "chubby, plump, full figure, soft curvy body, thick thighs, wide hips, fuller cheeks, soft belly" — để model không quay về mặc định.
 
-3. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
+3. TỰ LẤP PHẦN THIẾU, KHÔNG HỎI LẠI. Người dùng thường mô tả ngắn và không rành kỹ thuật. Với mọi chi tiết họ KHÔNG nói rõ, hãy tự suy luận một lựa chọn CỤ THỂ, hợp lý nhất với ý tưởng (một chủ thể rõ ràng: ngoại hình, độ tuổi, trang phục, bối cảnh, ánh sáng, tâm trạng) rồi giữ nhất quán cho cả bộ. Luôn tự quyết và điền đủ, không bao giờ hỏi lại hay để trống vì "thiếu thông tin".
 
-4. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh.
-5. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy `;
+4. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
+
+5. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh.
+6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy `;
 
 export interface ComposeUserMessageInput {
   request: string;

@@ -154,6 +154,29 @@ function finalExportSlotName(indexInBatch: number): string {
 }
 
 /**
+ * Dựng nội dung file etsy.txt (title/description/tags) để người dùng dán
+ * nhanh lên Etsy khi đăng bán, ghi kèm trong thư mục export của batch -- xem
+ * `finalizeEtsy` ở lib/llm/finalize-suggestion.ts cho nguồn dữ liệu.
+ */
+function buildEtsyTextFile(title: string | null, description: string | null, tagsJson: string | null): string {
+  let tags: string[] = [];
+  if (tagsJson) {
+    try {
+      const parsed = JSON.parse(tagsJson);
+      if (Array.isArray(parsed)) tags = parsed.filter((t): t is string => typeof t === "string");
+    } catch {
+      tags = [];
+    }
+  }
+
+  return [
+    `Title:\n${title ?? ""}`,
+    `Description:\n${description ?? ""}`,
+    `Tags (${tags.length}):\n${tags.join(", ")}`,
+  ].join("\n\n");
+}
+
+/**
  * Xuất bản COPY gọn gàng, sẵn sàng đem in cho một batch, thành 2 thư mục con
  * dưới `finalRoot/<slug>/`:
  * - `khong-che/`: 14 ảnh KHÔNG che (bìa trước + 12 artwork + bìa sau).
@@ -184,6 +207,11 @@ async function exportBatchFolders(batchId: string, roots: UpscaleRoots): Promise
     await fs.rm(censoredDir, { recursive: true, force: true });
     await fs.mkdir(uncensoredDir, { recursive: true });
     await fs.mkdir(censoredDir, { recursive: true });
+
+    if (batch.etsyTitle || batch.etsyDescription || batch.etsyTagsJson) {
+      const etsyText = buildEtsyTextFile(batch.etsyTitle, batch.etsyDescription, batch.etsyTagsJson);
+      await fs.writeFile(path.join(roots.finalRoot, slug, "etsy.txt"), etsyText, "utf-8");
+    }
 
     for (const image of images) {
       const name = finalExportSlotName(image.job.indexInBatch);

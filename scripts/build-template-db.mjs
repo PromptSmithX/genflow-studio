@@ -48,5 +48,13 @@ const workflowOutDir = path.join(outDir, "workflows");
 fs.mkdirSync(workflowOutDir, { recursive: true });
 fs.copyFileSync(workflowSrc, path.join(workflowOutDir, workflowFilename));
 
+// Copy prisma/migrations into template/migrations so the packaged app can auto-migrate
+// existing user databases on startup without needing Prisma CLI or internet.
+const migrationsSrc = path.join(root, "prisma", "migrations");
+const migrationsOutDir = path.join(outDir, "migrations");
+fs.rmSync(migrationsOutDir, { recursive: true, force: true });
+fs.cpSync(migrationsSrc, migrationsOutDir, { recursive: true });
+
 console.log(`\nTemplate DB written to ${dbPath}`);
 console.log(`Default workflow written to ${path.join(workflowOutDir, workflowFilename)}`);
+console.log(`Migrations copied to ${migrationsOutDir}`);

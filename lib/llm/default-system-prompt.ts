@@ -66,9 +66,11 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
   ánh sáng + góc máy, phong cách editorial/tạp chí.
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, khuôn mặt, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
-- Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
-  rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
+- QUY TẮC VỀ SỐ LƯỢNG CHỦ THỂ (NHÂN VẬT):
+  • TÔN TRỌNG Ý ĐỊNH CỦA NGƯỜI DÙNG: Khi người dùng có ý định mô tả 2 người / cặp đôi / tình nhân / nam nữ / tương tác đôi lứa, hãy mô tả ĐẦY ĐỦ CẢ HAI NHÂN VẬT tương tác tự nhiên trong cùng một cảnh liền mạch, gợi cảm và thẩm mỹ theo đúng yêu cầu (dùng tag Danbooru đôi chuẩn như "couple, 1girl, 1boy", hoặc "2girls"/"2boys" tùy ngữ cảnh). TUYỆT ĐỐI KHÔNG đưa các từ chỉ cặp đôi hay giới tính (như "couple", "man", "boy", "male", "1boy", "two people") vào negative prompt.
+  • MẶC ĐỊNH (khi người dùng chỉ mô tả một nhân vật hoặc concept chung): MỌI "positive" phải mô tả CHÍNH XÁC MỘT người (mở đầu bằng "solo, 1girl" hoặc "solo, 1boy"), khung hình rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG tự ý sinh người thứ hai hay đám đông ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
   thế + góc máy KHÁC nhau (đứng, bước đi, ngồi, dựa tường, quỳ, nghiêng người, nằm, vặn người...).
   KHÔNG lặp lại cùng một kiểu cho cả bộ, và ĐẶC BIỆT đừng mặc định tư thế nằm dạng chân.
@@ -155,6 +157,7 @@ TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/descr
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
+  "concept": { "campaignTheme": "...(tên concept/câu chuyện chiến dịch, ngắn gọn)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
   "images": [
     { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
@@ -191,6 +194,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   cận mặt + toàn thân ghép cạnh nhau. KHÔNG dùng cụm "magazine spread", "magazine layout",
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, khuôn mặt, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
@@ -289,6 +293,7 @@ TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/descr
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
+  "concept": { "campaignTheme": "...(tên concept/câu chuyện chiến dịch, ngắn gọn)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
   "images": [
     { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
@@ -350,15 +355,27 @@ export const ANIME_SINGLE_SUBJECT_TAGS =
   "solo, solo focus, single character, one person only, no other people, no second person, balanced anatomy, correct head-to-body ratio, normal head size";
 
 /**
- * Hint tiếng Việt nối vào user message khi medium là anime: hướng LLM mở đầu MỖI
- * positive anime bằng count-tag Danbooru đúng giới tính nhân vật (chỉ LLM biết
- * giới tính nên app không tự chèn được), bổ trợ cho ANIME_SINGLE_SUBJECT_TAGS.
+ * Tag giải phẫu/tỉ lệ cho anime khi là cặp đôi hoặc nhiều người (không kèm tag
+ * solo/single subject để không xung đột với mô tả cặp đôi).
+ */
+export const ANIME_COUPLE_QUALITY_TAGS =
+  "balanced anatomy, correct head-to-body ratio, normal head size";
+
+/**
+ * Hint tiếng Việt nối vào user message khi medium là anime: hướng LLM hiểu đúng ý
+ * định của người dùng, mở đầu bằng tag Danbooru phù hợp (đơn hoặc đôi), bổ trợ cho
+ * ANIME_SINGLE_SUBJECT_TAGS / ANIME_COUPLE_QUALITY_TAGS.
  */
 export const ANIME_SINGLE_SUBJECT_HINT =
-  `Vì model anime dễ sinh thừa người / sai tỉ lệ và negative prompt bị vô hiệu: MỖI "positive" của bộ ` +
-  `anime hãy MỞ ĐẦU bằng "solo, 1girl" hoặc "solo, 1boy" đúng theo giới tính nhân vật, mô tả CHÍNH XÁC ` +
-  `MỘT người, TUYỆT ĐỐI không người thứ hai/cặp đôi/đám đông/người ở hậu cảnh, và giữ tỉ lệ đầu-thân tự ` +
-  `nhiên (không đầu/mặt quá to).`;
+  `Vì model anime dễ sinh thừa người / sai tỉ lệ và negative prompt bị vô hiệu: Hãy hiểu đúng ý định ` +
+  `của người dùng trong "Yêu cầu của người dùng":` +
+  `\n- Nếu người dùng CÓ Ý ĐỊNH về 2 người / cặp đôi / tình nhân / tương tác đôi: hãy mô tả ngữ cảnh ` +
+  `cặp đôi đầy đủ và thẩm mỹ (như ảnh đôi, tương tác lãng mạn/gợi cảm của cả hai nhân vật), mở đầu ` +
+  `bằng tag Danbooru cặp đôi phù hợp (vd: "couple, 1girl, 1boy" hoặc "2girls"/"2boys" tùy giới tính), ` +
+  `và TUYỆT ĐỐI KHÔNG đưa các từ cấm như "couple, man, boy, male, 1boy, two people" vào negative prompt.` +
+  `\n- Nếu người dùng KHÔNG có ý định về 2 người (mô tả 1 người hoặc ý tưởng chung): MẶC ĐỊNH MỖI ` +
+  `"positive" hãy MỞ ĐẦU bằng "solo, 1girl" hoặc "solo, 1boy" đúng theo giới tính nhân vật, mô tả ` +
+  `CHÍNH XÁC MỘT người, không có người thừa hay đám đông ở hậu cảnh, và giữ tỉ lệ đầu-thân tự nhiên.`;
 
 /**
  * Khung prompt DÙNG CHUNG cho cả REAL và ANIME, chèn ở ĐẦU system prompt --
@@ -396,6 +413,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
      Kết hợp linh hoạt với nét văn hóa hoặc phong cách của nhân vật để concept thêm sống động và ăn nhập.
    - TÍNH NHẤT QUÁN CỦA CÂU CHUYỆN (STORYLINE COHESION):
      Cả 12 tháng xoay quanh CÙNG một Concept chiến dịch đã chọn (không đổi đột ngột giữa các tháng sang chủ đề xa lạ). Thay vào đó, người mẫu tương tác với các set chụp nhỏ, góc máy, ánh sáng và góc độ tương tác đạo cụ khác nhau của cùng concept đó (ví dụ với concept xe: tháng chụp tựa nắp capo, tháng chụp ngồi buồng lái mở cửa, tháng chụp bên sườn xe, tháng tạo dáng bên đuôi xe...).
+     BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, bảng màu, loại không gian/mood) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
    - TƯƠNG TÁC TỰ NHIÊN VỚI ĐẠO CỤ (NATURAL INTERACTION - TRÁNH BĂM ĐÔI KHUNG HÌNH):
      Khi người mẫu tương tác với phương tiện hoặc đạo cụ lớn (xe, đàn piano, máy móc, tác phẩm điêu khắc...), mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against the sleek hood of...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is a car") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
    - RÀNG BUỘC DUY NHẤT 1 NGƯỜI MẪU (STRICT SINGLE SUBJECT):

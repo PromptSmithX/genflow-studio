@@ -31,15 +31,29 @@ export const etsySuggestionSchema = z.object({
   tags: z.array(z.string().trim()).default([]),
 });
 
+// --- Concept chiến dịch (per bộ lịch / per batch) ---
+// LLM chốt MỘT concept chung cho cả bộ và trả về ở top-level. "anchorTags" là
+// chuỗi tag tiếng Anh CHỈ chứa phần BẤT BIẾN của cả bộ (ngoại hình nhân vật,
+// nhóm trang phục, bảng màu, không gian/mood) -- KHÔNG kèm cảnh/tư thế/góc máy
+// theo từng tháng. App tiêm "anchorTags" vào MỌI positive (finalizeSuggestedImage)
+// để đảm bảo bằng cấu trúc cả bộ cùng concept, không phụ thuộc LLM tuân thủ.
+// Giữ schema LỎNG (default rỗng) để LLM lỡ bỏ field không làm hỏng việc gen.
+export const conceptSuggestionSchema = z.object({
+  campaignTheme: z.string().trim().default(""),
+  anchorTags: z.string().trim().default(""),
+});
+
 export const llmSuggestionResultSchema = z.object({
   images: z.array(llmImageSuggestionSchema),
   negative: z.string().trim().default(""),
+  concept: conceptSuggestionSchema.optional(),
   etsy: etsySuggestionSchema.optional(),
 });
 
 export type LlmSuggestionResult = z.infer<typeof llmSuggestionResultSchema>;
 export type LlmImageSuggestion = z.infer<typeof llmImageSuggestionSchema>;
 export type EtsySuggestion = z.infer<typeof etsySuggestionSchema>;
+export type ConceptSuggestion = z.infer<typeof conceptSuggestionSchema>;
 
 export interface TokenUsage {
   promptTokens: number | null;

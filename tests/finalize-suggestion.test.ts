@@ -73,6 +73,15 @@ describe("finalizeSuggestedImage", () => {
     expect(result.positive.startsWith("solo, solo focus")).toBe(true);
   });
 
+  it("artwork + anime + couple: preserves couple tags and does NOT prepend solo tags", () => {
+    const image = makeImage({ positive: "couple, 1girl, 1boy, lovers embracing on the beach" });
+    const result = finalizeSuggestedImage(image, { isCover: false, isAnimeMedium: true });
+    expect(result.positive.startsWith("balanced anatomy")).toBe(true);
+    expect(result.positive).not.toContain("solo");
+    expect(result.positive).not.toContain("no other people");
+    expect(result.positive).toContain("couple, 1girl, 1boy");
+  });
+
   it("strips copy-space / negative-space / split-composition phrases from positive", () => {
     const image = makeImage({
       positive: "a scene, copy space at the top, split composition, clean simple floor",

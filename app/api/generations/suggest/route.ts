@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
     console.log(
       `[LLM suggest] model=${llmConfig.model} usage=${JSON.stringify(result.usage)}\n` +
         `--- user message ---\n${userMessage}\n` +
+        `--- concept ---\n${JSON.stringify(result.concept ?? null)}\n` +
         `--- negative ---\n${result.negative}\n` +
         result.images.map((image, index) => `--- positive #${index + 1} ---\n${image.positive}`).join("\n"),
     );

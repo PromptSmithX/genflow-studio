@@ -65,7 +65,8 @@ TÊN + NĂM in trên trang bìa:
 RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
   ánh sáng + góc máy, phong cách editorial/tạp chí.
-- Giữ CÙNG MỘT nhân vật/phong cách cho cả bộ; giữa các ảnh chỉ đổi bối cảnh/tư thế/góc máy/trang phục.
+- Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
@@ -189,7 +190,8 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   DUY NHẤT, LIỀN MẠCH — TUYỆT ĐỐI KHÔNG phải trang tạp chí trải đôi / dàn 2 trang / ảnh ghép so sánh /
   cận mặt + toàn thân ghép cạnh nhau. KHÔNG dùng cụm "magazine spread", "magazine layout",
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
-- Giữ CÙNG MỘT nhân vật/phong cách cho cả bộ; giữa các ảnh chỉ đổi bối cảnh/tư thế/góc máy/trang phục.
+- Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
@@ -375,7 +377,29 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 4. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
 
 5. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh.
-6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt, mái tóc, màu da , kiểu dáng, kiểu tóc qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy `;
+6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt, mái tóc, màu da , kiểu dáng, kiểu tóc qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy
+7. CÂU CHUYỆN VÀ CONCEPT CHIẾN DỊCH THƯƠNG MẠI CHO BỘ LỊCH (COMMERCIAL CAMPAIGN STORYLINE & DIVERSE CONCEPTS):
+   Một bộ lịch 12 tháng được xây dựng như một CHIẾN DỊCH CHỤP ẢNH THƯƠNG MẠI CAO CẤP (Commercial Editorial Photoshoot Campaign) của một nhãn hàng hoặc thương hiệu xa xỉ thuê người mẫu chụp.
+   - NẾU NGƯỜI DÙNG CÓ NÊU CỤ THỂ Ý TƯỞNG / BỐI CẢNH / ĐẠO CỤ (ví dụ: "cô gái thợ làm bánh", "nữ điệp viên", "chụp ở thư viện", "chụp bên bờ biển"...):
+     LUÔN TUÂN THỦ 100% Ý TƯỞNG NGƯỜI DÙNG (Nguyên tắc số 1). KHÔNG tự ý chèn ép thêm concept khác làm loãng ý đồ của họ.
+   - NẾU NGƯỜI DÙNG CHỈ MÔ TẢ NHÂN VẬT HOẶC QUỐC TỊCH TỐI GIẢN (ví dụ: "cô gái", "cô gái Việt Nam", "người mẫu Nhật Bản", "cô gái tóc vàng"... mà không có bối cảnh cụ thể):
+     Bạn PHẢI TỰ CHỌN một "Campaign Theme" cụ thể, có tính thương mại cao, sang trọng và thu hút người xem lịch. Cả 12 tháng xoay quanh concept chiến dịch này.
+   - ĐA DẠNG HÓA TỐI ĐA - CHỐNG LẶP KHUÔN MẪU (MAXIMAL CONCEPT DIVERSITY & ANTI-REPETITION):
+     Mỗi lần được gọi, bạn phải tư duy như một Giám đốc Sáng tạo (Creative Director) đang pitching một chiến dịch hoàn toàn mới độc nhất vô nhị. TUYỆT ĐỐI KHÔNG mặc định lặp lại một vài chủ đề quen thuộc (như chỉ nghĩ đến siêu xe hay hồ bơi). Hãy kích hoạt sự sáng tạo không giới hạn từ ma trận các không gian và chủ đề thương mại cao cấp:
+     • Phương tiện & Cơ khí xa xỉ: siêu xe thể thao (hypercar/supercar), xe roadster mui trần cổ điển (vintage classic car), mô tô phân khối lớn/cafe racer, du thuyền cá nhân, phi cơ tư nhân, garage bảo tàng xe hơi nghệ thuật...
+     • Thời trang Haute Couture & Studio nghệ thuật: sàn diễn runway, studio kiến trúc tối giản với tác phẩm điêu khắc trừu tượng, phối đồ thời trang cao cấp với vải voan/lụa bay, ánh sáng kịch tính (dramatic editorial lighting)...
+     • Lối sống thượng lưu & Thể thao quý tộc: bến cảng du thuyền xa hoa, sân tennis phong cách retro sang trọng, trang trại ngựa quý tộc (equestrian/polo), khu nghỉ dưỡng trượt tuyết tuyết trắng, sân golf hoàng hôn...
+     • Không gian Kiến trúc & Nội thất Xa xỉ: penthouse kính nhìn ra toàn cảnh thành phố đêm, thư viện cổ điển với nội thất gỗ mun và sách bìa da, phòng tổng thống hoàng gia, hầm rượu vang nghệ thuật...
+     • Nghệ thuật & Âm nhạc Đỉnh cao: bên cây đại dương cầm (Grand Piano), phòng hòa nhạc cổ điển, xưởng điêu khắc đá cẩm thạch, xưởng họa sĩ sơn dầu...
+     • Thiên nhiên & Dã ngoại Thượng lưu: ốc đảo sa mạc sang trọng, nhà kính thực vật nhiệt đới quý hiếm, suối nước nóng onsen cao cấp giữa mùa tuyết rơi...
+     • Công nghệ & Tương lai (Futuristic & Cyber-Chic): phòng thí nghiệm công nghệ cao tối giản, phong cách cyberpunk neon cao cấp, không gian phi thuyền viễn tưởng...
+     Kết hợp linh hoạt với nét văn hóa hoặc phong cách của nhân vật để concept thêm sống động và ăn nhập.
+   - TÍNH NHẤT QUÁN CỦA CÂU CHUYỆN (STORYLINE COHESION):
+     Cả 12 tháng xoay quanh CÙNG một Concept chiến dịch đã chọn (không đổi đột ngột giữa các tháng sang chủ đề xa lạ). Thay vào đó, người mẫu tương tác với các set chụp nhỏ, góc máy, ánh sáng và góc độ tương tác đạo cụ khác nhau của cùng concept đó (ví dụ với concept xe: tháng chụp tựa nắp capo, tháng chụp ngồi buồng lái mở cửa, tháng chụp bên sườn xe, tháng tạo dáng bên đuôi xe...).
+   - TƯƠNG TÁC TỰ NHIÊN VỚI ĐẠO CỤ (NATURAL INTERACTION - TRÁNH BĂM ĐÔI KHUNG HÌNH):
+     Khi người mẫu tương tác với phương tiện hoặc đạo cụ lớn (xe, đàn piano, máy móc, tác phẩm điêu khắc...), mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against the sleek hood of...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is a car") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
+   - RÀNG BUỘC DUY NHẤT 1 NGƯỜI MẪU (STRICT SINGLE SUBJECT):
+     Dù có phương tiện hay đạo cụ lớn, TUYỆT ĐỐI CHỈ CÓ DUY NHẤT 1 NGƯỜI MẪU tương tác với đồ vật. Không vẽ thêm tài xế, trợ lý, phụ tá, thợ máy hay bất kỳ người nào khác trong khung hình.`;
 
 export interface ComposeUserMessageInput {
   request: string;

@@ -4,6 +4,7 @@ import {
   SINGLE_SUBJECT_QUALITY_TAGS,
   FRAMING_MARGIN_TAGS,
   ANIME_SINGLE_SUBJECT_TAGS,
+  ANIME_COUPLE_QUALITY_TAGS,
 } from "@/lib/llm/default-system-prompt";
 
 const CALENDAR_YEAR = "2027";
@@ -63,6 +64,17 @@ const DUP_SUBJECT_REGEX =
 const CALENDAR_LABEL = "CALENDAR";
 
 /**
+ * Với anime: nếu LLM đã nhận diện và mở đầu bằng tag cặp đôi/hai người, dùng
+ * tag giải phẫu tỉ lệ (ANIME_COUPLE_QUALITY_TAGS) để không chèn các tag solo/no
+ * second person đè lên prompt cặp đôi. Mặc định các trường hợp 1 người (solo)
+ * vẫn khoá bằng ANIME_SINGLE_SUBJECT_TAGS như cũ.
+ */
+const ANIME_COUPLE_REGEX = /^\s*(couple|1boy\s*,\s*1girl|1girl\s*,\s*1boy|2girls|2boys)\b/i;
+function resolveAnimeSubjectTags(positive: string): string {
+  return ANIME_COUPLE_REGEX.test(positive) ? ANIME_COUPLE_QUALITY_TAGS : ANIME_SINGLE_SUBJECT_TAGS;
+}
+
+/**
  * Chuẩn hoá một ảnh do LLM gợi ý về đúng ràng buộc gen ảnh của app, SỬA TẠI CHỖ
  * `image` và trả lại chính nó. Dùng chung bởi route /suggest (tạo cả bộ) và
  * luồng "Sửa lại" 1 ảnh (regenerate-fresh), nên hành vi phải y hệt nhau.
@@ -101,7 +113,7 @@ export function finalizeSuggestedImage(
     // trọng số token đầu mạnh) để giảm lỗi nhân đôi chủ thể ở Turbo (negative
     // bị ZeroOut nên không có lớp chặn duplicate).
     image.positive = isAnimeMedium
-      ? mergeTags(ANIME_SINGLE_SUBJECT_TAGS, FRAMING_MARGIN_TAGS, image.positive)
+      ? mergeTags(resolveAnimeSubjectTags(image.positive), FRAMING_MARGIN_TAGS, image.positive)
       : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, FRAMING_MARGIN_TAGS, image.positive);
     return image;
   }
@@ -135,7 +147,7 @@ export function finalizeSuggestedImage(
 
   image.positive = isAnimeMedium
     ? mergeTags(
-        ANIME_SINGLE_SUBJECT_TAGS,
+        resolveAnimeSubjectTags(image.positive),
         FRAMING_MARGIN_TAGS,
         image.positive,
         ...missingTags,

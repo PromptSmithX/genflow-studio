@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -71,11 +71,9 @@ export function AssistantCreateForm() {
 
   // Không còn lựa chọn "để AI tự quyết" -- luôn chọn sẵn kiểu ảnh đầu tiên
   // (sortOrder thấp nhất, API đã sắp xếp) ngay khi danh sách tải xong.
-  useEffect(() => {
-    if (!mediumId && activeMediums.length > 0) {
-      setMediumId(activeMediums[0].id);
-    }
-  }, [activeMediums, mediumId]);
+  if (!mediumId && activeMediums.length > 0) {
+    setMediumId(activeMediums[0].id);
+  }
 
   // Pre-fill the advanced params from the workflow's own values once per
   // (re)fetch, mirroring create-form's settings sync. We never re-sync on later

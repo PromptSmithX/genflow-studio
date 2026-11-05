@@ -21,7 +21,7 @@ interface Params {
  * không thể trỏ ra ngoài finalRoot. Không await exit code của explorer.exe --
  * nó trả về mã khác 0 ngay cả khi mở thành công.
  */
-export async function POST(_request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { batchId } = await params;
     const batch = await prisma.generationBatch.findUnique({ where: { id: batchId } });
@@ -32,7 +32,16 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
     const settings = await getOrCreateSettings();
     const finalRoot = resolveFinalRoot(resolveOutputRoot(settings));
-    const folderPath = resolveSafePath(finalRoot, batch.finalExportRelativePath);
+    let folderPath = resolveSafePath(finalRoot, batch.finalExportRelativePath);
+
+    const sub = request.nextUrl.searchParams.get("folder");
+    if (sub === "mockup") {
+      const subPath = resolveSafePath(folderPath, "mockup");
+      const subStat = await fs.stat(subPath).catch(() => null);
+      if (subStat?.isDirectory()) {
+        folderPath = subPath;
+      }
+    }
 
     const stat = await fs.stat(folderPath).catch(() => null);
     if (!stat?.isDirectory()) {

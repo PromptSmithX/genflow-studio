@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiPost } from "@/lib/client/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost } from "@/lib/client/api";
 import type { GeneratedImageDTO, GenerationBatchDTO } from "@/lib/types";
 
 export function useUpscaleImage() {
@@ -18,6 +18,7 @@ export interface UpscaleBatchResponse extends GenerationBatchDTO {
     failed: number;
     backCover: "done" | "failed" | "skipped";
     finalExport: "done" | "failed" | "skipped";
+    mockup: "done" | "failed" | "skipped";
   };
 }
 
@@ -29,6 +30,33 @@ export function useUpscaleBatch() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["history"] });
       queryClient.invalidateQueries({ queryKey: ["generations", variables.batchId] });
+      queryClient.invalidateQueries({ queryKey: ["mockup", variables.batchId] });
+    },
+  });
+}
+
+export interface BatchMockupInfo {
+  status: "done" | "failed" | null;
+  files: string[];
+}
+
+export function useBatchMockup(batchId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["mockup", batchId],
+    queryFn: () => apiGet<BatchMockupInfo>(`/api/generations/${batchId}/mockup`),
+    enabled: Boolean(batchId) && enabled,
+  });
+}
+
+export function useGenerateMockup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) =>
+      apiPost<{ status: string; files: string[] }>(`/api/generations/${batchId}/mockup`),
+    onSuccess: (_data, batchId) => {
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+      queryClient.invalidateQueries({ queryKey: ["generations", batchId] });
+      queryClient.invalidateQueries({ queryKey: ["mockup", batchId] });
     },
   });
 }
@@ -36,6 +64,11 @@ export function useUpscaleBatch() {
 /** Mở Windows Explorer đúng thư mục file in đã xuất của batch (xem app/api/generations/[batchId]/reveal-folder). */
 export function useRevealFolder() {
   return useMutation({
-    mutationFn: (batchId: string) => apiPost<{ ok: true }>(`/api/generations/${batchId}/reveal-folder`),
+    mutationFn: (args: string | { batchId: string; folder?: string }) => {
+      const batchId = typeof args === "string" ? args : args.batchId;
+      const folder = typeof args === "string" ? undefined : args.folder;
+      const query = folder ? `?folder=${encodeURIComponent(folder)}` : "";
+      return apiPost<{ ok: true }>(`/api/generations/${batchId}/reveal-folder${query}`);
+    },
   });
 }

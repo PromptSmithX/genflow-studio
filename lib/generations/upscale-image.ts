@@ -16,6 +16,7 @@ import { upscaleToSize } from "@/lib/images/upscale";
 import { listCalendarFormats, type CalendarFormat } from "@/lib/calendar/formats";
 import { loadBackCoverGeometry } from "@/lib/calendar/back-cover-format";
 import { composeBackCover } from "@/lib/images/back-cover";
+import { wrapBatchMockup } from "@/lib/mockup/run-mockup";
 
 interface UpscaleRoots {
   outputRoot: string;
@@ -281,13 +282,15 @@ export interface UpscaleBatchResult {
   failed: number;
   backCover: "done" | "failed" | "skipped";
   finalExport: "done" | "failed" | "skipped";
+  mockup: "done" | "failed" | "skipped";
 }
 
 /**
  * Upscale toàn bộ ảnh đã hoàn thành của một batch bằng 1 lệnh, thay vì bấm
  * từng ảnh -- tải settings/format một lần rồi lặp tuần tự (nội suy cục bộ rẻ,
  * tuần tự để không làm CPU nghẽn khi batch có 15 ảnh). Một ảnh lỗi không chặn
- * các ảnh còn lại trong batch.
+ * các ảnh còn lại trong batch. Sau khi xuất folder file in, tự động tạo luôn
+ * 5 ảnh mockup sản phẩm phối cảnh vào folder finalRoot/<slug>/mockup/.
  */
 export async function upscaleBatch(batchId: string, formatId: string): Promise<UpscaleBatchResult> {
   const format = await resolveFormatOrThrow(formatId);
@@ -313,5 +316,16 @@ export async function upscaleBatch(batchId: string, formatId: string): Promise<U
   const backCover = await buildBackCover(batchId, format, roots);
   const finalExport = await exportBatchFolders(batchId, roots);
 
-  return { total: images.length, done, failed, backCover, finalExport };
+  let mockup: "done" | "failed" | "skipped" = "skipped";
+  if (finalExport === "done") {
+    try {
+      const mockupRes = await wrapBatchMockup(batchId);
+      mockup = mockupRes.status;
+    } catch (err) {
+      console.error(`[upscaleBatch] lỗi khi tạo mockup cho batch ${batchId}:`, err);
+      mockup = "failed";
+    }
+  }
+
+  return { total: images.length, done, failed, backCover, finalExport, mockup };
 }

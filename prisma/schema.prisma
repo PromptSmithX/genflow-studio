@@ -157,6 +157,10 @@ model GenerationBatch {
   // "2026-11-02_22-29_..._sf4u7b". null nếu chưa xuất hoặc xuất thất bại.
   finalExportRelativePath   String?
 
+  // Trạng thái tạo mockup sản phẩm (5 ảnh phối cảnh trong thư mục mockup/ dưới finalRoot).
+  // "done" | "failed" | null.
+  mockupStatus              String?
+
   // Medium (Người thực/Anime...) đã chọn khi tạo batch qua Trợ lý AI -- quyết
   // định system prompt REAL vs ANIME. null = batch cũ trước khi có trường này,
   // hoặc không tạo qua Trợ lý AI. Dùng lại ở lib/generations/regenerate-fresh.ts

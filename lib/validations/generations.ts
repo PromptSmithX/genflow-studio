@@ -3,8 +3,8 @@ import { z } from "zod";
 export const imageRequestSchema = z.object({
   sceneId: z.string().optional().nullable(),
   poseId: z.string().optional().nullable(),
-  positiveOverride: z.string().trim().max(2000).optional().nullable(),
-  negativeOverride: z.string().trim().max(2000).optional().nullable(),
+  positiveOverride: z.string().trim().max(4000).optional().nullable(),
+  negativeOverride: z.string().trim().max(4000).optional().nullable(),
 });
 
 // Metadata Etsy cho CẢ bộ lịch (per batch), do Trợ lý AI gợi ý ở /api/generations/suggest

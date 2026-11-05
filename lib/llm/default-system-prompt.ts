@@ -66,6 +66,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
   ánh sáng + góc máy, phong cách editorial/tạp chí.
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, khuôn mặt, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
@@ -155,6 +156,7 @@ TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/descr
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
+  "concept": { "campaignTheme": "...(tên concept/câu chuyện chiến dịch, ngắn gọn)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
   "images": [
     { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
@@ -191,6 +193,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   cận mặt + toàn thân ghép cạnh nhau. KHÔNG dùng cụm "magazine spread", "magazine layout",
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, khuôn mặt, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
@@ -289,6 +292,7 @@ TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/descr
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
+  "concept": { "campaignTheme": "...(tên concept/câu chuyện chiến dịch, ngắn gọn)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
   "images": [
     { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
@@ -396,6 +400,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
      Kết hợp linh hoạt với nét văn hóa hoặc phong cách của nhân vật để concept thêm sống động và ăn nhập.
    - TÍNH NHẤT QUÁN CỦA CÂU CHUYỆN (STORYLINE COHESION):
      Cả 12 tháng xoay quanh CÙNG một Concept chiến dịch đã chọn (không đổi đột ngột giữa các tháng sang chủ đề xa lạ). Thay vào đó, người mẫu tương tác với các set chụp nhỏ, góc máy, ánh sáng và góc độ tương tác đạo cụ khác nhau của cùng concept đó (ví dụ với concept xe: tháng chụp tựa nắp capo, tháng chụp ngồi buồng lái mở cửa, tháng chụp bên sườn xe, tháng tạo dáng bên đuôi xe...).
+     BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, bảng màu, loại không gian/mood) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
    - TƯƠNG TÁC TỰ NHIÊN VỚI ĐẠO CỤ (NATURAL INTERACTION - TRÁNH BĂM ĐÔI KHUNG HÌNH):
      Khi người mẫu tương tác với phương tiện hoặc đạo cụ lớn (xe, đàn piano, máy móc, tác phẩm điêu khắc...), mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against the sleek hood of...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is a car") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
    - RÀNG BUỘC DUY NHẤT 1 NGƯỜI MẪU (STRICT SINGLE SUBJECT):

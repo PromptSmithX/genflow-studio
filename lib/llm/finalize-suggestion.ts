@@ -13,6 +13,18 @@ const YEAR_REGEX = /\b20\d{2}\b/g;
 function forceYear(text: string): string {
   return text.replace(YEAR_REGEX, CALENDAR_YEAR);
 }
+// Lịch in vật lý giao tận nơi -> loại mọi cụm ngụ ý giao hàng số khỏi metadata.
+const DIGITAL_DELIVERY_SRC =
+  "\\b(instant\\s+downloads?|digital\\s+(?:downloads?|files?|cop(?:y|ies)|versions?)|downloadable|downloads?|printables?|print[\\s-]?at[\\s-]?home|pdfs?)\\b";
+const DIGITAL_DELIVERY_STRIP = new RegExp(DIGITAL_DELIVERY_SRC, "gi");
+function stripDigital(text: string): string {
+  return text
+    .replace(DIGITAL_DELIVERY_STRIP, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+([,.|])/g, "$1")
+    .replace(/[ \t]+$/gm, "")
+    .trim();
+}
 const ETSY_TITLE_MAX = 140;
 const ETSY_DETAILS_SECTION =
   "\n\nDetails\n\nSizes:\n   11 x 8.5 in (opens to 11 x 17 in)\n   14 x 11.5 in (opens to 14 x 23 in)\nBinding: wire-bound, with a hanging hole\nPaper: Matte or Glossy\nPrinting: printed on demand and shipped to you";
@@ -21,8 +33,8 @@ const ETSY_TAG_COUNT = 13;
 const ETSY_FALLBACK_TAGS = [
   `calendar ${CALENDAR_YEAR}`,
   "wall calendar",
-  "printable art",
-  "digital download",
+  "wall decor",
+  "printed calendar",
   "home decor",
   "gift idea",
   "art print",
@@ -85,11 +97,12 @@ export function finalizeSuggestedImage(
   if (!isCover) {
     image.title = undefined;
     image.year = undefined;
-    // Anime: ép single-subject lên ĐẦU positive (model đánh trọng số token đầu
-    // mạnh); nhánh người giữ tag chung ở cuối.
+    // Cả anime lẫn người đều ép single-subject lên ĐẦU positive (model đánh
+    // trọng số token đầu mạnh) để giảm lỗi nhân đôi chủ thể ở Turbo (negative
+    // bị ZeroOut nên không có lớp chặn duplicate).
     image.positive = isAnimeMedium
       ? mergeTags(ANIME_SINGLE_SUBJECT_TAGS, FRAMING_MARGIN_TAGS, image.positive)
-      : mergeTags(image.positive, FRAMING_MARGIN_TAGS, SINGLE_SUBJECT_QUALITY_TAGS);
+      : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, FRAMING_MARGIN_TAGS, image.positive);
     return image;
   }
 
@@ -113,8 +126,11 @@ export function finalizeSuggestedImage(
   if (!lowerPositive.includes(CALENDAR_LABEL.toLowerCase())) {
     missingTags.push(`uppercase text "${CALENDAR_LABEL}", exact spelling, clearly legible`);
   }
+  // Năm: chỉ MỘT lần nhắc để model vẽ đúng MỘT số năm (nhiều lần nhắc -> model
+  // vẽ lặp thành nhiều glyph). forceYear đã chuẩn hoá năm LLM về 2027 nên nếu
+  // positive đã có thì khỏi thêm; nhấn mạnh bằng tính từ, KHÔNG lặp lại con số.
   if (!lowerPositive.includes(year.toLowerCase())) {
-    missingTags.push(`year text "${year}"`);
+    missingTags.push(`large bold year text "${year}", clearly legible`);
   }
 
   image.positive = isAnimeMedium
@@ -126,11 +142,11 @@ export function finalizeSuggestedImage(
         "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
       )
     : mergeTags(
-        image.positive,
+        SINGLE_SUBJECT_QUALITY_TAGS,
         FRAMING_MARGIN_TAGS,
+        image.positive,
         ...missingTags,
         "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-        SINGLE_SUBJECT_QUALITY_TAGS,
       );
   return image;
 }
@@ -145,13 +161,22 @@ export function finalizeSuggestedImage(
  * hỏng việc gen ảnh), nên hàm này là lớp bảo đảm cuối cùng trước khi lưu DB.
  */
 export function finalizeEtsy(etsy: EtsySuggestion): EtsySuggestion {
-  const title = forceYear(etsy.title.trim()).slice(0, ETSY_TITLE_MAX);
-  const description = forceYear(etsy.description.trim()) + ETSY_DETAILS_SECTION;
+  // Title: tách theo "|", loại cụm giao hàng số ở từng đoạn, bỏ đoạn rỗng.
+  const title = forceYear(etsy.title)
+    .split("|")
+    .map((segment) => stripDigital(segment.trim()))
+    .filter(Boolean)
+    .join(" | ")
+    .slice(0, ETSY_TITLE_MAX);
+  const description = stripDigital(forceYear(etsy.description.trim())) + ETSY_DETAILS_SECTION;
 
   const seen = new Set<string>();
   const tags: string[] = [];
   for (const raw of etsy.tags) {
-    const tag = forceYear(raw.trim()).slice(0, ETSY_TAG_MAX);
+    const cleaned = forceYear(raw.trim());
+    // Tag chứa cụm giao hàng số -> bỏ nguyên tag (không giữ phần còn lại vụn).
+    if (stripDigital(cleaned) !== cleaned) continue;
+    const tag = cleaned.slice(0, ETSY_TAG_MAX);
     const key = tag.toLowerCase();
     if (!tag || seen.has(key)) continue;
     seen.add(key);

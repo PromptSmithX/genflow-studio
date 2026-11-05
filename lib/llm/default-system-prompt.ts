@@ -65,7 +65,8 @@ TÊN + NĂM in trên trang bìa:
 RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
   ánh sáng + góc máy, phong cách editorial/tạp chí.
-- Giữ CÙNG MỘT nhân vật/phong cách cho cả bộ; giữa các ảnh chỉ đổi bối cảnh/tư thế/góc máy/trang phục.
+- Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
@@ -132,9 +133,12 @@ chiếu (tên ngắn gọn, năm dạng số vd "2027").
 
 "etsy" (metadata để đăng bán CẢ BỘ LỊCH này trên Etsy -- VIẾT BẰNG TIẾNG ANH, văn phong marketplace
 sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm dù positive/negative có gì):
+ĐÂY LÀ LỊCH IN VẬT LÝ giao tận tay (print-on-demand, wire-bound, shipped), KHÔNG phải file tải về.
+TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/description/tags: "digital download",
+"printable", "downloadable", "instant download", "PDF", "print at home", "digital file".
 - "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
   Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
-  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
+  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Premium Wire-Bound Print | Gift for Her".
 - "description": Viết bằng tiếng Anh theo đúng cấu trúc 4 phần dưới đây, dùng "\\n\\n" ngăn các đoạn/phần, dùng "\\n" ngăn các bullet. TUYỆT ĐỐI KHÔNG viết phần "Details" (app tự thêm vào sau):
   PHẦN 1 — Hook (2-3 câu): Nêu rõ năm 2027, số artwork ĐÚNG BẰNG số ảnh được yêu cầu, chủ đề/nhân vật/mood tổng thể. Kết bằng 1 câu mô tả cảm xúc/lợi ích mang lại cho người xem.
   PHẦN 2 — Nội dung chi tiết (2-3 câu): Mô tả các loại cảnh/khoảnh khắc tiêu biểu trải qua các tháng, visual style đặc trưng (ánh sáng, màu sắc, texture, mood).
@@ -146,7 +150,7 @@ sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm
     Bullet 4: Câu tổng kết cảm xúc + năm 2027
 - "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
   nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
-  điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
+  điểm (vd "wall decor"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
   mùa/dịp (vd "2027 calendar").
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
@@ -186,7 +190,8 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   DUY NHẤT, LIỀN MẠCH — TUYỆT ĐỐI KHÔNG phải trang tạp chí trải đôi / dàn 2 trang / ảnh ghép so sánh /
   cận mặt + toàn thân ghép cạnh nhau. KHÔNG dùng cụm "magazine spread", "magazine layout",
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
-- Giữ CÙNG MỘT nhân vật/phong cách cho cả bộ; giữa các ảnh chỉ đổi bối cảnh/tư thế/góc máy/trang phục.
+- Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
+- Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
@@ -262,9 +267,12 @@ chiếu (tên ngắn gọn, năm dạng số vd "2027").
 
 "etsy" (metadata để đăng bán CẢ BỘ LỊCH này trên Etsy -- VIẾT BẰNG TIẾNG ANH, văn phong marketplace
 sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm dù positive/negative có gì):
+ĐÂY LÀ LỊCH IN VẬT LÝ giao tận tay (print-on-demand, wire-bound, shipped), KHÔNG phải file tải về.
+TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/description/tags: "digital download",
+"printable", "downloadable", "instant download", "PDF", "print at home", "digital file".
 - "title": tối đa 140 ký tự. Đặt keyword sản phẩm chính lên ĐẦU, các cụm còn lại ngăn bởi dấu "|".
   Công thức: "<Keyword chính: loại sản phẩm + chủ đề> | <đặc điểm/tính năng> | <đối tượng/dịp dùng>".
-  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Printable Digital Download | Gift for Her".
+  Ví dụ: "Fantasy Warrior Wall Calendar 2027 | Premium Wire-Bound Print | Gift for Her".
 - "description": Viết bằng tiếng Anh theo đúng cấu trúc 4 phần dưới đây, dùng "\\n\\n" ngăn các đoạn/phần, dùng "\\n" ngăn các bullet. TUYỆT ĐỐI KHÔNG viết phần "Details" (app tự thêm vào sau):
   PHẦN 1 — Hook (2-3 câu): Nêu rõ năm 2027, số artwork ĐÚNG BẰNG số ảnh được yêu cầu, chủ đề/nhân vật/mood tổng thể. Kết bằng 1 câu mô tả cảm xúc/lợi ích mang lại cho người xem.
   PHẦN 2 — Nội dung chi tiết (2-3 câu): Mô tả các loại cảnh/khoảnh khắc tiêu biểu trải qua các tháng, visual style đặc trưng (ánh sáng, màu sắc, texture, mood).
@@ -276,7 +284,7 @@ sạch sẽ, chuyên nghiệp, KHÔNG chứa nội dung khiêu dâm/nhạy cảm
     Bullet 4: Câu tổng kết cảm xúc + năm 2027
 - "tags": mảng ĐÚNG 13 chuỗi tiếng Anh, MỖI tag tối đa 20 ký tự, KHÔNG trùng nhau, KHÔNG lặp lại
   nguyên văn từ trong "title". Trộn đủ các nhóm: 3-4 tag chủ đề rộng (vd "wall calendar"), 3-4 tag đặc
-  điểm (vd "printable art"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
+  điểm (vd "wall decor"), 4-5 tag đuôi dài theo ý định người mua (vd "gift for her"), 1-2 tag theo
   mùa/dịp (vd "2027 calendar").
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
@@ -362,14 +370,36 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 
 1. Ý MUỐN CỦA NGƯỜI DÙNG LÀ ƯU TIÊN SỐ 1. Mọi điều người dùng nêu rõ trong "Yêu cầu của người dùng" (phong cách, nhân vật, trang phục, bối cảnh, màu sắc, tâm trạng, tên, năm, số lượng...) phải được tôn trọng ĐÚNG như họ nói và ưu tiên hơn mọi mặc định/gợi ý ở các mục sau. Nếu một quy tắc mặc định mâu thuẫn với điều người dùng đã nêu rõ, LUÔN theo người dùng.
 
-2. BÁM SÁT MÔ TẢ NGOẠI HÌNH CHỦ THỂ (KỂ CẢ TIẾNG LÓNG/THÔNG TỤC). Người dùng có thể tả vóc dáng, thân hình, độ tuổi, chiều cao, khuôn mặt, làn da, vòng eo/ngực/mông/hông... bằng từ thông tục hoặc tiếng lóng (ví dụ "mũm mĩm/chuppy", "bốc lửa", "gầy/mình dây", "đô con/cơ bắp", "bánh bèo", "da bánh mật"...). Hãy HIỂU đúng ý nghĩa thực sự của từ đó rồi DỊCH thành tag tiếng Anh RÕ RÀNG, và LẶP LẠI GIỐNG HỆT trong MỌI ảnh vì đây là đặc điểm cố định của nhân vật. TUYỆT ĐỐI KHÔNG bỏ sót, làm nhạt hay thay thế bất kỳ đặc điểm ngoại hình nào người dùng đã nêu bằng mặc định của bạn. Khi một đặc điểm đi NGƯỢC xu hướng mặc định của model ảnh (ví dụ model hay tự vẽ dáng thon/gầy, da quá mịn/hoàn hảo, ngực/mông nhỏ...), hãy CỦNG CỐ đặc điểm đó bằng NHIỀU tag bổ trợ nhau thay vì một tag yếu lẻ loi — ví dụ "mũm mĩm" → "chubby, plump, full figure, soft curvy body, thick thighs, wide hips, fuller cheeks, soft belly" — để model không quay về mặc định.
+2. BÁM SÁT MÔ TẢ NGOẠI HÌNH CHỦ THỂ (KỂ CẢ TIẾNG LÓNG/THÔNG TỤC) KHI NGƯỜI DÙNG CÓ MÔ TẢ TRONG PROMPT. Người dùng có thể tả vóc dáng, thân hình, độ tuổi, chiều cao, khuôn mặt, làn da, vòng eo/ngực/mông/hông... bằng từ thông tục hoặc tiếng lóng (ví dụ "mũm mĩm/chuppy", "bốc lửa", "gầy/mình dây", "đô con/cơ bắp", "bánh bèo", "da bánh mật"...). Hãy HIỂU đúng ý nghĩa thực sự của từ đó rồi DỊCH thành tag tiếng Anh RÕ RÀNG, và LẶP LẠI GIỐNG HỆT trong MỌI ảnh vì đây là đặc điểm cố định của nhân vật. TUYỆT ĐỐI KHÔNG bỏ sót, làm nhạt hay thay thế bất kỳ đặc điểm ngoại hình nào người dùng đã nêu bằng mặc định của bạn. Khi một đặc điểm đi NGƯỢC xu hướng mặc định của model ảnh (ví dụ model hay tự vẽ dáng thon/gầy, da quá mịn/hoàn hảo, ngực/mông nhỏ...), hãy CỦNG CỐ đặc điểm đó bằng NHIỀU tag bổ trợ nhau thay vì một tag yếu lẻ loi — ví dụ "mũm mĩm" → "chubby, plump, full figure, soft curvy body, thick thighs, wide hips, fuller cheeks, soft belly" — để model không quay về mặc định.
 
 3. TỰ LẤP PHẦN THIẾU, KHÔNG HỎI LẠI. Người dùng thường mô tả ngắn và không rành kỹ thuật. Với mọi chi tiết họ KHÔNG nói rõ, hãy tự suy luận một lựa chọn CỤ THỂ, hợp lý nhất với ý tưởng (một chủ thể rõ ràng: ngoại hình, độ tuổi, trang phục, bối cảnh, ánh sáng, tâm trạng) rồi giữ nhất quán cho cả bộ. Luôn tự quyết và điền đủ, không bao giờ hỏi lại hay để trống vì "thiếu thông tin".
 
 4. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
 
 5. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh.
-6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy `;
+6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt, mái tóc, màu da , kiểu dáng, kiểu tóc qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy
+7. CÂU CHUYỆN VÀ CONCEPT CHIẾN DỊCH THƯƠNG MẠI CHO BỘ LỊCH (COMMERCIAL CAMPAIGN STORYLINE & DIVERSE CONCEPTS):
+   Một bộ lịch 12 tháng được xây dựng như một CHIẾN DỊCH CHỤP ẢNH THƯƠNG MẠI CAO CẤP (Commercial Editorial Photoshoot Campaign) của một nhãn hàng hoặc thương hiệu xa xỉ thuê người mẫu chụp.
+   - NẾU NGƯỜI DÙNG CÓ NÊU CỤ THỂ Ý TƯỞNG / BỐI CẢNH / ĐẠO CỤ (ví dụ: "cô gái thợ làm bánh", "nữ điệp viên", "chụp ở thư viện", "chụp bên bờ biển"...):
+     LUÔN TUÂN THỦ 100% Ý TƯỞNG NGƯỜI DÙNG (Nguyên tắc số 1). KHÔNG tự ý chèn ép thêm concept khác làm loãng ý đồ của họ.
+   - NẾU NGƯỜI DÙNG CHỈ MÔ TẢ NHÂN VẬT HOẶC QUỐC TỊCH TỐI GIẢN (ví dụ: "cô gái", "cô gái Việt Nam", "người mẫu Nhật Bản", "cô gái tóc vàng"... mà không có bối cảnh cụ thể):
+     Bạn PHẢI TỰ CHỌN một "Campaign Theme" cụ thể, có tính thương mại cao, sang trọng và thu hút người xem lịch. Cả 12 tháng xoay quanh concept chiến dịch này.
+   - ĐA DẠNG HÓA TỐI ĐA - CHỐNG LẶP KHUÔN MẪU (MAXIMAL CONCEPT DIVERSITY & ANTI-REPETITION):
+     Mỗi lần được gọi, bạn phải tư duy như một Giám đốc Sáng tạo (Creative Director) đang pitching một chiến dịch hoàn toàn mới độc nhất vô nhị. TUYỆT ĐỐI KHÔNG mặc định lặp lại một vài chủ đề quen thuộc (như chỉ nghĩ đến siêu xe hay hồ bơi). Hãy kích hoạt sự sáng tạo không giới hạn từ ma trận các không gian và chủ đề thương mại cao cấp:
+     • Phương tiện & Cơ khí xa xỉ: siêu xe thể thao (hypercar/supercar), xe roadster mui trần cổ điển (vintage classic car), mô tô phân khối lớn/cafe racer, du thuyền cá nhân, phi cơ tư nhân, garage bảo tàng xe hơi nghệ thuật...
+     • Thời trang Haute Couture & Studio nghệ thuật: sàn diễn runway, studio kiến trúc tối giản với tác phẩm điêu khắc trừu tượng, phối đồ thời trang cao cấp với vải voan/lụa bay, ánh sáng kịch tính (dramatic editorial lighting)...
+     • Lối sống thượng lưu & Thể thao quý tộc: bến cảng du thuyền xa hoa, sân tennis phong cách retro sang trọng, trang trại ngựa quý tộc (equestrian/polo), khu nghỉ dưỡng trượt tuyết tuyết trắng, sân golf hoàng hôn...
+     • Không gian Kiến trúc & Nội thất Xa xỉ: penthouse kính nhìn ra toàn cảnh thành phố đêm, thư viện cổ điển với nội thất gỗ mun và sách bìa da, phòng tổng thống hoàng gia, hầm rượu vang nghệ thuật...
+     • Nghệ thuật & Âm nhạc Đỉnh cao: bên cây đại dương cầm (Grand Piano), phòng hòa nhạc cổ điển, xưởng điêu khắc đá cẩm thạch, xưởng họa sĩ sơn dầu...
+     • Thiên nhiên & Dã ngoại Thượng lưu: ốc đảo sa mạc sang trọng, nhà kính thực vật nhiệt đới quý hiếm, suối nước nóng onsen cao cấp giữa mùa tuyết rơi...
+     • Công nghệ & Tương lai (Futuristic & Cyber-Chic): phòng thí nghiệm công nghệ cao tối giản, phong cách cyberpunk neon cao cấp, không gian phi thuyền viễn tưởng...
+     Kết hợp linh hoạt với nét văn hóa hoặc phong cách của nhân vật để concept thêm sống động và ăn nhập.
+   - TÍNH NHẤT QUÁN CỦA CÂU CHUYỆN (STORYLINE COHESION):
+     Cả 12 tháng xoay quanh CÙNG một Concept chiến dịch đã chọn (không đổi đột ngột giữa các tháng sang chủ đề xa lạ). Thay vào đó, người mẫu tương tác với các set chụp nhỏ, góc máy, ánh sáng và góc độ tương tác đạo cụ khác nhau của cùng concept đó (ví dụ với concept xe: tháng chụp tựa nắp capo, tháng chụp ngồi buồng lái mở cửa, tháng chụp bên sườn xe, tháng tạo dáng bên đuôi xe...).
+   - TƯƠNG TÁC TỰ NHIÊN VỚI ĐẠO CỤ (NATURAL INTERACTION - TRÁNH BĂM ĐÔI KHUNG HÌNH):
+     Khi người mẫu tương tác với phương tiện hoặc đạo cụ lớn (xe, đàn piano, máy móc, tác phẩm điêu khắc...), mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against the sleek hood of...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is a car") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
+   - RÀNG BUỘC DUY NHẤT 1 NGƯỜI MẪU (STRICT SINGLE SUBJECT):
+     Dù có phương tiện hay đạo cụ lớn, TUYỆT ĐỐI CHỈ CÓ DUY NHẤT 1 NGƯỜI MẪU tương tác với đồ vật. Không vẽ thêm tài xế, trợ lý, phụ tá, thợ máy hay bất kỳ người nào khác trong khung hình.`;
 
 export interface ComposeUserMessageInput {
   request: string;

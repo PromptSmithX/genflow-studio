@@ -4,8 +4,6 @@ import { prisma } from "@/lib/db";
 import * as clientModule from "@/lib/r2/client";
 import * as renderModule from "@/lib/r2/render-pages";
 import * as skuModule from "@/lib/r2/sku";
-import * as formatsModule from "@/lib/calendar/formats";
-import * as configModule from "@/lib/r2/config";
 import fs from "node:fs/promises";
 
 vi.mock("@/lib/db", () => ({
@@ -156,8 +154,8 @@ describe("r2-push", () => {
       const batch2 = makeEligibleBatch("batch-fail");
 
       vi.mocked(prisma.generationBatch.findUnique)
-        .mockResolvedValueOnce(batch1 as any)
-        .mockResolvedValueOnce(batch2 as any);
+        .mockResolvedValueOnce(batch1 as unknown as never)
+        .mockResolvedValueOnce(batch2 as unknown as never);
 
       vi.mocked(skuModule.ensureSkuBase)
         .mockResolvedValueOnce("CAL-ANI-2611-B1OK1")
@@ -178,10 +176,10 @@ describe("r2-push", () => {
         "02_mockup_q2.png",
         "03_mockup_q3.png",
         "04_mockup_q4.png",
-      ] as any);
+      ] as unknown as never);
       vi.mocked(fs.readFile).mockResolvedValue(Buffer.from("fake-png-bytes"));
       vi.mocked(fs.rm).mockResolvedValue(undefined);
-      vi.mocked(fs.mkdir).mockResolvedValue(undefined as any);
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined as unknown as string);
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       const result = await pushBatches(["batch-ok", "batch-fail"]);
@@ -230,7 +228,7 @@ describe("r2-push", () => {
 
     it("returns csvFileName === null when all batches fail", async () => {
       const batchFail = makeEligibleBatch("batch-fail-all");
-      vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(batchFail as any);
+      vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(batchFail as unknown as never);
       vi.mocked(skuModule.ensureSkuBase).mockResolvedValueOnce("CAL-ANI-2611-FAIL1");
 
       vi.mocked(renderModule.renderBatchPages).mockRejectedValueOnce(

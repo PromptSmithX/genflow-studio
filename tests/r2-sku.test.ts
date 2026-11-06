@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { GenerationBatch } from "@prisma/client";
 import { mediumCode, buildSkuBase, fullSku, ensureSkuBase } from "@/lib/r2/sku";
 import { prisma } from "@/lib/db";
 
@@ -62,7 +63,7 @@ describe("r2-sku", () => {
       vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce({
         id: "b1",
         r2SkuBase: "CAL-ANI-2611-EXIST",
-      } as any);
+      } as unknown as GenerationBatch);
 
       const sku = await ensureSkuBase("b1");
       expect(sku).toBe("CAL-ANI-2611-EXIST");
@@ -76,14 +77,14 @@ describe("r2-sku", () => {
         createdAt,
         mediumId: null,
         r2SkuBase: null,
-      } as any);
+      } as unknown as GenerationBatch);
 
       // Suppose CAL-GEN-2611-56789 already exists in DB
       vi.mocked(prisma.generationBatch.findMany).mockResolvedValueOnce([
         { r2SkuBase: "CAL-GEN-2611-56789" },
-      ] as any);
+      ] as unknown as GenerationBatch[]);
 
-      vi.mocked(prisma.generationBatch.update).mockResolvedValueOnce({} as any);
+      vi.mocked(prisma.generationBatch.update).mockResolvedValueOnce({} as unknown as GenerationBatch);
 
       const sku = await ensureSkuBase("batch123456789");
       // 5 chars was 56789 (collision), 6 chars is 456789

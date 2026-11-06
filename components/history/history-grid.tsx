@@ -14,6 +14,7 @@ import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
 import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 import { OpenFolderButton } from "@/components/history/open-folder-button";
 import { EtsyMetadataCard } from "@/components/history/etsy-metadata-card";
+import { BatchMockupSection } from "@/components/history/batch-mockup-section";
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "Đang chờ",
@@ -42,6 +43,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
     createdAt: string;
     backCoverStatus: "done" | "failed" | null;
     finalExportStatus: "done" | "failed" | null;
+    mockupStatus: "done" | "failed" | null;
     etsyTitle: string | null;
     etsyDescription: string | null;
     etsyTagsJson: string | null;
@@ -58,6 +60,7 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
         createdAt: job.batch.createdAt,
         backCoverStatus: job.batch.backCoverStatus,
         finalExportStatus: job.batch.finalExportStatus,
+        mockupStatus: job.batch.mockupStatus,
         etsyTitle: job.batch.etsyTitle,
         etsyDescription: job.batch.etsyDescription,
         etsyTagsJson: job.batch.etsyTagsJson,
@@ -109,6 +112,11 @@ export function HistoryGrid({ filters }: { filters: HistoryFilters }) {
               <p className="shrink-0 text-xs text-muted-foreground">{new Date(group.createdAt).toLocaleString("vi-VN")}</p>
             </div>
           </div>
+          <BatchMockupSection
+            batchId={group.batchId}
+            finalExportStatus={group.finalExportStatus}
+            mockupStatus={group.mockupStatus}
+          />
           <EtsyMetadataCard
             title={group.etsyTitle}
             description={group.etsyDescription}

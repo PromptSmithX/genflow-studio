@@ -108,6 +108,7 @@ export interface GenerationBatchDTO {
   backCoverHeight: number | null;
   finalExportStatus: "done" | "failed" | null;
   finalExportRelativePath: string | null;
+  mockupStatus: "done" | "failed" | null;
   etsyTitle: string | null;
   etsyDescription: string | null;
   etsyTagsJson: string | null;
@@ -121,6 +122,7 @@ export interface HistoryListResponse {
       createdAt: string;
       backCoverStatus: "done" | "failed" | null;
       finalExportStatus: "done" | "failed" | null;
+      mockupStatus: "done" | "failed" | null;
       etsyTitle: string | null;
       etsyDescription: string | null;
       etsyTagsJson: string | null;

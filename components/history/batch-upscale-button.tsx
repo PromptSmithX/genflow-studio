@@ -55,9 +55,13 @@ export function BatchUpscaleButton({ batchId, className }: { batchId: string; cl
       { batchId, formatId },
       {
         onSuccess: (data) => {
-          const { total, done, failed, backCover, finalExport } = data.upscaleResult;
+          const { total, done, failed, backCover, finalExport, mockup } = data.upscaleResult;
           if (finalExport === "done") {
-            toast.success(`Đã xuất file in cho ${done}/${total} ảnh vào 2 thư mục (không che / đã che)`);
+            if (mockup === "done") {
+              toast.success(`Đã xuất file in (${done}/${total} ảnh) và tạo 5 ảnh mockup sản phẩm thành công!`);
+            } else {
+              toast.success(`Đã xuất file in cho ${done}/${total} ảnh vào 2 thư mục (không che / đã che)`);
+            }
           } else if (failed > 0) {
             toast.error(`Hoàn thiện ${done}/${total} ảnh, ${failed} ảnh lỗi`);
           } else {
@@ -65,6 +69,7 @@ export function BatchUpscaleButton({ batchId, className }: { batchId: string; cl
           }
           if (backCover === "failed") toast.error("Tạo bìa sau thất bại");
           if (finalExport === "failed") toast.error("Xuất thư mục file in thất bại");
+          if (mockup === "failed") toast.error("Tạo mockup thất bại");
         },
         onError: (e) => toast.error(e instanceof Error ? e.message : "Hoàn thiện thất bại"),
         onSettled: () => setConfirmOpen(false),

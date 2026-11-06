@@ -36,7 +36,7 @@ export function OpenFolderButton({
       }
     >
       {revealMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
-      Mở thư mục
+      Mở thư mục bộ lịch
     </Button>
   );
 }

@@ -38,6 +38,8 @@ export function useUpscaleBatch() {
 export interface BatchMockupInfo {
   status: "done" | "failed" | null;
   files: string[];
+  // Đổi mỗi lần batch được cập nhật -> dùng làm ?v= để ảnh mockup không bị cache cũ.
+  version: number;
 }
 
 export function useBatchMockup(batchId: string, enabled = true) {

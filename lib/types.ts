@@ -115,18 +115,8 @@ export interface GenerationBatchDTO {
 }
 
 export interface HistoryListResponse {
-  jobs: (GenerationJobDTO & {
-    batch: {
-      id: string;
-      ideaPrompt: string;
-      createdAt: string;
-      backCoverStatus: "done" | "failed" | null;
-      finalExportStatus: "done" | "failed" | null;
-      mockupStatus: "done" | "failed" | null;
-      etsyTitle: string | null;
-      etsyDescription: string | null;
-      etsyTagsJson: string | null;
-    };
-  })[];
+  batches: GenerationBatchDTO[];
   nextCursor: string | null;
 }
+
+export type JobDetailDTO = GenerationJobDTO & { batch: Omit<GenerationBatchDTO, "jobs"> };

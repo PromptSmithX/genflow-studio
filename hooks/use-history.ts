@@ -1,18 +1,16 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/client/api";
-import type { GenerationBatchDTO, GenerationJobDTO, HistoryListResponse } from "@/lib/types";
+import type { GenerationBatchDTO, HistoryListResponse, JobDetailDTO } from "@/lib/types";
 
 export interface HistoryFilters {
-  status?: string;
-  styleId?: string;
   search?: string;
-  from?: string;
-  to?: string;
 }
 
 function hasUnsettledJob(pages: HistoryListResponse[] | undefined): boolean {
   if (!pages) return false;
-  return pages.some((page) => page.jobs.some((job) => job.status === "queued" || job.status === "running"));
+  return pages.some((page) =>
+    page.batches.some((batch) => batch.jobs.some((job) => job.status === "queued" || job.status === "running")),
+  );
 }
 
 export function useHistoryList(filters: HistoryFilters) {
@@ -20,11 +18,7 @@ export function useHistoryList(filters: HistoryFilters) {
     queryKey: ["history", filters],
     queryFn: ({ pageParam }: { pageParam: string | null }) => {
       const params = new URLSearchParams();
-      if (filters.status) params.set("status", filters.status);
-      if (filters.styleId) params.set("styleId", filters.styleId);
       if (filters.search) params.set("search", filters.search);
-      if (filters.from) params.set("from", filters.from);
-      if (filters.to) params.set("to", filters.to);
       if (pageParam) params.set("cursor", pageParam);
       return apiGet<HistoryListResponse>(`/api/history?${params.toString()}`);
     },
@@ -39,29 +33,27 @@ export function useHistoryList(filters: HistoryFilters) {
 export function useJobDetail(jobId: string | null) {
   return useQuery({
     queryKey: ["history", "job", jobId],
-    queryFn: () => apiGet<GenerationJobDTO>(`/api/history/${jobId}`),
+    queryFn: () => apiGet<JobDetailDTO>(`/api/history/${jobId}`),
     enabled: Boolean(jobId),
-  });
-}
-
-export function useRegenerateJob() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ jobId, seedMode }: { jobId: string; seedMode: "same" | "random" }) =>
-      apiPost<GenerationBatchDTO>(`/api/history/${jobId}/regenerate`, { seedMode }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["history"] }),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "queued" || status === "running" ? 8_000 : false;
+    },
   });
 }
 
 /**
- * "Sửa lại" một ảnh lỗi TẠI CHỖ: LLM sinh prompt mới đúng vai trò (bìa/artwork),
+ * "Sửa lại" một ảnh TẠI CHỖ: LLM sinh prompt mới đúng vai trò (bìa/artwork),
  * giữ seed chung batch. Xem app/api/history/[jobId]/regenerate-fresh/route.ts.
  */
 export function useRegenerateFresh() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (jobId: string) => apiPost<GenerationBatchDTO>(`/api/history/${jobId}/regenerate-fresh`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["history"] }),
+    onSuccess: (batch) => {
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+      queryClient.invalidateQueries({ queryKey: ["mockup", batch.id] });
+    },
   });
 }
 

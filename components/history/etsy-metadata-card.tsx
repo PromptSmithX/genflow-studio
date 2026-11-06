@@ -3,7 +3,6 @@
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 function copyToClipboard(text: string, label: string) {
@@ -41,52 +40,55 @@ export function EtsyMetadataCard({
   if (!title && !description && tags.length === 0) return null;
 
   return (
-    <Card>
-      <CardContent className="space-y-3 p-4 text-sm">
-        <p className="font-medium">Metadata Etsy</p>
+    <div className="space-y-3 text-sm">
+      <div>
+        <p className="font-medium">Nội dung đăng Etsy</p>
+        <p className="text-xs text-muted-foreground">
+          Bấm nút copy cạnh từng phần để dán lên Etsy. Nội dung này cũng có trong file <code>etsy.txt</code> của thư mục.
+        </p>
+      </div>
 
-        {title && (
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Title</p>
-              <p>{title}</p>
-            </div>
-            <Button variant="ghost" size="icon-sm" onClick={() => copyToClipboard(title, "title")}>
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
+      {title && (
+        <div className="flex items-start justify-between gap-2 rounded-md border p-3">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Tiêu đề</p>
+            <p>{title}</p>
           </div>
-        )}
+          <Button variant="outline" size="sm" onClick={() => copyToClipboard(title, "tiêu đề")}>
+            <Copy /> Copy
+          </Button>
+        </div>
+      )}
 
-        {description && (
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Description</p>
-              <p className="whitespace-pre-line text-muted-foreground">{description}</p>
-            </div>
-            <Button variant="ghost" size="icon-sm" onClick={() => copyToClipboard(description, "description")}>
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
+      {description && (
+        <div className="flex items-start justify-between gap-2 rounded-md border p-3">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Mô tả</p>
+            <p className="whitespace-pre-line text-muted-foreground">{description}</p>
           </div>
-        )}
+          <Button variant="outline" size="sm" onClick={() => copyToClipboard(description, "mô tả")}>
+            <Copy /> Copy
+          </Button>
+        </div>
+      )}
 
-        {tags.length > 0 && (
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Tags ({tags.length}/13)</p>
-              <div className="flex flex-wrap gap-1">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-[10px]">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+      {tags.length > 0 && (
+        <div className="flex items-start justify-between gap-2 rounded-md border p-3">
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">Từ khoá (tags) — {tags.length}/13</p>
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[11px]">
+                  {tag}
+                </Badge>
+              ))}
             </div>
-            <Button variant="ghost" size="icon-sm" onClick={() => copyToClipboard(tags.join(", "), "tags")}>
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <Button variant="outline" size="sm" onClick={() => copyToClipboard(tags.join(", "), "từ khoá")}>
+            <Copy /> Copy
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

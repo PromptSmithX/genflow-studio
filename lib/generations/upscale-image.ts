@@ -96,11 +96,18 @@ async function buildRoots(): Promise<UpscaleRoots> {
   };
 }
 
+/** Bản bìa sau đã che nằm cạnh bản gốc: `<batchId>/back_cover.png` -> `<batchId>/back_cover_censored.png`. */
+function censoredBackCoverPath(relativePath: string): string {
+  return relativePath.replace(/\.png$/i, "_censored.png");
+}
+
 /**
- * Ghép bìa sau từ 12 artwork (job.indexInBatch 1-12) của batch, đọc từ ảnh
- * GỐC (không dùng bản đã che). Đây là bước phụ cộng thêm cuối `upscaleBatch`:
+ * Ghép bìa sau từ 12 artwork (job.indexInBatch 1-12) của batch thành 2 bản:
+ * bản gốc (từ ảnh gốc) và bản đã che (từ ảnh masked, ảnh "clean" không có bản
+ * masked thì dùng ảnh gốc). Đây là bước phụ cộng thêm cuối `upscaleBatch`:
  * lỗi ở đây chỉ đánh dấu `backCoverStatus:"failed"` trên batch, không bao giờ
  * ném ra ngoài -- không được phép làm hỏng kết quả upscale của 13 ảnh chính.
+ * Lỗi ở bản đã che chỉ log, không làm hỏng bản gốc.
  * Batch không có artwork nào (0 job indexInBatch >= 1) -> bỏ qua, trả "skipped".
  */
 async function buildBackCover(
@@ -128,6 +135,21 @@ async function buildBackCover(
     const outPath = resolveSafePath(roots.backCoverRoot, relativePath);
     await fs.mkdir(path.dirname(outPath), { recursive: true });
     await fs.writeFile(outPath, composed);
+
+    const censoredOutPath = resolveSafePath(roots.backCoverRoot, censoredBackCoverPath(relativePath));
+    try {
+      const censoredBuffers = await Promise.all(
+        images.map((image, i) =>
+          image.maskedRelativePath
+            ? fs.readFile(resolveSafePath(roots.censoredRoot, image.maskedRelativePath))
+            : Promise.resolve(buffers[i]),
+        ),
+      );
+      await fs.writeFile(censoredOutPath, await composeBackCover(censoredBuffers, geom));
+    } catch (error) {
+      console.error(`[buildBackCover] bỏ qua bản đã che của batch ${batchId}:`, error);
+      await fs.rm(censoredOutPath, { force: true });
+    }
 
     await prisma.generationBatch.update({
       where: { id: batchId },
@@ -181,7 +203,8 @@ function buildEtsyTextFile(title: string | null, description: string | null, tag
  * Xuất bản COPY gọn gàng, sẵn sàng đem in cho một batch, thành 2 thư mục con
  * dưới `finalRoot/<slug>/`:
  * - `khong-che/`: 14 ảnh KHÔNG che (bìa trước + 12 artwork + bìa sau).
- * - `da-che/`: 13 ảnh ĐÃ che (bìa trước + 12 artwork) + bìa sau KHÔNG che.
+ * - `da-che/`: 14 ảnh ĐÃ che (bìa trước + 12 artwork + bìa sau đã che; batch
+ *   cũ chưa có bìa sau đã che thì dùng bản không che).
  * `slug` tái tạo bằng `buildBatchFolder` (xác định, khớp đúng folder ComfyUI đã
  * ghi khi sync -- xem lib/comfyui/job-sync.ts). Đây là bước phụ CỘNG THÊM cuối
  * `upscaleBatch`, chỉ đọc dữ liệu đã có (không đụng upscale/censor/back-cover
@@ -240,7 +263,10 @@ async function exportBatchFolders(batchId: string, roots: UpscaleRoots): Promise
       try {
         const src = resolveSafePath(roots.backCoverRoot, batch.backCoverRelativePath);
         await fs.copyFile(src, path.join(uncensoredDir, "13_bia-sau.png"));
-        await fs.copyFile(src, path.join(censoredDir, "13_bia-sau.png"));
+
+        const censoredSrc = resolveSafePath(roots.backCoverRoot, censoredBackCoverPath(batch.backCoverRelativePath));
+        const hasCensored = await fs.access(censoredSrc).then(() => true, () => false);
+        await fs.copyFile(hasCensored ? censoredSrc : src, path.join(censoredDir, "13_bia-sau.png"));
       } catch (error) {
         console.error(`[exportBatchFolders] bỏ qua bìa sau của batch ${batchId}:`, error);
       }

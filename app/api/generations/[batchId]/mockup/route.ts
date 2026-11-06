@@ -24,6 +24,9 @@ export async function POST(_request: NextRequest, { params }: Params) {
     if (result.status === "failed") {
       return apiError("mockup_failed", result.error || "Tạo mockup thất bại", 500);
     }
+    if (result.status === "skipped") {
+      return apiError("mockup_skipped", result.error || "Chưa đủ ảnh để tạo mockup", 409);
+    }
 
     return NextResponse.json({
       status: result.status,
@@ -45,17 +48,22 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const slug = batch.finalExportRelativePath || buildBatchFolder(batch);
     const mockupDir = path.join(finalRoot, slug, "mockup");
 
+    // Chỉ liệt kê khi lần tạo gần nhất thành công: sau khi sửa lại ảnh, status bị
+    // reset và file cũ trên đĩa không còn khớp bộ ảnh hiện tại.
     let files: string[] = [];
-    try {
-      const entries = await fs.readdir(mockupDir);
-      files = entries.filter((f) => f.endsWith(".png")).sort();
-    } catch {
-      files = [];
+    if (batch.mockupStatus === "done") {
+      try {
+        const entries = await fs.readdir(mockupDir);
+        files = entries.filter((f) => f.endsWith(".png")).sort();
+      } catch {
+        files = [];
+      }
     }
 
     return NextResponse.json({
-      status: batch.mockupStatus ?? (files.length > 0 ? "done" : null),
+      status: batch.mockupStatus,
       files,
+      version: batch.updatedAt.getTime(),
     });
   } catch (error) {
     return handleApiError(error);

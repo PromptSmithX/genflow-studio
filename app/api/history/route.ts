@@ -6,42 +6,32 @@ import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
-const PAGE_SIZE = 24;
+// Phân trang theo BỘ LỊCH (batch) chứ không theo ảnh, để mỗi thẻ ở trang Kết
+// quả luôn có đủ ảnh của bộ đó và tiến độ "x/13" không bị sai do cắt trang.
+const PAGE_SIZE = 5;
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const cursor = searchParams.get("cursor");
-    const status = searchParams.get("status");
-    const styleId = searchParams.get("styleId");
     const search = searchParams.get("search")?.trim();
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
 
-    const where: Prisma.GenerationJobWhereInput = {};
-    if (status) where.status = status as Prisma.GenerationJobWhereInput["status"];
-    if (styleId) where.styleId = styleId;
-    if (search) where.ideaPromptSnapshot = { contains: search };
-    if (from || to) {
-      where.createdAt = {
-        ...(from ? { gte: new Date(from) } : {}),
-        ...(to ? { lte: new Date(to) } : {}),
-      };
-    }
+    const where: Prisma.GenerationBatchWhereInput = {};
+    if (search) where.ideaPrompt = { contains: search };
 
-    const jobs = await prisma.generationJob.findMany({
+    const batches = await prisma.generationBatch.findMany({
       where,
-      include: { images: true, batch: true },
+      include: { jobs: { include: { images: true }, orderBy: { indexInBatch: "asc" } } },
       orderBy: { createdAt: "desc" },
       take: PAGE_SIZE + 1,
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     });
 
-    const hasMore = jobs.length > PAGE_SIZE;
-    const page = hasMore ? jobs.slice(0, PAGE_SIZE) : jobs;
+    const hasMore = batches.length > PAGE_SIZE;
+    const page = hasMore ? batches.slice(0, PAGE_SIZE) : batches;
 
     return NextResponse.json({
-      jobs: serializeBigInts(page),
+      batches: serializeBigInts(page),
       nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
     });
   } catch (error) {

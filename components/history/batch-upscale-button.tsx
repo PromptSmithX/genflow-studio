@@ -23,7 +23,17 @@ import { useUpscaleBatch } from "@/hooks/use-upscale";
  * nhóm batch trang Kết quả. Có hộp xác nhận trước khi chạy, vì đây là bước
  * chốt cuối: phóng to + ghép bìa sau + xuất 2 thư mục (không che / đã che).
  */
-export function BatchUpscaleButton({ batchId, className }: { batchId: string; className?: string }) {
+export function BatchUpscaleButton({
+  batchId,
+  imageCount,
+  isReExport,
+  className,
+}: {
+  batchId: string;
+  imageCount: number;
+  isReExport: boolean;
+  className?: string;
+}) {
   const { data: formatsData } = useCalendarFormats();
   const upscaleMutation = useUpscaleBatch();
   const formats = formatsData?.formats ?? [];
@@ -57,19 +67,20 @@ export function BatchUpscaleButton({ batchId, className }: { batchId: string; cl
         onSuccess: (data) => {
           const { total, done, failed, backCover, finalExport, mockup } = data.upscaleResult;
           if (finalExport === "done") {
-            if (mockup === "done") {
-              toast.success(`Đã xuất file in (${done}/${total} ảnh) và tạo 5 ảnh mockup sản phẩm thành công!`);
-            } else {
-              toast.success(`Đã xuất file in cho ${done}/${total} ảnh vào 2 thư mục (không che / đã che)`);
-            }
+            toast.success(
+              mockup === "done"
+                ? `Đã xuất ${done} ảnh vào thư mục trên máy và tạo 5 ảnh mockup`
+                : `Đã xuất ${done} ảnh vào thư mục trên máy (bản gốc và bản đã che)`,
+            );
           } else if (failed > 0) {
-            toast.error(`Hoàn thiện ${done}/${total} ảnh, ${failed} ảnh lỗi`);
-          } else {
-            toast.success(`Đã hoàn thiện ${done}/${total} ảnh để in`);
+            toast.error(`Xuất được ${done}/${total} ảnh, ${failed} ảnh lỗi`);
           }
-          if (backCover === "failed") toast.error("Tạo bìa sau thất bại");
-          if (finalExport === "failed") toast.error("Xuất thư mục file in thất bại");
-          if (mockup === "failed") toast.error("Tạo mockup thất bại");
+          if (backCover === "failed") toast.error("Không ghép được bìa sau");
+          if (finalExport === "failed") toast.error("Không ghi được thư mục file in");
+          if (mockup === "failed") toast.error("Tạo mockup thất bại — bạn có thể bấm \"Tạo lại mockup\"");
+          if (finalExport === "done" && mockup === "skipped") {
+            toast.warning("Chưa tạo mockup: mockup cần đủ bìa trước + 12 tháng (13 ảnh)");
+          }
         },
         onError: (e) => toast.error(e instanceof Error ? e.message : "Hoàn thiện thất bại"),
         onSettled: () => setConfirmOpen(false),
@@ -78,10 +89,10 @@ export function BatchUpscaleButton({ batchId, className }: { batchId: string; cl
   }
 
   return (
-    <div className={className ? `flex items-center gap-2 ${className}` : "flex items-center gap-2"}>
+    <div className={className ? `flex flex-wrap items-center gap-2 ${className}` : "flex flex-wrap items-center gap-2"}>
       <Select value={formatId} onValueChange={(v) => { if (typeof v === "string") handleFormatChange(v); }}>
-        <SelectTrigger className="w-56">
-          <SelectValue placeholder={formats.length ? "Chọn khổ lịch" : "Không có template"} />
+        <SelectTrigger className="w-60" aria-label="Khổ lịch">
+          <SelectValue placeholder={formats.length ? "Chọn khổ lịch" : "Không có khổ lịch nào"} />
         </SelectTrigger>
         <SelectContent>
           {formats.map((format) => (
@@ -91,30 +102,26 @@ export function BatchUpscaleButton({ batchId, className }: { batchId: string; cl
           ))}
         </SelectContent>
       </Select>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setConfirmOpen(true)}
-        disabled={upscaleMutation.isPending || !formatId}
-      >
-        {upscaleMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-        {upscaleMutation.isPending ? "Đang hoàn thiện..." : "Hoàn thiện & xuất file in"}
+      <Button onClick={() => setConfirmOpen(true)} disabled={upscaleMutation.isPending || !formatId}>
+        {upscaleMutation.isPending ? <Loader2 className="animate-spin" /> : <Printer />}
+        {upscaleMutation.isPending ? "Đang xuất... (có thể mất vài phút)" : isReExport ? "Xuất lại file in" : "Xuất file in"}
       </Button>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bạn đã xem kỹ 13 ảnh chưa?</AlertDialogTitle>
+            <AlertDialogTitle>Bạn đã xem kỹ {imageCount} ảnh chưa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bấm xác nhận sẽ phóng to toàn bộ ảnh về khổ in, ghép bìa sau và xuất ra 2 thư mục (không che / đã
-              che) sẵn sàng đem in. Hãy xem kỹ ảnh bên dưới trước khi tiếp tục.
+              App sẽ phóng to ảnh về đúng khổ in, tự ghép bìa sau, rồi lưu vào thư mục trên máy gồm: bản gốc
+              (khong-che), bản đã che (da-che), 5 ảnh mockup và file etsy.txt.
+              {isReExport ? " Thư mục cũ của bộ lịch này sẽ được thay bằng bản mới." : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Để xem thêm</AlertDialogCancel>
             <AlertDialogAction onClick={runExport} disabled={upscaleMutation.isPending}>
               {upscaleMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              Xuất file in
+              {isReExport ? "Xuất lại" : "Xuất file in"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

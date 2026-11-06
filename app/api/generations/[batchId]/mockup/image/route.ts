@@ -35,7 +35,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": "image/png",
-        "Cache-Control": "private, max-age=86400, stale-while-revalidate=3600",
+        // Tạo lại mockup ghi đè cùng tên file -- không cache để luôn khớp thư mục trên đĩa.
+        "Cache-Control": "no-cache",
       },
     });
   } catch (error) {

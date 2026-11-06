@@ -27,26 +27,31 @@ DEFAULT_TEMPLATE_DIR = r"D:\model_gen_anh_local_18\MVP_workflow\mockup"
 # Quad coordinates: [(Top-Left), (Top-Right), (Bottom-Right), (Bottom-Left)] in the
 # orientation of the print file. Each quad is the WHOLE physical sheet the full-bleed
 # print page covers (spiral strip + hanging hole included), so the template's wire and
-# hole land on the artwork's own keep-out zones. All edges are sub-pixel line fits of
-# the paper edge; for month sheets the hinge edge hides under the wire, so it is set by
-# the back cover's measured sheet ratio (0.8123), landing just past the sheet's own hole
-# row. The hanging hole lands within ~4px of the template's hole on every sheet.
+# hole land on the artwork's own keep-out zones. Free edges and the covers' spiral edge
+# are sub-pixel line fits of the paper edge. On month pages the photo sheet and the
+# calendar sheet meet at the wire, so the hinge edge is the midline between the two
+# punched-hole rows (photo sheet's row above, calendar sheet's row below).
+# The hanging hole lands within ~4px of the template's hole on every sheet.
 QUAD_COVERS_FRONT: List[Tuple[float, float]] = [(195.2, 374.0), (1077.0, 232.7), (1187.2, 953.6), (324.6, 1088.4)]
 QUAD_COVERS_BACK: List[Tuple[float, float]] = [(960.4, 1051.0), (1832.2, 1092.6), (1780.4, 1784.5), (927.3, 1744.0)]
 
 # Quarters (Q1, Q2, Q3, Q4 share identical geometry — verified to 0.0px)
-QUAD_QUARTER_LEFT: List[Tuple[float, float]] = [(406.0, 287.3), (971.7, 503.7), (798.7, 964.2), (241.2, 750.8)]
-QUAD_QUARTER_RIGHT: List[Tuple[float, float]] = [(1054.9, 318.1), (1622.4, 95.5), (1790.6, 561.2), (1231.3, 780.8)]
-QUAD_QUARTER_BOTTOM: List[Tuple[float, float]] = [(746.0, 998.6), (1336.7, 940.7), (1379.5, 1420.9), (798.1, 1477.8)]
+QUAD_QUARTER_LEFT: List[Tuple[float, float]] = [(406.0, 287.3), (971.7, 503.7), (799.1, 963.2), (241.6, 749.7)]
+QUAD_QUARTER_RIGHT: List[Tuple[float, float]] = [(1054.9, 318.1), (1622.4, 95.5), (1790.4, 560.7), (1231.1, 780.3)]
+QUAD_QUARTER_BOTTOM: List[Tuple[float, float]] = [(746.0, 998.6), (1336.7, 940.7), (1378.9, 1414.2), (797.4, 1471.1)]
 
 SUPERSAMPLE = 3          # Render warp at this factor, then downscale (anti-aliasing)
-BLEED_FRAC = 0.0015      # Sub-pixel outward nudge so the anti-aliased edge leaves no seam
+BLEED_FRAC = 0.0015      # Sub-pixel outward nudge on free edges so the art stays full-bleed
+# The spiral edge is pulled IN instead: just outside it the template is background/edge
+# shadow, and art covering it would multiply into a dark line running across the wire.
+HINGE_INSET_PX = 1.2
 WHITE_PERCENTILE = 99.0  # Percentile of template luminance treated as paper white
 
 # Multiply can only darken, so the silver wire and punched holes vanish over dark art.
 # Inside the spiral strip and around the hanging hole, template pixels that are brighter
 # than paper (wire highlights) or far darker (holes) are laid back on top of the artwork.
 HINGE_BAND_FRAC = 0.08   # Spiral-strip depth as a fraction of print height (keep_out ≈ 0.055)
+WIRE_MAX_DEPTH_FRAC = 0.06  # Max distance (print height fraction) a wire stem runs onto the sheet
 HANG_HOLE_FROM_EDGE_PX = 112.0  # format.json: hole centre distance from the free edge
 HANG_HOLE_RADIUS_PX = 70.0
 
@@ -89,6 +94,100 @@ def sample_white_point(tmpl_arr: np.ndarray) -> np.ndarray:
         return np.array([236.0, 236.0, 236.0])
     white = np.percentile(bright, WHITE_PERCENTILE, axis=0)
     return np.clip(white, 1.0, 255.0)
+
+
+def inset_hinge(quad: List[Tuple[float, float]], hinge: str, px: float) -> List[Tuple[float, float]]:
+    """Moves the two hinge-edge corners inward along the sheet sides by px."""
+    q = [np.array(p, dtype=float) for p in quad]
+    pairs = [(0, 3), (1, 2)] if hinge == "top" else [(3, 0), (2, 1)]
+    for edge_i, far_i in pairs:
+        d = q[far_i] - q[edge_i]
+        q[edge_i] = q[edge_i] + d / np.linalg.norm(d) * px
+    return [(float(p[0]), float(p[1])) for p in q]
+
+
+def _bilinear(img: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    h, w = img.shape
+    x = np.clip(x, 0, w - 1.001)
+    y = np.clip(y, 0, h - 1.001)
+    x0 = np.floor(x).astype(int)
+    y0 = np.floor(y).astype(int)
+    fx = x - x0
+    fy = y - y0
+    return (img[y0, x0] * (1 - fx) * (1 - fy) + img[y0, x0 + 1] * fx * (1 - fy)
+            + img[y0 + 1, x0] * (1 - fx) * fy + img[y0 + 1, x0 + 1] * fx * fy)
+
+
+def wire_layer(
+    tmpl_lum: np.ndarray,
+    tmpl_rgb: np.ndarray,
+    white_lum: float,
+    sheet_quad: List[Tuple[float, float]],
+    bbox: Tuple[int, int, int, int],
+    hinge: str,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """(alpha, rgb) of the spiral wire stems that run from the sheet edge onto the sheet
+    (and so over the artwork), for the slot bbox. Stems are found just OUTSIDE the edge,
+    where they contrast with what lies beyond, then extended inward to the punched hole
+    carrying that outside wire colour (copying the inside would paste white paper)."""
+    x0, y0, x1, y1 = bbox
+    q = [np.array(p, dtype=float) for p in sheet_quad]
+    # Unit-square sheet coords (u along the hinge edge, t = depth from the hinge edge).
+    if hinge == "top":
+        e0, e1, f0, f1 = q[0], q[1], q[3], q[2]
+    else:
+        e0, e1, f0, f1 = q[3], q[2], q[0], q[1]
+    unit = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    to_dest = compute_perspective_coeffs(unit, [tuple(e0), tuple(e1), tuple(f1), tuple(f0)])
+    to_unit = compute_perspective_coeffs([tuple(e0), tuple(e1), tuple(f1), tuple(f0)], unit)
+
+    def map_pts(c, xs, ys):
+        a, b, cc, d, e, f, g, h = c
+        den = g * xs + h * ys + 1.0
+        return (a * xs + b * ys + cc) / den, (d * xs + e * ys + f) / den
+
+    edge_len = float(np.linalg.norm(e1 - e0))
+    depth_len = float(np.linalg.norm(f0 - e0))  # sheet depth in dest px
+    n_u = max(64, int(edge_len * 2))
+    px = 1.0 / depth_len                          # one dest px in t units
+    max_depth = WIRE_MAX_DEPTH_FRAC
+    ts = np.arange(-4.0 * px, max_depth + px * 0.5, px * 0.5)
+    us = (np.arange(n_u) + 0.5) / n_u
+    U, Tt = np.meshgrid(us, ts)
+    dx, dy = map_pts(to_dest, U, Tt)
+    strip = _bilinear(tmpl_lum, dx, dy)          # rows = depth, cols = along edge
+
+    out_rows = (ts >= -3.5 * px) & (ts <= -1.5 * px)
+    outside = strip[out_rows].mean(axis=0)
+    out_rgb = np.stack([_bilinear(tmpl_rgb[:, :, k], dx[out_rows], dy[out_rows]).mean(axis=0)
+                        for k in range(3)], axis=1)        # (n_u, 3) wire colour per column
+    win = max(9, int(n_u / edge_len * 30) | 1)  # ~30 dest px running median
+    pad = np.pad(outside, win // 2, mode="edge")
+    base = np.median(np.lib.stride_tricks.sliding_window_view(pad, win), axis=1)
+    # Bright metal only: on month pages the next sheet's punched holes sit right past the
+    # edge, and treating dark pixels as wire would cut dark/white notches into the art.
+    stroke = np.clip((outside - base - 2.0) / 7.0, 0, 1)
+
+    inside = ts >= 0
+    hole = strip[inside] < (white_lum - 35.0)
+    first = np.where(hole.any(axis=0), hole.argmax(axis=0), -1)
+    n_in = inside.sum()
+    rows = np.arange(n_in)[:, None]
+    reach = np.where(first >= 0, first + 2, int(2 * 2))  # into the hole, else a short stub
+    wire = np.zeros_like(strip)
+    wire[inside] = np.where(rows <= reach[None, :], stroke[None, :], 0.0)
+
+    gx, gy = np.meshgrid(np.arange(x0, x1, dtype=float) + 0.5, np.arange(y0, y1, dtype=float) + 0.5)
+    uu, tt = map_pts(to_unit, gx, gy)
+    ci = uu * n_u - 0.5
+    ri = (tt - ts[0]) / (px * 0.5)
+    ok = (uu >= 0) & (uu <= 1) & (tt >= 0) & (tt <= max_depth)
+    alpha = np.where(ok, _bilinear(wire, ci, ri), 0.0)
+    cif = np.clip(ci, 0, n_u - 1.001)
+    c0 = np.floor(cif).astype(int)
+    fr = (cif - c0)[:, :, None]
+    rgb = out_rgb[c0] * (1 - fr) + out_rgb[c0 + 1] * fr
+    return alpha, rgb
 
 
 def hardware_alpha(
@@ -154,13 +253,16 @@ def warp_and_blend_template(
     composite_warped = np.zeros((canvas_h, canvas_w, 3), dtype=float)
     composite_alpha = np.zeros((canvas_h, canvas_w), dtype=float)
     hw_alpha = np.zeros((canvas_h, canvas_w), dtype=float)
+    wire_a = np.zeros((canvas_h, canvas_w), dtype=float)
+    wire_rgb = np.zeros((canvas_h, canvas_w, 3), dtype=float)
 
     for slot in slots:
         img_path = slot["image_path"]
         if not os.path.exists(img_path):
             raise FileNotFoundError(f"Artwork image not found: {img_path}")
 
-        quad = expand_quad([(float(x), float(y)) for (x, y) in slot["quad"]], BLEED_FRAC)
+        sheet_quad = [(float(x), float(y)) for (x, y) in slot["quad"]]
+        quad = inset_hinge(expand_quad(sheet_quad, BLEED_FRAC), hinge, HINGE_INSET_PX)
 
         # Integer bounding box of the quad on the template canvas (clamped).
         xs = [p[0] for p in quad]
@@ -190,11 +292,15 @@ def warp_and_blend_template(
         mask_big = Image.new("L", (bw * S, bh * S), 0)
         ImageDraw.Draw(mask_big).polygon(dest_local, fill=255)
 
-        warped = warped_big.resize((bw, bh), Image.Resampling.LANCZOS)
-        mask = mask_big.resize((bw, bh), Image.Resampling.LANCZOS)
+        # Downscale premultiplied ("RGBa"): otherwise the black fill outside the quad is
+        # averaged into the edge pixels and leaves a dark line along every sheet edge.
+        rgba_big = warped_big.convert("RGBA")
+        rgba_big.putalpha(mask_big)
+        rgba = rgba_big.convert("RGBa").resize((bw, bh), Image.Resampling.LANCZOS).convert("RGBA")
 
-        warped_arr = np.array(warped, dtype=float)
-        a = (np.array(mask, dtype=float) / 255.0)[:, :, None]
+        rgba_arr = np.array(rgba, dtype=float)
+        warped_arr = rgba_arr[:, :, :3]
+        a = (rgba_arr[:, :, 3] / 255.0)[:, :, None]
 
         region_rgb = composite_warped[y0:y1, x0:x1, :]
         region_a = composite_alpha[y0:y1, x0:x1, None]
@@ -207,6 +313,12 @@ def warp_and_blend_template(
         a2 = a[:, :, 0]
         hw_alpha[y0:y1, x0:x1] = hw_alpha[y0:y1, x0:x1] * (1.0 - a2) + hw * a2
 
+        wa, wrgb = wire_layer(tmpl_lum, tmpl_arr, white_lum, sheet_quad, (x0, y0, x1, y1), hinge)
+        wa = wa * a2
+        # Premultiplied: this sheet hides wire drawn for sheets beneath it, then adds its own.
+        wire_rgb[y0:y1, x0:x1] = wire_rgb[y0:y1, x0:x1] * (1.0 - a2[:, :, None]) + wrgb * wa[:, :, None]
+        wire_a[y0:y1, x0:x1] = wire_a[y0:y1, x0:x1] * (1.0 - a2) + wa
+
     alpha = composite_alpha[:, :, None]
     blended = np.clip((tmpl_arr / white) * composite_warped, 0.0, 255.0)
     result_arr = tmpl_arr * (1.0 - alpha) + blended * alpha
@@ -216,6 +328,8 @@ def warp_and_blend_template(
     ) / 255.0
     hwa = hw_alpha[:, :, None]
     result_arr = result_arr * (1.0 - hwa) + tmpl_arr * hwa
+    wa = np.clip(wire_a, 0.0, 1.0)[:, :, None]
+    result_arr = result_arr * (1.0 - wa) + wire_rgb
 
     result = Image.fromarray(result_arr.astype(np.uint8))
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

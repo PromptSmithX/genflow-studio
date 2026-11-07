@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -119,10 +119,6 @@ export function R2ExportDialog() {
     apiPost("/api/r2/exports/reveal")
       .then(() => toast.success("Đang mở thư mục exports trên máy"))
       .catch((e) => toast.error(e instanceof Error ? e.message : "Không mở được thư mục"));
-  }
-
-  function handleDownloadCsv(filename: string) {
-    window.open(`/api/r2/exports/${encodeURIComponent(filename)}`, "_blank");
   }
 
   function handleReset() {
@@ -283,12 +279,13 @@ export function R2ExportDialog() {
                     <p className="font-mono text-xs text-muted-foreground">{pushMutation.data.csvFileName}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleDownloadCsv(pushMutation.data!.csvFileName!)}
+                    <a
+                      href={`/api/r2/exports/${encodeURIComponent(pushMutation.data.csvFileName)}`}
+                      download={pushMutation.data.csvFileName}
+                      className={buttonVariants({ size: "sm" })}
                     >
                       <Download className="mr-1.5 h-4 w-4" /> Tải CSV
-                    </Button>
+                    </a>
                     <Button variant="outline" size="sm" onClick={handleOpenFolder}>
                       <Folder className="mr-1.5 h-4 w-4" /> Mở thư mục
                     </Button>

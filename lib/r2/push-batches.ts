@@ -133,6 +133,13 @@ export async function pushBatches(batchIds: string[]): Promise<PushBatchesResult
     try {
       const skuBase = await ensureSkuBase(batch.id);
       const r2Folder = batch.r2Folder || buildR2Folder(skuBase, batch.createdAt, batch.etsyTitle);
+      if (!batch.r2Folder) {
+        await prisma.generationBatch.update({
+          where: { id: batch.id },
+          data: { r2Folder },
+        });
+        batch.r2Folder = r2Folder;
+      }
 
       const batchUrlsInput: BatchUrlsInput = {
         skuBase,

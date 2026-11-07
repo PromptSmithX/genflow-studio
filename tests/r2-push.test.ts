@@ -259,5 +259,25 @@ describe("r2-push", () => {
       });
       expect(prisma.generationBatch.update).not.toHaveBeenCalled();
     });
+
+    it("persists r2Folder even when rendering or upload fails", async () => {
+      const batchFail = makeEligibleBatch("batch-fail-folder");
+      vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(
+        batchFail as unknown as never,
+      );
+      vi.mocked(skuModule.ensureSkuBase).mockResolvedValueOnce("CAL-ANI-2611-BFAIL");
+      vi.mocked(renderModule.renderBatchPages).mockRejectedValueOnce(
+        new Error("Render error"),
+      );
+
+      await pushBatches(["batch-fail-folder"]);
+
+      expect(prisma.generationBatch.update).toHaveBeenCalledWith({
+        where: { id: "batch-fail-folder" },
+        data: {
+          r2Folder: "2026/cal-ani-2611-bfail_sample-calendar-title",
+        },
+      });
+    });
   });
 });

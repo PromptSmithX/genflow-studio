@@ -170,3 +170,9 @@ Copy pattern từ `app/api/generations/[batchId]/mockup/route.ts`: `export const
 3. **Những gì chưa test được trong môi trường này:**
    - Chưa test upload trực tiếp lên Cloudflare R2 bucket thật do môi trường local không có sẵn R2 credentials thật (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`).
    - Mọi tương tác S3Client R2 (gọi `headBucket`, `putObject` đúng 61 lần mỗi bộ lịch, xử lý retry, độc lập lỗi giữa các bộ lịch, dọn dẹp thư mục staging tạm và ghi file CSV RFC 4180) đã được kiểm thử toàn diện qua Vitest.
+
+4. **Cập nhật sau Review vòng 1 (`docs/tasks/r2-export-review-1.md`):**
+   - **Mục 1:** Bộ không đủ điều kiện không ghi DB (tránh ghi đè trạng thái đã đẩy trước đó nếu bị gửi lại), chỉ trả về kết quả lỗi trong response.
+   - **Mục 2:** Lưu `r2Folder` ngay sau khi tạo/lấy SKU và trước khi render/upload, đảm bảo folder được cố định kể cả khi lần push đầu gặp lỗi.
+   - **Mục 3:** Nút "Tải CSV" đổi sang thẻ `<a href="..." download="...">` kèm `buttonVariants`, tránh mở popup trắng trên Electron.
+   - **Mục 4:** Cải tiến `runWithConcurrency` dừng tạo task mới khi có lỗi nhưng đợi các upload in-flight hoàn tất trước khi throw, ngăn ngừa race condition dọn staging sớm.

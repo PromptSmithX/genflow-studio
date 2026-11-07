@@ -59,17 +59,30 @@ async function runWithConcurrency<T>(
   limit: number,
   fn: (item: T) => Promise<void>,
 ): Promise<void> {
+  let firstError: unknown = null;
   const executing = new Set<Promise<void>>();
+
   for (const item of items) {
-    const p = fn(item).then(() => {
-      executing.delete(p);
-    });
+    if (firstError) break;
+
+    const p: Promise<void> = fn(item)
+      .catch((err) => {
+        if (!firstError) firstError = err;
+      })
+      .finally(() => {
+        executing.delete(p);
+      });
+
     executing.add(p);
     if (executing.size >= limit) {
       await Promise.race(executing);
     }
   }
+
   await Promise.all(executing);
+  if (firstError) {
+    throw firstError;
+  }
 }
 
 function formatLocalTimestamp(d: Date): string {

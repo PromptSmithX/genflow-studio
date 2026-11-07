@@ -124,10 +124,6 @@ export async function pushBatches(batchIds: string[]): Promise<PushBatchesResult
     const check = isBatchEligible(batch);
     if (!check.eligible) {
       const errorMsg = check.reason || "Bộ chưa đủ điều kiện";
-      await prisma.generationBatch.update({
-        where: { id: batchId },
-        data: { r2Status: "failed", r2Error: errorMsg },
-      });
       results.push({ batchId, ok: false, error: errorMsg });
       continue;
     }

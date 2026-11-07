@@ -240,5 +240,24 @@ describe("r2-push", () => {
       expect(result.results[0].ok).toBe(false);
       expect(result.csvFileName).toBeNull();
     });
+
+    it("does not update DB when a batch is not eligible", async () => {
+      const ineligibleBatch = {
+        ...makeEligibleBatch("ineligible-batch"),
+        etsyTitle: null,
+      };
+      vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(
+        ineligibleBatch as unknown as never,
+      );
+
+      const result = await pushBatches(["ineligible-batch"]);
+
+      expect(result.results[0]).toEqual({
+        batchId: "ineligible-batch",
+        ok: false,
+        error: "Thiếu Etsy title",
+      });
+      expect(prisma.generationBatch.update).not.toHaveBeenCalled();
+    });
   });
 });

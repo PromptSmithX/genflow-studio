@@ -112,6 +112,11 @@ export interface GenerationBatchDTO {
   etsyTitle: string | null;
   etsyDescription: string | null;
   etsyTagsJson: string | null;
+  r2SkuBase?: string | null;
+  r2Folder?: string | null;
+  r2Status?: "done" | "failed" | null;
+  r2PushedAt?: string | null;
+  r2Error?: string | null;
 }
 
 export interface HistoryListResponse {

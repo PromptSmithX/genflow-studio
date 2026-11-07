@@ -175,6 +175,17 @@ model GenerationBatch {
   etsyDescription String?
   etsyTagsJson    String?
 
+  // SKU gốc (CAL-{MED}-{YYMM}-{CODE}) cố định cho bộ lịch khi đẩy R2 lần đầu.
+  r2SkuBase  String?   @unique
+  // Thư mục lưu trên R2 ({YYYY}/{sku-lower}_{title-slug}) tính ở lần đẩy đầu.
+  r2Folder   String?
+  // Trạng thái đẩy lên Cloudflare R2: "done" | "failed" | null.
+  r2Status   String?
+  // Thời điểm đẩy lên Cloudflare R2 thành công gần nhất.
+  r2PushedAt DateTime?
+  // Thông tin lỗi gần nhất nếu đẩy lên R2 thất bại.
+  r2Error    String?
+
   jobs GenerationJob[]
 
   @@index([createdAt])

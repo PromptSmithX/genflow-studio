@@ -92,6 +92,17 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
             <span>{new Date(batch.createdAt).toLocaleString("vi-VN")}</span>
             <span>·</span>
             <span>{total} ảnh</span>
+            {batch.r2SkuBase && (
+              <>
+                <span>·</span>
+                <span className="font-mono text-xs">SKU: {batch.r2SkuBase}</span>
+              </>
+            )}
+            {batch.r2Status === "done" && (
+              <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-xs">
+                Đã đẩy R2
+              </Badge>
+            )}
             <Badge
               variant="secondary"
               className={cn(

@@ -16,6 +16,8 @@ export interface SettingsDTO {
   defaultFixedSeed: number | null;
   maxImagesPerBatch: number;
   outputDirectory: string;
+  autoPublish: boolean;
+  autoFormatId: string;
   llmModel: string | null;
   llmSystemPrompt: string | null;
   hasLlmKey: boolean;
@@ -112,21 +114,20 @@ export interface GenerationBatchDTO {
   etsyTitle: string | null;
   etsyDescription: string | null;
   etsyTagsJson: string | null;
+  r2SkuBase?: string | null;
+  r2Folder?: string | null;
+  r2Status?: "done" | "failed" | null;
+  r2PushedAt?: string | null;
+  r2Error?: string | null;
+  autoStatus?: "pending" | "retrying" | "processing" | "done" | "failed" | "skipped" | "legacy" | null;
+  autoError?: string | null;
+  autoFinishedAt?: string | null;
+  sheetSyncedAt?: string | null;
 }
 
 export interface HistoryListResponse {
-  jobs: (GenerationJobDTO & {
-    batch: {
-      id: string;
-      ideaPrompt: string;
-      createdAt: string;
-      backCoverStatus: "done" | "failed" | null;
-      finalExportStatus: "done" | "failed" | null;
-      mockupStatus: "done" | "failed" | null;
-      etsyTitle: string | null;
-      etsyDescription: string | null;
-      etsyTagsJson: string | null;
-    };
-  })[];
+  batches: GenerationBatchDTO[];
   nextCursor: string | null;
 }
+
+export type JobDetailDTO = GenerationJobDTO & { batch: Omit<GenerationBatchDTO, "jobs"> };

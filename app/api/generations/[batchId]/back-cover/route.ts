@@ -33,7 +33,8 @@ export async function GET(request: NextRequest, { params }: Params) {
     const isDownload = request.nextUrl.searchParams.get("download") === "1";
     const headers: Record<string, string> = {
       "Content-Type": "image/png",
-      "Cache-Control": "private, max-age=31536000, immutable",
+      // Xuất lại (đổi khổ / sửa ảnh) ghi đè cùng đường dẫn nên không được cache vĩnh viễn.
+      "Cache-Control": "no-cache",
     };
     if (isDownload) {
       headers["Content-Disposition"] = `attachment; filename="back_cover_${batchId}.png"`;

@@ -58,7 +58,27 @@ Muốn backup: sao chép cả thư mục `data/`. Muốn restore: dán thư mụ
 
 Không có node ID nào bị hard-code trong code — bạn phải tự map theo đúng workflow của mình.
 
-## 7. Xử lý lỗi thường gặp
+## 7. Cấu hình Cloudflare R2 (Đẩy ảnh & Xuất CSV Printify)
+
+Để sử dụng tính năng đẩy ảnh lên Cloudflare R2 và xuất file CSV Printify hàng loạt, cần cấu hình các biến môi trường trong file `.env`:
+- `R2_ACCOUNT_ID`: Cloudflare Account ID.
+- `R2_ACCESS_KEY_ID`: Access Key ID của R2 API Token.
+- `R2_SECRET_ACCESS_KEY`: Secret Access Key của R2 API Token.
+- `R2_BUCKET`: Tên bucket R2.
+- `R2_PUBLIC_BASE_URL`: URL public CDN trỏ tới bucket (vd `https://pub-xxx.r2.dev` hoặc custom domain).
+- `R2_KEY_PREFIX`: Tiền tố đường dẫn lưu trên R2 (mặc định `calendars/anima`).
+
+## 8. Cấu hình Google Sheets (Đồng bộ bảng online tự động)
+
+Để tự động đồng bộ kết quả lên Google Sheets:
+1. Vào [Google Cloud Console](https://console.cloud.google.com/), tạo project và bật **Google Sheets API**.
+2. Tạo **Service Account**, tạo và tải file JSON key về máy.
+3. Tạo một Google Spreadsheet mới, chia sẻ (Share) quyền **Editor** cho email của Service Account vừa tạo.
+4. Cấu hình biến môi trường trong file `.env`:
+   - `GOOGLE_SERVICE_ACCOUNT_FILE`: Đường dẫn tuyệt đối hoặc tương đối tới file JSON key (vd `keys/google-service-account.json`).
+   - `GOOGLE_SHEET_ID`: ID của bảng tính Google Sheets (lấy từ URL: `https://docs.google.com/spreadsheets/d/<GOOGLE_SHEET_ID>/edit`).
+
+## 9. Xử lý lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
 |---|---|---|
@@ -69,7 +89,7 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 | Mapping không hợp lệ | Node ID/input key không còn tồn tại trong workflow mới | Vào Cài đặt, chọn lại node/input, Validate lại |
 | GPU out of memory / lỗi node khi tạo ảnh | Workflow/model vượt quá VRAM của GPU Colab | Giảm kích thước ảnh/steps, hoặc kiểm tra workflow trên ComfyUI trực tiếp |
 
-## 8. Scripts
+## 10. Scripts
 
 ```bash
 npm run dev         # chạy dev server (bind 127.0.0.1)
@@ -82,6 +102,6 @@ npm run db:seed       # seed dữ liệu mẫu (an toàn, không overwrite)
 npm run db:studio     # mở Prisma Studio để xem database
 ```
 
-## 9. Công nghệ sử dụng
+## 11. Công nghệ sử dụng
 
 Next.js (App Router) + TypeScript, Tailwind CSS + shadcn/ui, Prisma + SQLite, Zod, React Hook Form, TanStack Query, Vitest.

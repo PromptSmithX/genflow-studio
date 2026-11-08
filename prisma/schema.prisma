@@ -95,6 +95,10 @@ model AppSettings {
   // không phải con) để tránh Next.js dev watch thư mục này -- ảnh/DB được ghi
   // liên tục trong đó sẽ trigger full-page reload nếu nằm trong vùng watch.
   outputDirectory   String   @default("outputs")
+  // Tự động đẩy pipeline (upscale -> mockup -> R2 -> Sheet) sau khi gen xong bộ lịch.
+  autoPublish       Boolean  @default(true)
+  // Khổ template lịch mặc định dùng cho auto publish (vd premade_wall_11x8_5).
+  autoFormatId      String   @default("premade_wall_11x8_5")
   llmBaseUrl        String?
   llmModel          String?
   llmSystemPrompt   String?
@@ -175,6 +179,26 @@ model GenerationBatch {
   etsyDescription String?
   etsyTagsJson    String?
 
+  // SKU gốc (CAL-{MED}-{YYMM}-{CODE}) cố định cho bộ lịch khi đẩy R2 lần đầu.
+  r2SkuBase  String?   @unique
+  // Thư mục lưu trên R2 ({YYYY}/{sku-lower}_{title-slug}) tính ở lần đẩy đầu.
+  r2Folder   String?
+  // Trạng thái đẩy lên Cloudflare R2: "done" | "failed" | null.
+  r2Status   String?
+  // Thời điểm đẩy lên Cloudflare R2 thành công gần nhất.
+  r2PushedAt DateTime?
+  // Thông tin lỗi gần nhất nếu đẩy lên R2 thất bại.
+  r2Error    String?
+
+  // Tiến độ tự động xuất và đẩy pipeline: "pending" | "retrying" | "processing" | "done" | "failed" | "skipped" | "legacy" | null.
+  autoStatus     String?
+  // Chi tiết lỗi khi chạy pipeline tự động thất bại.
+  autoError      String?
+  // Thời điểm kết thúc chạy pipeline tự động gần nhất.
+  autoFinishedAt DateTime?
+  // Thời điểm ghi dữ liệu bộ lịch lên Google Sheet thành công gần nhất.
+  sheetSyncedAt  DateTime?
+
   jobs GenerationJob[]
 
   @@index([createdAt])
@@ -212,6 +236,8 @@ model GenerationJob {
   scheduler             String?
   errorCode             String?
   errorMessage          String?
+  // Số lần tự động sinh lại khi job lỗi (tối đa 2 lần).
+  autoRetryCount        Int       @default(0)
   submittedAt           DateTime?
   startedAt             DateTime?
   finishedAt            DateTime?

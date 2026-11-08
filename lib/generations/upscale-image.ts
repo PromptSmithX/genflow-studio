@@ -17,6 +17,7 @@ import { listCalendarFormats, type CalendarFormat } from "@/lib/calendar/formats
 import { loadBackCoverGeometry } from "@/lib/calendar/back-cover-format";
 import { composeBackCover } from "@/lib/images/back-cover";
 import { wrapBatchMockup } from "@/lib/mockup/run-mockup";
+import { BACK_COVER_FILENAME, slotFilename } from "@/lib/calendar/slot-label";
 
 interface UpscaleRoots {
   outputRoot: string;
@@ -172,10 +173,6 @@ async function buildBackCover(
   }
 }
 
-function finalExportSlotName(indexInBatch: number): string {
-  return indexInBatch === 0 ? "00_bia-truoc.png" : `${String(indexInBatch).padStart(2, "0")}.png`;
-}
-
 /**
  * Dựng nội dung file etsy.txt (title/description/tags) để người dùng dán
  * nhanh lên Etsy khi đăng bán, ghi kèm trong thư mục export của batch -- xem
@@ -238,7 +235,7 @@ async function exportBatchFolders(batchId: string, roots: UpscaleRoots): Promise
     }
 
     for (const image of images) {
-      const name = finalExportSlotName(image.job.indexInBatch);
+      const name = slotFilename(image.job.indexInBatch);
 
       if (image.upscaledRelativePath) {
         try {
@@ -262,11 +259,11 @@ async function exportBatchFolders(batchId: string, roots: UpscaleRoots): Promise
     if (batch.backCoverStatus === "done" && batch.backCoverRelativePath) {
       try {
         const src = resolveSafePath(roots.backCoverRoot, batch.backCoverRelativePath);
-        await fs.copyFile(src, path.join(uncensoredDir, "13_bia-sau.png"));
+        await fs.copyFile(src, path.join(uncensoredDir, BACK_COVER_FILENAME));
 
         const censoredSrc = resolveSafePath(roots.backCoverRoot, censoredBackCoverPath(batch.backCoverRelativePath));
         const hasCensored = await fs.access(censoredSrc).then(() => true, () => false);
-        await fs.copyFile(hasCensored ? censoredSrc : src, path.join(censoredDir, "13_bia-sau.png"));
+        await fs.copyFile(hasCensored ? censoredSrc : src, path.join(censoredDir, BACK_COVER_FILENAME));
       } catch (error) {
         console.error(`[exportBatchFolders] bỏ qua bìa sau của batch ${batchId}:`, error);
       }

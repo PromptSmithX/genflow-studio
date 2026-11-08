@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Wand2, Sparkles } from "lucide-react";
+import { Wand2, Loader2, Check, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,9 @@ type AdvancedParams = Record<AdvancedParamField, string>;
 const COVER_DEFAULT_WIDTH = 1152;
 const COVER_DEFAULT_HEIGHT = 952;
 
+// 1 bìa trước + 12 tháng; bìa sau do app tự ghép -> đủ 14 trang cho file in và mockup.
+const CALENDAR_IMAGE_COUNT = 13;
+
 /**
  * Reads a field's current literal value out of the imported workflow JSON via
  * its node mapping, so the Trợ lý AI form can pre-fill CFG/steps/size with the
@@ -65,7 +68,7 @@ export function AssistantCreateForm() {
   const activeMediums = useMemo(() => (mediums ?? []).filter((m) => m.isActive), [mediums]);
 
   const [requestText, setRequestText] = useState("");
-  const [imageCount, setImageCount] = useState(12);
+  const [imageCount, setImageCount] = useState(CALENDAR_IMAGE_COUNT);
   const [mediumId, setMediumId] = useState("");
   const [params, setParams] = useState<AdvancedParams>({ width: "", height: "", steps: "", cfg: "" });
 
@@ -103,12 +106,8 @@ export function AssistantCreateForm() {
   const llmReady = Boolean(settings?.hasLlmKey);
   // Một nút "Tạo ảnh" chạy cả soạn prompt (LLM) lẫn gửi gen (ComfyUI) nên cần
   // đủ cả hai sẵn sàng ngay từ đầu.
-  const canGenerate =
-    llmReady &&
-    isReady &&
-    requestText.trim().length > 0 &&
-    !suggestMutation.isPending &&
-    !createMutation.isPending;
+  const isWorking = suggestMutation.isPending || createMutation.isPending;
+  const canGenerate = llmReady && isReady && requestText.trim().length > 0 && !isWorking;
 
   function handleCountChange(next: number) {
     setImageCount(Math.max(1, Math.min(maxImages, next)));
@@ -166,8 +165,8 @@ export function AssistantCreateForm() {
       },
       {
         onSuccess: (batch) => {
-          toast.success(`Đã gửi ${batch.jobs.length} ảnh để tạo`);
-          router.push("/history");
+          toast.success(`Đã gửi ${batch.jobs.length} ảnh để tạo. Theo dõi tiến độ ở trang Kết quả.`);
+          router.push(`/history?batch=${batch.id}`);
         },
         onError: (error) => {
           toast.error(error instanceof ApiRequestError ? error.message : "Tạo ảnh thất bại");
@@ -179,56 +178,65 @@ export function AssistantCreateForm() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Trợ lý AI</h1>
+        <h2 className="text-xl font-semibold">Tạo bộ lịch mới</h2>
         <p className="text-sm text-muted-foreground">
-          Gõ ý tưởng bằng lời của bạn, AI sẽ tự viết yêu cầu chi tiết cho từng ảnh và tự tạo ảnh đầu thành bìa
-          lịch (tên + năm do AI tự quyết nếu bạn không nêu).
+          Gõ ý tưởng bằng lời của bạn. AI sẽ tự viết mô tả cho từng ảnh, ảnh đầu tiên thành bìa lịch (tên + năm do AI
+          tự đặt nếu bạn không nêu).
         </p>
       </div>
 
-      {!llmReady && (
+      {!(llmReady && isReady) && (
         <Alert variant="destructive">
-          <AlertTitle>Chưa cấu hình Trợ lý AI</AlertTitle>
+          <AlertTitle>App chưa sẵn sàng để tạo ảnh</AlertTitle>
           <AlertDescription>
-            Nhờ người cài đặt vào{" "}
+            Máy tạo ảnh chưa được kết nối hoặc chưa cài đặt xong. Nhờ người cài đặt vào{" "}
             <Link href="/settings" className="underline underline-offset-4">
               trang Cài đặt
             </Link>{" "}
-            để dán URL ComfyUI (Trợ lý AI dùng chung URL này). Cần có trước khi tạo ảnh.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {!isReady && (
-        <Alert variant="destructive">
-          <AlertTitle>Chưa sẵn sàng để tạo ảnh</AlertTitle>
-          <AlertDescription>
-            {!workflow?.configured
-              ? "Chưa cấu hình workflow. "
-              : !workflow.isValidated
-                ? "Workflow chưa được validate. "
-                : "Chưa kết nối ComfyUI. "}
-            Nhờ người cài đặt vào{" "}
-            <Link href="/settings" className="underline underline-offset-4">
-              trang Cài đặt
-            </Link>{" "}
-            để hoàn tất trước khi bấm &quot;Tạo ảnh&quot;.
+            để hoàn tất.
+            <span className="mt-1 block text-xs opacity-80">
+              Chi tiết:{" "}
+              {!llmReady
+                ? "chưa có URL ComfyUI"
+                : !workflow?.configured
+                  ? "chưa import workflow"
+                  : !workflow.isValidated
+                    ? "workflow chưa được validate"
+                    : "chưa kết nối được ComfyUI"}
+              .
+            </span>
           </AlertDescription>
         </Alert>
       )}
 
       <Card>
         <CardContent className="space-y-3 p-4">
-          <h3 className="text-sm font-medium">Kiểu ảnh</h3>
+          <h3 className="text-sm font-medium">1. Ý tưởng của bạn</h3>
+          <Textarea
+            value={requestText}
+            onChange={(e) => setRequestText(e.target.value)}
+            placeholder="Ví dụ: cô gái tóc đỏ dạo phố Nhật Bản vào mùa thu, không khí ấm áp..."
+            className="min-h-28"
+            autoFocus
+            disabled={isWorking}
+          />
           <p className="text-xs text-muted-foreground">
-            Chọn một kiểu để app tự ghép tag phong cách/chất lượng chuẩn (ổn định, không phụ thuộc AI).
+            Càng cụ thể (nhân vật, bối cảnh, mùa, cảm xúc) thì ảnh càng đúng ý.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <h3 className="text-sm font-medium">2. Kiểu ảnh</h3>
+          <p className="text-xs text-muted-foreground">Cả bộ lịch sẽ theo cùng một kiểu này.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {activeMediums.map((medium) => (
               <button
                 key={medium.id}
                 type="button"
                 onClick={() => setMediumId(medium.id)}
+                disabled={isWorking}
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
                   mediumId === medium.id ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
@@ -246,42 +254,52 @@ export function AssistantCreateForm() {
 
       <Card>
         <CardContent className="space-y-3 p-4">
-          <h3 className="text-sm font-medium">Số lượng ảnh</h3>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={() => handleCountChange(safeImageCount - 1)} disabled={safeImageCount <= 1}>
+          <h3 className="text-sm font-medium">3. Số lượng ảnh</h3>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Bớt 1 ảnh"
+              onClick={() => handleCountChange(safeImageCount - 1)}
+              disabled={isWorking || safeImageCount <= 1}
+            >
               −
             </Button>
             <span className="w-12 text-center text-lg font-semibold">{safeImageCount}</span>
-            <Button variant="outline" size="icon" onClick={() => handleCountChange(safeImageCount + 1)} disabled={safeImageCount >= maxImages}>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Thêm 1 ảnh"
+              onClick={() => handleCountChange(safeImageCount + 1)}
+              disabled={isWorking || safeImageCount >= maxImages}
+            >
               +
             </Button>
-            <span className="text-xs text-muted-foreground">Tối đa {maxImages} ảnh/lần</span>
+            {safeImageCount !== CALENDAR_IMAGE_COUNT && CALENDAR_IMAGE_COUNT <= maxImages && (
+              <Button variant="link" size="sm" onClick={() => handleCountChange(CALENDAR_IMAGE_COUNT)} disabled={isWorking}>
+                Về mặc định {CALENDAR_IMAGE_COUNT}
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-3 p-4">
-          <h3 className="text-sm font-medium">Ý tưởng của bạn</h3>
-          <Textarea
-            value={requestText}
-            onChange={(e) => setRequestText(e.target.value)}
-            placeholder="Ví dụ: cô gái tóc đỏ dạo phố Nhật Bản vào mùa thu, không khí ấm áp..."
-            className="min-h-28"
-          />
           <p className="text-xs text-muted-foreground">
-            Bấm &quot;Tạo ảnh&quot; là AI tự soạn mô tả chi tiết rồi tạo ảnh luôn. Cần Trợ lý AI và ComfyUI đã sẵn sàng.
+            {CALENDAR_IMAGE_COUNT} ảnh = 1 bìa trước + 12 tháng. Bìa sau được app tự ghép khi xuất file in. Tối đa{" "}
+            {maxImages} ảnh/lần.
           </p>
+          {safeImageCount !== CALENDAR_IMAGE_COUNT && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Lưu ý: bộ lịch đầy đủ và ảnh mockup sản phẩm cần đúng {CALENDAR_IMAGE_COUNT} ảnh.
+            </p>
+          )}
         </CardContent>
       </Card>
 
       <Accordion>
         <AccordionItem value="advanced-params">
-          <AccordionTrigger>Thông số nâng cao (tuỳ chọn)</AccordionTrigger>
+          <AccordionTrigger>Tuỳ chỉnh nâng cao (không cần chỉnh nếu không chắc)</AccordionTrigger>
           <AccordionContent className="space-y-3 pt-2">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="space-y-2">
-                <Label>Width</Label>
+                <Label>Chiều rộng (px)</Label>
                 <Input
                   type="number"
                   min={64}
@@ -291,7 +309,7 @@ export function AssistantCreateForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Height</Label>
+                <Label>Chiều cao (px)</Label>
                 <Input
                   type="number"
                   min={64}
@@ -301,7 +319,7 @@ export function AssistantCreateForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Steps</Label>
+                <Label>Số bước vẽ (steps)</Label>
                 <Input
                   type="number"
                   min={1}
@@ -311,7 +329,7 @@ export function AssistantCreateForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>CFG</Label>
+                <Label>Độ bám mô tả (CFG)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -323,30 +341,59 @@ export function AssistantCreateForm() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Mặc định điền sẵn theo workflow. Để trống một ô = giữ giá trị của workflow. Các thông số này chỉ áp cho
-              bước gen chính; bước sửa tay (detailer) không đổi.
+              Đã điền sẵn giá trị chuẩn. Để trống một ô = dùng giá trị của workflow. Các thông số này chỉ áp cho bước
+              vẽ chính; bước sửa chi tiết (detailer) không đổi.
             </p>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
 
-      <div className="flex items-center justify-end">
+      {isWorking && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="space-y-2 p-4 text-sm">
+            <ProgressStep
+              state={suggestMutation.isPending ? "active" : "done"}
+              text={`AI đang viết mô tả cho ${safeImageCount} ảnh — thường mất 1–2 phút, đừng đóng app.`}
+            />
+            <ProgressStep
+              state={createMutation.isPending ? "active" : "waiting"}
+              text="Gửi sang máy tạo ảnh — xong sẽ tự chuyển sang trang Kết quả."
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex items-center justify-end gap-3">
+        {!isWorking && requestText.trim().length === 0 && (
+          <span className="text-xs text-muted-foreground">Nhập ý tưởng để bắt đầu</span>
+        )}
         <Button size="lg" onClick={handleGenerate} disabled={!canGenerate}>
-          {suggestMutation.isPending ? (
+          {isWorking ? (
             <>
-              <Sparkles className="h-4 w-4 animate-pulse" /> Đang soạn mô tả...
-            </>
-          ) : createMutation.isPending ? (
-            <>
-              <Sparkles className="h-4 w-4 animate-pulse" /> Đang tạo ảnh...
+              <Loader2 className="h-4 w-4 animate-spin" /> Đang xử lý...
             </>
           ) : (
             <>
-              <Wand2 className="h-4 w-4" /> Tạo ảnh
+              <Wand2 className="h-4 w-4" /> Tạo {safeImageCount} ảnh
             </>
           )}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function ProgressStep({ state, text }: { state: "waiting" | "active" | "done"; text: string }) {
+  return (
+    <div className={cn("flex items-start gap-2", state === "waiting" && "text-muted-foreground")}>
+      {state === "done" ? (
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+      ) : state === "active" ? (
+        <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
+      ) : (
+        <Circle className="mt-0.5 h-4 w-4 shrink-0" />
+      )}
+      <span>{text}</span>
     </div>
   );
 }

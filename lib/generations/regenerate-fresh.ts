@@ -146,7 +146,17 @@ export async function regenerateJobFreshPrompt(jobId: string) {
 
   // Đưa batch về "running" để poller nền (chỉ sync batch queued/running) bắt
   // lại job này; job-sync sẽ tự tính lại status batch chính xác ở lần sync kế.
-  await prisma.generationBatch.update({ where: { id: batch.id }, data: { status: "running" } });
+  // Bìa sau, thư mục file in và mockup đều dựng từ ảnh cũ -> đánh dấu cần xuất lại.
+  await prisma.generationBatch.update({
+    where: { id: batch.id },
+    data: {
+      status: "running",
+      backCoverStatus: null,
+      finalExportStatus: null,
+      mockupStatus: null,
+      ...(batch.autoStatus !== "legacy" ? { autoStatus: null } : {}),
+    },
+  });
 
   const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });
   const values: ApplyMappingValues = {

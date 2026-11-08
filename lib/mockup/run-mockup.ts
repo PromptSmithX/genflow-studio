@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { getOrCreateSettings } from "@/lib/settings";
 import { buildBatchFolder } from "@/lib/files/safe-output";
 import { resolveFinalRoot, resolveOutputRoot } from "@/lib/output-dir";
+import { BACK_COVER_FILENAME, slotFilename, slotLabel } from "@/lib/calendar/slot-label";
 
 const execFileAsync = promisify(execFile);
 
@@ -72,7 +73,7 @@ export async function wrapBatchMockup(batchId: string): Promise<MockupResult> {
     return {
       status: "skipped",
       files: [],
-      error: "Thư mục 'da-che' chưa được tạo, cần xuất file in trước",
+      error: "Chưa có thư mục file in (da-che). Hãy bấm \"Xuất file in\" trước khi tạo mockup.",
     };
   }
 
@@ -90,15 +91,13 @@ export async function wrapBatchMockup(batchId: string): Promise<MockupResult> {
     };
   }
 
-  // Construct the expected 14 image files
-  const expectedNames = [
-    "00_bia-truoc.png",
-    ...Array.from({ length: 12 }, (_, i) => `${String(i + 1).padStart(2, "0")}.png`),
-    "13_bia-sau.png",
+  const expected = [
+    ...Array.from({ length: 13 }, (_, i) => ({ name: slotFilename(i), label: slotLabel(i) })),
+    { name: BACK_COVER_FILENAME, label: "Bìa sau" },
   ];
 
   const imagePaths: string[] = [];
-  for (const name of expectedNames) {
+  for (const { name, label } of expected) {
     let p = path.join(censoredDir, name);
     try {
       await fs.access(p);
@@ -108,16 +107,21 @@ export async function wrapBatchMockup(batchId: string): Promise<MockupResult> {
       try {
         await fs.access(p);
       } catch {
+        // Mockup cũ (nếu có) được ghép từ bộ ảnh trước đó -- xoá để không hiển thị nhầm.
+        await fs.rm(mockupDir, { recursive: true, force: true });
+        await prisma.generationBatch.update({ where: { id: batchId }, data: { mockupStatus: null } });
         return {
           status: "skipped",
           files: [],
-          error: `Thiếu file ảnh ${name} để tạo mockup`,
+          error: `Mockup cần đủ 14 trang nhưng đang thiếu "${label}" (${name}). Hãy sửa lại ảnh đó rồi xuất file in lại.`,
         };
       }
     }
     imagePaths.push(p);
   }
 
+  // Xoá mockup cũ để thư mục luôn khớp đúng lần tạo gần nhất.
+  await fs.rm(mockupDir, { recursive: true, force: true });
   await fs.mkdir(mockupDir, { recursive: true });
 
   const pythonBin = process.env.MOCKUP_PYTHON || process.env.CENSOR_PYTHON || "python";

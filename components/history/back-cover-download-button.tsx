@@ -11,10 +11,12 @@ import { Button } from "@/components/ui/button";
 export function BackCoverDownloadButton({
   batchId,
   status,
+  version,
   className,
 }: {
   batchId: string;
   status: "done" | "failed" | null;
+  version: number;
   className?: string;
 }) {
   if (status !== "done") return null;
@@ -24,8 +26,9 @@ export function BackCoverDownloadButton({
       variant="outline"
       size="sm"
       className={className}
+      nativeButton={false}
       render={
-        <a href={`/api/generations/${batchId}/back-cover?download=1`} download>
+        <a href={`/api/generations/${batchId}/back-cover?download=1&v=${version}`} download>
           <Download className="h-3.5 w-3.5" /> Tải bìa sau
         </a>
       }

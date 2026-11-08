@@ -41,11 +41,13 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (!resolved) return apiError("not_found", "Chưa có bản ảnh này", 404);
 
     const buffer = await fs.readFile(resolveSafePath(resolved.root, resolved.relativePath));
+    // Bản in (upscaled*) bị ghi đè cùng path khi xuất lại với khổ khác; bản gốc thì bất biến.
+    const isMutableVariant = request.nextUrl.searchParams.get("variant")?.startsWith("upscaled") ?? false;
 
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": image.mimeType,
-        "Cache-Control": "private, max-age=31536000, immutable",
+        "Cache-Control": isMutableVariant ? "no-cache" : "private, max-age=31536000, immutable",
       },
     });
   } catch (error) {

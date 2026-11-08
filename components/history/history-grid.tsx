@@ -5,11 +5,13 @@ import { Loader2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHistoryList, type HistoryFilters } from "@/hooks/use-history";
+import { useAdvancedMode } from "@/hooks/use-settings";
 import { BatchCard } from "@/components/history/batch-card";
 import { R2ExportDialog } from "@/components/history/r2-export-dialog";
 
 export function HistoryGrid({ filters, focusBatchId }: { filters: HistoryFilters; focusBatchId: string | null }) {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useHistoryList(filters);
+  const advancedMode = useAdvancedMode();
   const batches = data?.pages.flatMap((page) => page.batches) ?? [];
 
   return (
@@ -18,7 +20,7 @@ export function HistoryGrid({ filters, focusBatchId }: { filters: HistoryFilters
         <h2 className="text-sm font-medium text-muted-foreground">
           Danh sách bộ lịch {batches.length > 0 && `(${batches.length})`}
         </h2>
-        <R2ExportDialog />
+        {advancedMode && <R2ExportDialog />}
       </div>
 
       {isLoading ? (

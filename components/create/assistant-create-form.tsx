@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Wand2, Loader2, Check, Circle } from "lucide-react";
+import { Wand2, Loader2, Check, Circle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMediums } from "@/hooks/use-mediums";
-import { useSettings } from "@/hooks/use-settings";
+import { useSettings, useAdvancedMode } from "@/hooks/use-settings";
 import { useWorkflow } from "@/hooks/use-workflow";
 import { useHeaderConnectionState } from "@/hooks/use-connection";
 import { useCreateGeneration } from "@/hooks/use-generations";
@@ -59,6 +59,7 @@ function readWorkflowNumber(workflow: WorkflowSummaryResponse | undefined, field
 export function AssistantCreateForm() {
   const { data: mediums } = useMediums();
   const { data: settings } = useSettings();
+  const advancedMode = useAdvancedMode();
   const { data: workflow } = useWorkflow();
   const { state: connectionState } = useHeaderConnectionState();
   const suggestMutation = useSuggestPrompts();
@@ -189,11 +190,17 @@ export function AssistantCreateForm() {
         <Alert variant="destructive">
           <AlertTitle>App chưa sẵn sàng để tạo ảnh</AlertTitle>
           <AlertDescription>
-            Máy tạo ảnh chưa được kết nối hoặc chưa cài đặt xong. Nhờ người cài đặt vào{" "}
-            <Link href="/settings" className="underline underline-offset-4">
-              trang Cài đặt
-            </Link>{" "}
-            để hoàn tất.
+            {!workflow?.configured || !workflow?.isValidated ? (
+              <>Liên hệ người cài đặt hoặc bật Chế độ nâng cao trong Cài đặt.</>
+            ) : (
+              <>
+                Máy tạo ảnh chưa được kết nối hoặc chưa cài đặt xong. Nhờ người cài đặt vào{" "}
+                <Link href="/settings" className="underline underline-offset-4">
+                  trang Cài đặt
+                </Link>{" "}
+                để hoàn tất.
+              </>
+            )}
             <span className="mt-1 block text-xs opacity-80">
               Chi tiết:{" "}
               {!llmReady
@@ -286,74 +293,77 @@ export function AssistantCreateForm() {
             {maxImages} ảnh/lần.
           </p>
           {safeImageCount !== CALENDAR_IMAGE_COUNT && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              Lưu ý: bộ lịch đầy đủ và ảnh mockup sản phẩm cần đúng {CALENDAR_IMAGE_COUNT} ảnh.
-            </p>
+            <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>Chỉ bộ 13 ảnh mới được tự động xuất & ghi Google Sheet.</span>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <Accordion>
-        <AccordionItem value="advanced-params">
-          <AccordionTrigger>Tuỳ chỉnh nâng cao (không cần chỉnh nếu không chắc)</AccordionTrigger>
-          <AccordionContent className="space-y-3 pt-2">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="space-y-2">
-                <Label>Chiều rộng (px)</Label>
-                <Input
-                  type="number"
-                  min={64}
-                  max={4096}
-                  value={params.width}
-                  onChange={(e) => setParams((prev) => ({ ...prev, width: e.target.value }))}
-                />
+      {advancedMode && (
+        <Accordion>
+          <AccordionItem value="advanced-params">
+            <AccordionTrigger>Tuỳ chỉnh nâng cao (không cần chỉnh nếu không chắc)</AccordionTrigger>
+            <AccordionContent className="space-y-3 pt-2">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="space-y-2">
+                  <Label>Chiều rộng (px)</Label>
+                  <Input
+                    type="number"
+                    min={64}
+                    max={4096}
+                    value={params.width}
+                    onChange={(e) => setParams((prev) => ({ ...prev, width: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Chiều cao (px)</Label>
+                  <Input
+                    type="number"
+                    min={64}
+                    max={4096}
+                    value={params.height}
+                    onChange={(e) => setParams((prev) => ({ ...prev, height: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Số bước vẽ (steps)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={params.steps}
+                    onChange={(e) => setParams((prev) => ({ ...prev, steps: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Độ bám mô tả (CFG)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={30}
+                    step="0.1"
+                    value={params.cfg}
+                    onChange={(e) => setParams((prev) => ({ ...prev, cfg: e.target.value }))}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Chiều cao (px)</Label>
-                <Input
-                  type="number"
-                  min={64}
-                  max={4096}
-                  value={params.height}
-                  onChange={(e) => setParams((prev) => ({ ...prev, height: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Số bước vẽ (steps)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={params.steps}
-                  onChange={(e) => setParams((prev) => ({ ...prev, steps: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Độ bám mô tả (CFG)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={30}
-                  step="0.1"
-                  value={params.cfg}
-                  onChange={(e) => setParams((prev) => ({ ...prev, cfg: e.target.value }))}
-                />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Đã điền sẵn giá trị chuẩn. Để trống một ô = dùng giá trị của workflow. Các thông số này chỉ áp cho bước
-              vẽ chính; bước sửa chi tiết (detailer) không đổi.
-            </p>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+              <p className="text-xs text-muted-foreground">
+                Đã điền sẵn giá trị chuẩn. Để trống một ô = dùng giá trị của workflow. Các thông số này chỉ áp cho bước
+                vẽ chính; bước sửa chi tiết (detailer) không đổi.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
 
       {isWorking && (
         <Card className="border-primary/40 bg-primary/5">
           <CardContent className="space-y-2 p-4 text-sm">
             <ProgressStep
               state={suggestMutation.isPending ? "active" : "done"}
-              text={`AI đang viết mô tả cho ${safeImageCount} ảnh — thường mất 1–2 phút, đừng đóng app.`}
+              text={`AI đang viết mô tả cho ${safeImageCount} ảnh — thường mất 1–2 phút, bạn có thể làm việc khác.`}
             />
             <ProgressStep
               state={createMutation.isPending ? "active" : "waiting"}
@@ -363,18 +373,18 @@ export function AssistantCreateForm() {
         </Card>
       )}
 
-      <div className="flex items-center justify-end gap-3">
+      <div className="space-y-2">
         {!isWorking && requestText.trim().length === 0 && (
-          <span className="text-xs text-muted-foreground">Nhập ý tưởng để bắt đầu</span>
+          <p className="text-center text-xs text-muted-foreground">Nhập ý tưởng để bắt đầu</p>
         )}
-        <Button size="lg" onClick={handleGenerate} disabled={!canGenerate}>
+        <Button size="lg" className="w-full text-base font-semibold" onClick={handleGenerate} disabled={!canGenerate}>
           {isWorking ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Đang xử lý...
+              <Loader2 className="h-5 w-5 animate-spin" /> Đang xử lý...
             </>
           ) : (
             <>
-              <Wand2 className="h-4 w-4" /> Tạo {safeImageCount} ảnh
+              <Wand2 className="h-5 w-5" /> Tạo bộ lịch
             </>
           )}
         </Button>

@@ -125,3 +125,26 @@ Sau vòng sync trong `runSyncTick`, nếu `settings.autoPublish`:
    - Chưa đẩy file thật lên bucket Cloudflare R2 live do môi trường local không có credentials R2 thật (đã test kỹ qua mock SDK S3 / vitest).
    - Chưa ghi trực tiếp vào Google Spreadsheet online live do không có file JSON service account thật và Google Sheet ID thật (đã test kỹ qua mock REST v4 / fetch & auth).
    - Chưa chạy ComfyUI / Colab GPU thật (đã test qua mock ComfyClient và regenerateJobFreshPrompt).
+
+## Cập nhật sau Review vòng 1
+Đã hoàn thành toàn bộ 3 mục "Nên sửa" và mục 4 (Gợi ý) theo `docs/tasks/auto-workflow-review-1.md`:
+
+1. **Bỏ qua batch không phải bộ lịch trong auto-retry và auto-publish**:
+   - Trích xuất helper thuần `getCalendarSkipReason(batch): string | null` trong `lib/pipeline/auto-publish.ts` để kiểm tra điều kiện bộ lịch (`requestedCount !== 13` hoặc thiếu `etsyTitle`).
+   - Tái sử dụng helper này trong cả `runAutoPublish` và `processAutoWorkflow` (`lib/comfyui/auto-sync.ts`). Các batch không phải bộ lịch (như gen tay 1 ảnh, requestedCount !== 13) được đánh dấu `autoStatus: "skipped"` kèm `autoError` và không gọi `regenerateJobFreshPrompt`, tránh làm hỏng prompt người dùng và tránh tiêu hao lượt gọi LLM vô ích.
+   - Thêm unit test kiểm tra batch `partial` có `requestedCount: 1` chuyển sang `skipped` và không gọi regenerate.
+
+2. **Khôi phục batch kẹt pending/processing khi khởi động và hỗ trợ retry batch skipped**:
+   - Thêm hàm `resetInterruptedBatches()` trong `lib/comfyui/auto-sync.ts`, gọi 1 lần khi `startAutoSyncPoller` khởi động (chạy nền, không await chặn poller), tự động reset các batch đang ở trạng thái `pending` hoặc `processing` về `null` để vòng sync kế tiếp nhặt lại xử lý.
+   - Bổ sung điều kiện trong `canRetryAuto` tại `components/history/batch-card.tsx` để hiển thị nút "Chạy lại tự động" cho cả batch có trạng thái `skipped`.
+   - Thêm test đảm bảo quá trình reset batch kẹt được kích hoạt đúng 1 lần duy nhất dù poller được gọi nhiều lần.
+
+3. **Chỉ cập nhật cột Status và Updated trên Sheet khi báo lỗi SKU đã tồn tại**:
+   - Bổ sung hàm tiện ích `columnToLetter(colIndex)` trong `lib/sheets/rows.ts` để chuyển đổi chỉ số cột 0-indexed thành ký tự cột Google Sheets (ví dụ cột 26 -> AA, 27 -> AB).
+   - Trong `lib/sheets/sync.ts`, khi đồng bộ ở chế độ lỗi (`isErrorMode`) với SKU đã tồn tại trên Sheet (`rowIndex >= 0`), chỉ cập nhật đúng 2 ô `Status` và `Updated` (range `AA{row}:AB{row}` được tính tự động từ `FULL_SHEET_HEADER`), không ghi đè URL ảnh và các cột dữ liệu khác đã đẩy thành công trước đó.
+   - Thêm test xác minh khi SKU đã tồn tại và gặp lỗi, hàm chỉ gọi `updateRange` đúng phạm vi `AA{row}:AB{row}` với 2 giá trị Status và Updated.
+
+4. **Bảo toàn số lượt retry khi LLM hoặc ComfyUI service gặp sự cố (Mục 4 - Gợi ý)**:
+   - Trong `lib/comfyui/auto-sync.ts`, chuyển thao tác tăng `autoRetryCount` vào sau khi `regenerateJobFreshPrompt` thực thi thành công không ném lỗi.
+   - Nếu toàn bộ lời gọi sinh lại trong tick đều thất bại (ví dụ LLM/Colab tắt), giữ nguyên `autoStatus` hiện tại và chỉ cập nhật `autoError` với thông điệp lỗi để chờ tick kế tiếp thử lại khi dịch vụ online trở lại trong cửa sổ 24h, tránh việc bị đốt hết 2 lượt retry trong 30 giây.
+   - Thêm test mô phỏng `regenerateJobFreshPrompt` throw lỗi và xác nhận `autoRetryCount` không tăng, `autoStatus` không bị đẩy sang `failed`.

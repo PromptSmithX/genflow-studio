@@ -1,5 +1,4 @@
 import { GoogleAuth } from "google-auth-library";
-import type { SheetsConfig } from "./config";
 
 export async function getAccessToken(serviceAccountFile: string): Promise<string> {
   const auth = new GoogleAuth({

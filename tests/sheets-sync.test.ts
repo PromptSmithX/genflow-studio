@@ -62,13 +62,19 @@ describe("sheets-sync", () => {
       id: "batch-1",
       r2SkuBase: "CAL-ANI-2611-TEST",
       etsyTitle: "Test Title",
-    } as any);
+    } as unknown as never);
 
-    const fetchCalls: Array<{ url: string; method?: string; body?: any }> = [];
+    interface FetchCallRecord {
+      url: string;
+      method?: string;
+      body?: { requests?: Array<{ addSheet: { properties: { title: string } } }>; values?: string[][] };
+    }
 
-    const mockFetch = vi.fn().mockImplementation(async (url: string, options?: any) => {
+    const fetchCalls: FetchCallRecord[] = [];
+
+    const mockFetch = vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
       const method = options?.method || "GET";
-      const body = options?.body ? JSON.parse(options.body) : undefined;
+      const body = options?.body ? JSON.parse(options.body as string) : undefined;
       fetchCalls.push({ url, method, body });
 
       // getSheetTitles
@@ -141,13 +147,19 @@ describe("sheets-sync", () => {
       id: "batch-1",
       r2SkuBase: "CAL-ANI-2611-TEST",
       etsyTitle: "Test Title",
-    } as any);
+    } as unknown as never);
 
-    const fetchCalls: Array<{ url: string; method?: string; body?: any }> = [];
+    interface FetchCallRecord {
+      url: string;
+      method?: string;
+      body?: { requests?: Array<{ addSheet: { properties: { title: string } } }>; values?: string[][] };
+    }
 
-    const mockFetch = vi.fn().mockImplementation(async (url: string, options?: any) => {
+    const fetchCalls: FetchCallRecord[] = [];
+
+    const mockFetch = vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
       const method = options?.method || "GET";
-      const body = options?.body ? JSON.parse(options.body) : undefined;
+      const body = options?.body ? JSON.parse(options.body as string) : undefined;
       fetchCalls.push({ url, method, body });
 
       if (url.includes("?fields=sheets.properties")) {

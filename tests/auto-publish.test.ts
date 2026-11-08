@@ -39,9 +39,9 @@ describe("auto-publish", () => {
       id: "main",
       autoPublish: true,
       autoFormatId: "premade_wall_11x8_5",
-    } as any);
+    } as unknown as never);
 
-    vi.mocked(prisma.generationBatch.update).mockResolvedValue({} as any);
+    vi.mocked(prisma.generationBatch.update).mockResolvedValue({} as unknown as never);
   });
 
   it("happy path: sets processing -> done, calls upscaleBatch, pushBatches, syncBatchToSheet", async () => {
@@ -50,7 +50,7 @@ describe("auto-publish", () => {
       requestedCount: 13,
       etsyTitle: "Beautiful 2026 Calendar",
       r2SkuBase: "CAL-ANI-2611-B1OK1",
-    } as any);
+    } as unknown as never);
 
     vi.mocked(upscaleBatch).mockResolvedValue({
       total: 13,
@@ -118,7 +118,7 @@ describe("auto-publish", () => {
       id: "batch-2",
       requestedCount: 4,
       etsyTitle: "Short Batch",
-    } as any);
+    } as unknown as never);
 
     const result = await runAutoPublish("batch-2");
 
@@ -142,7 +142,7 @@ describe("auto-publish", () => {
       id: "batch-3",
       requestedCount: 13,
       etsyTitle: "   ",
-    } as any);
+    } as unknown as never);
 
     const result = await runAutoPublish("batch-3");
 
@@ -167,7 +167,7 @@ describe("auto-publish", () => {
       requestedCount: 13,
       etsyTitle: "Valid Title",
       r2SkuBase: null,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(upscaleBatch).mockResolvedValue({
       total: 13,
@@ -200,7 +200,7 @@ describe("auto-publish", () => {
       requestedCount: 13,
       etsyTitle: "Valid Title",
       r2SkuBase: "CAL-ANI-2611-B5SKU",
-    } as any);
+    } as unknown as never);
 
     vi.mocked(upscaleBatch).mockResolvedValue({
       total: 13,
@@ -241,7 +241,7 @@ describe("auto-publish", () => {
       requestedCount: 13,
       etsyTitle: "Valid Title",
       r2SkuBase: "CAL-ANI-2611-B6SKU",
-    } as any);
+    } as unknown as never);
 
     vi.mocked(upscaleBatch).mockResolvedValue({
       total: 13,
@@ -284,7 +284,14 @@ describe("auto-publish", () => {
   });
 
   it("runAutoPublishExclusive in-flight lock prevents duplicate executions for same batch", async () => {
-    let resolveBatch: any;
+    let resolveBatch: (val: {
+      total: number;
+      done: number;
+      failed: number;
+      backCover: "done";
+      finalExport: "done";
+      mockup: "done";
+    }) => void = () => {};
     const slowUpscalePromise = new Promise<{
       total: number;
       done: number;
@@ -300,9 +307,9 @@ describe("auto-publish", () => {
       id: "batch-lock",
       requestedCount: 13,
       etsyTitle: "Lock Title",
-    } as any);
+    } as unknown as never);
 
-    vi.mocked(upscaleBatch).mockReturnValue(slowUpscalePromise as any);
+    vi.mocked(upscaleBatch).mockReturnValue(slowUpscalePromise as unknown as never);
     vi.mocked(pushBatches).mockResolvedValue({
       csvFileName: "out.csv",
       results: [{ batchId: "batch-lock", ok: true, rows: [] }],

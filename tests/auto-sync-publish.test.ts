@@ -51,10 +51,10 @@ describe("auto-sync-publish", () => {
       id: "main",
       comfyBaseUrl: null, // skip ComfyUI sync loop in tests
       autoPublish: true,
-    } as any);
+    } as unknown as never);
 
-    vi.mocked(prisma.generationBatch.update).mockResolvedValue({} as any);
-    vi.mocked(prisma.generationJob.update).mockResolvedValue({} as any);
+    vi.mocked(prisma.generationBatch.update).mockResolvedValue({} as unknown as never);
+    vi.mocked(prisma.generationJob.update).mockResolvedValue({} as unknown as never);
     vi.mocked(runAutoPublishExclusive).mockReturnValue(Promise.resolve({ status: "done" }));
   });
 
@@ -63,7 +63,7 @@ describe("auto-sync-publish", () => {
       id: "main",
       comfyBaseUrl: null,
       autoPublish: false, // disabled
-    } as any);
+    } as unknown as never);
 
     await runSyncTick();
 
@@ -74,7 +74,7 @@ describe("auto-sync-publish", () => {
       id: "main",
       comfyBaseUrl: null,
       autoPublish: true,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([]);
 
@@ -83,7 +83,7 @@ describe("auto-sync-publish", () => {
     expect(prisma.generationBatch.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          autoStatus: { in: [null, "retrying"] },
+          OR: [{ autoStatus: null }, { autoStatus: "retrying" }],
           status: { in: ["completed", "partial", "failed"] },
           updatedAt: expect.objectContaining({ gte: expect.any(Date) }),
         }),
@@ -103,8 +103,8 @@ describe("auto-sync-publish", () => {
       ],
     };
 
-    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([mockBatch as any]);
-    vi.mocked(regenerateJobFreshPrompt).mockResolvedValue({} as any);
+    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([mockBatch as unknown as never]);
+    vi.mocked(regenerateJobFreshPrompt).mockResolvedValue({} as unknown as never);
 
     await runSyncTick();
 
@@ -141,7 +141,7 @@ describe("auto-sync-publish", () => {
       ],
     };
 
-    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([mockBatch as any]);
+    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([mockBatch as unknown as never]);
 
     await runSyncTick();
 
@@ -170,12 +170,12 @@ describe("auto-sync-publish", () => {
       finishPublish = () => resolve({ status: "done" });
     });
 
-    vi.mocked(runAutoPublishExclusive).mockReturnValue(hangingPublish as any);
+    vi.mocked(runAutoPublishExclusive).mockReturnValue(hangingPublish as unknown as never);
 
     const batch1 = { id: "batch-1", status: "completed", autoStatus: null, jobs: [] };
     const batch2 = { id: "batch-2", status: "completed", autoStatus: null, jobs: [] };
 
-    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([batch1, batch2] as any);
+    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([batch1, batch2] as unknown as never);
 
     await runSyncTick();
 

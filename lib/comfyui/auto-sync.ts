@@ -7,7 +7,6 @@ import { slotLabel } from "@/lib/calendar/slot-label";
 import { regenerateJobFreshPrompt } from "@/lib/generations/regenerate-fresh";
 import { runAutoPublishExclusive } from "@/lib/pipeline/auto-publish";
 import { syncBatchToSheet } from "@/lib/sheets/sync";
-import type { AppSettings } from "@prisma/client";
 
 const POLL_INTERVAL_MS = 15_000;
 // Chỉ đồng bộ batch gần đây; batch cũ hơn ngưỡng này sẽ không poll nữa để
@@ -30,11 +29,11 @@ export function resetAutoSyncStateForTest(): void {
   autoSyncState.isPublishing = false;
 }
 
-export async function processAutoWorkflow(settings: AppSettings): Promise<void> {
+export async function processAutoWorkflow(): Promise<void> {
   const since = new Date(Date.now() - MAX_BATCH_AGE_MS);
   const candidates = await prisma.generationBatch.findMany({
     where: {
-      autoStatus: { in: [null, "retrying"] },
+      OR: [{ autoStatus: null }, { autoStatus: "retrying" }],
       status: { in: ["completed", "partial", "failed"] },
       updatedAt: { gte: since },
     },
@@ -143,7 +142,7 @@ export async function runSyncTick(): Promise<void> {
     }
 
     if (settings.autoPublish) {
-      await processAutoWorkflow(settings);
+      await processAutoWorkflow();
     }
   } catch (error) {
     console.error("[auto-sync] tick thất bại", error);

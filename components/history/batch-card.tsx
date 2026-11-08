@@ -23,7 +23,7 @@ import { OpenFolderButton } from "@/components/history/open-folder-button";
 import { EtsyMetadataCard } from "@/components/history/etsy-metadata-card";
 import { BatchMockupSection } from "@/components/history/batch-mockup-section";
 import { RegenerateButton } from "@/components/history/regenerate-button";
-import { useResyncBatch } from "@/hooks/use-history";
+import { useResyncBatch, useAutoPublishBatch } from "@/hooks/use-history";
 import { slotLabel } from "@/lib/calendar/slot-label";
 import type { GenerationBatchDTO, GenerationJobDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -42,9 +42,70 @@ function aspectOf(job: GenerationJobDTO) {
   return job.width && job.height ? `${job.width} / ${job.height}` : "1152 / 952";
 }
 
+function renderAutoStatusBadge(status?: string | null) {
+  if (!status || status === "legacy") return null;
+
+  switch (status) {
+    case "pending":
+      return (
+        <Badge variant="secondary" className="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 text-xs">
+          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          Đang chờ
+        </Badge>
+      );
+    case "retrying":
+      return (
+        <Badge variant="secondary" className="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 text-xs">
+          <RefreshCcw className="mr-1 h-3 w-3 animate-spin" />
+          Đang gen lại ảnh lỗi
+        </Badge>
+      );
+    case "processing":
+      return (
+        <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-xs">
+          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+          Đang xử lý
+        </Badge>
+      );
+    case "done":
+      return (
+        <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs">
+          <Check className="mr-1 h-3 w-3" />
+          Hoàn tất
+        </Badge>
+      );
+    case "failed":
+      return (
+        <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 text-xs">
+          <AlertTriangle className="mr-1 h-3 w-3" />
+          Lỗi
+        </Badge>
+      );
+    case "skipped":
+      return (
+        <Badge variant="secondary" className="text-xs">
+          Bỏ qua
+        </Badge>
+      );
+    default:
+      return null;
+  }
+}
+
 export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const resyncMutation = useResyncBatch();
+  const autoPublishMutation = useAutoPublishBatch();
+
+  const canRetryAuto = batch.autoStatus === "failed" || batch.autoStatus === "legacy";
+
+  function handleRetryAuto(e: React.MouseEvent) {
+    e.stopPropagation();
+    autoPublishMutation.mutate(batch.id, {
+      onSuccess: () => toast.success("Đã kích hoạt chạy lại tự động"),
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Chạy lại tự động thất bại"),
+    });
+  }
 
   const jobs = [...batch.jobs].sort((a, b) => a.indexInBatch - b.indexInBatch);
   const total = jobs.length;
@@ -80,10 +141,14 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
 
   return (
     <Card className="gap-0 overflow-hidden py-0">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start justify-between gap-3 p-4 text-left hover:bg-muted/40"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") setOpen((v) => !v);
+        }}
+        className="flex w-full items-start justify-between gap-3 p-4 text-left hover:bg-muted/40 cursor-pointer"
         aria-expanded={open}
       >
         <div className="min-w-0 space-y-1">
@@ -103,6 +168,7 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
                 Đã đẩy R2
               </Badge>
             )}
+            {renderAutoStatusBadge(batch.autoStatus)}
             <Badge
               variant="secondary"
               className={cn(
@@ -117,6 +183,11 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
               {summary.text}
             </Badge>
           </div>
+          {batch.autoError && (
+            <p className="text-xs text-red-600 dark:text-red-400 line-clamp-1" title={batch.autoError}>
+              {batch.autoError}
+            </p>
+          )}
           {!open && (
             <div className="flex gap-1 pt-1">
               {jobs
@@ -130,12 +201,30 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
             </div>
           )}
         </div>
-        {open ? (
-          <ChevronUp className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
-        )}
-      </button>
+        <div className="flex items-center gap-2">
+          {canRetryAuto && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs shrink-0"
+              onClick={handleRetryAuto}
+              disabled={autoPublishMutation.isPending}
+            >
+              {autoPublishMutation.isPending ? (
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCcw className="mr-1 h-3.5 w-3.5" />
+              )}
+              Chạy lại tự động
+            </Button>
+          )}
+          {open ? (
+            <ChevronUp className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
+          )}
+        </div>
+      </div>
 
       {open && (
         <div className="space-y-6 border-t p-4">

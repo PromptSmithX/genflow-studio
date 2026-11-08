@@ -102,6 +102,7 @@ export interface PushBatchesResult {
     ok: boolean;
     skuBase?: string;
     error?: string;
+    rows?: string[][];
   }>;
 }
 
@@ -233,7 +234,8 @@ export async function pushBatches(batchIds: string[]): Promise<PushBatchesResult
         },
       });
 
-      results.push({ batchId: batch.id, ok: true, skuBase });
+      const rows = buildRowsForBatch(batchUrlsInput);
+      results.push({ batchId: batch.id, ok: true, skuBase, rows });
       successfulBatchInputs.push(batchUrlsInput);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);

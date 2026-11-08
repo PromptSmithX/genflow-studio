@@ -30,6 +30,8 @@ export function redactSettings(settings: AppSettings) {
     defaultFixedSeed: settings.defaultFixedSeed ? Number(settings.defaultFixedSeed) : null,
     maxImagesPerBatch: settings.maxImagesPerBatch,
     outputDirectory: settings.outputDirectory,
+    autoPublish: settings.autoPublish,
+    autoFormatId: settings.autoFormatId,
     llmModel: settings.llmModel,
     llmSystemPrompt: settings.llmSystemPrompt,
     // Trợ lý AI đi qua cùng tunnel ComfyUI (gateway Colab route "/llm", key

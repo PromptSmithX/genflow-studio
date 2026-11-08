@@ -5,7 +5,7 @@ import { ComfyClient } from "@/lib/comfyui/client";
 import { syncBatchExclusive } from "@/lib/comfyui/job-sync";
 import { slotLabel } from "@/lib/calendar/slot-label";
 import { regenerateJobFreshPrompt } from "@/lib/generations/regenerate-fresh";
-import { runAutoPublishExclusive } from "@/lib/pipeline/auto-publish";
+import { runAutoPublishExclusive, getCalendarSkipReason } from "@/lib/pipeline/auto-publish";
 import { syncBatchToSheet } from "@/lib/sheets/sync";
 
 const POLL_INTERVAL_MS = 15_000;
@@ -46,6 +46,19 @@ export async function processAutoWorkflow(): Promise<void> {
   });
 
   for (const batch of candidates) {
+    const skipReason = getCalendarSkipReason(batch);
+    if (skipReason) {
+      await prisma.generationBatch.update({
+        where: { id: batch.id },
+        data: {
+          autoStatus: "skipped",
+          autoError: skipReason,
+          autoFinishedAt: new Date(),
+        },
+      });
+      continue;
+    }
+
     if (batch.status === "completed") {
       if (!autoSyncState.isPublishing) {
         autoSyncState.isPublishing = true;

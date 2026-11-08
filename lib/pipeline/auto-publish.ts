@@ -9,6 +9,19 @@ export interface AutoPublishResult {
   error?: string | null;
 }
 
+export function getCalendarSkipReason(batch: {
+  requestedCount: number;
+  etsyTitle?: string | null;
+}): string | null {
+  if (batch.requestedCount !== 13) {
+    return `Batch không phải bộ lịch 13 ảnh (requestedCount = ${batch.requestedCount})`;
+  }
+  if (!batch.etsyTitle || !batch.etsyTitle.trim()) {
+    return "Batch thiếu Etsy title";
+  }
+  return null;
+}
+
 const inFlightAutoPublish = new Map<string, Promise<AutoPublishResult>>();
 
 export function runAutoPublishExclusive(batchId: string): Promise<AutoPublishResult> {
@@ -41,30 +54,17 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
       return { status: "failed", error: "Không tìm thấy batch" };
     }
 
-    if (batch.requestedCount !== 13) {
-      const reason = `Batch không phải bộ lịch 13 ảnh (requestedCount = ${batch.requestedCount})`;
+    const skipReason = getCalendarSkipReason(batch);
+    if (skipReason) {
       await prisma.generationBatch.update({
         where: { id: batchId },
         data: {
           autoStatus: "skipped",
-          autoError: reason,
+          autoError: skipReason,
           autoFinishedAt: new Date(),
         },
       });
-      return { status: "skipped", error: reason };
-    }
-
-    if (!batch.etsyTitle || !batch.etsyTitle.trim()) {
-      const reason = "Batch thiếu Etsy title";
-      await prisma.generationBatch.update({
-        where: { id: batchId },
-        data: {
-          autoStatus: "skipped",
-          autoError: reason,
-          autoFinishedAt: new Date(),
-        },
-      });
-      return { status: "skipped", error: reason };
+      return { status: "skipped", error: skipReason };
     }
 
     // 3. upscaleBatch (gồm bìa sau + xuất thư mục + mockup)

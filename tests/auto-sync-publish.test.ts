@@ -34,9 +34,13 @@ vi.mock("@/lib/generations/regenerate-fresh", () => ({
   regenerateJobFreshPrompt: vi.fn(),
 }));
 
-vi.mock("@/lib/pipeline/auto-publish", () => ({
-  runAutoPublishExclusive: vi.fn(),
-}));
+vi.mock("@/lib/pipeline/auto-publish", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/pipeline/auto-publish")>();
+  return {
+    ...actual,
+    runAutoPublishExclusive: vi.fn(),
+  };
+});
 
 vi.mock("@/lib/sheets/sync", () => ({
   syncBatchToSheet: vi.fn(),
@@ -91,9 +95,39 @@ describe("auto-sync-publish", () => {
     );
   });
 
+  it("batch partial với requestedCount: 1 không gọi regenerateJobFreshPrompt và chuyển sang skipped", async () => {
+    const mockBatch = {
+      id: "batch-manual-1",
+      requestedCount: 1,
+      etsyTitle: null,
+      status: "partial",
+      autoStatus: null,
+      jobs: [{ id: "job-manual", status: "failed", autoRetryCount: 0, indexInBatch: 0 }],
+    };
+
+    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([mockBatch as unknown as never]);
+
+    await runSyncTick();
+
+    expect(regenerateJobFreshPrompt).not.toHaveBeenCalled();
+    expect(prisma.generationJob.update).not.toHaveBeenCalled();
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "batch-manual-1" },
+        data: expect.objectContaining({
+          autoStatus: "skipped",
+          autoError: expect.stringContaining("requestedCount = 1"),
+          autoFinishedAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
   it("partial -> gọi regenerateJobFreshPrompt cho job lỗi có count < 2 và tăng count", async () => {
     const mockBatch = {
       id: "batch-partial",
+      requestedCount: 13,
+      etsyTitle: "Calendar 2026",
       status: "partial",
       autoStatus: null,
       jobs: [
@@ -132,6 +166,8 @@ describe("auto-sync-publish", () => {
   it("hết lượt retry -> set failed với danh sách trang lỗi và ghi Sheet nếu có SKU", async () => {
     const mockBatch = {
       id: "batch-exhausted",
+      requestedCount: 13,
+      etsyTitle: "Calendar 2026",
       status: "failed",
       autoStatus: "retrying",
       r2SkuBase: "CAL-ANI-2611-EXH01",
@@ -172,8 +208,22 @@ describe("auto-sync-publish", () => {
 
     vi.mocked(runAutoPublishExclusive).mockReturnValue(hangingPublish as unknown as never);
 
-    const batch1 = { id: "batch-1", status: "completed", autoStatus: null, jobs: [] };
-    const batch2 = { id: "batch-2", status: "completed", autoStatus: null, jobs: [] };
+    const batch1 = {
+      id: "batch-1",
+      requestedCount: 13,
+      etsyTitle: "Calendar 2026",
+      status: "completed",
+      autoStatus: null,
+      jobs: [],
+    };
+    const batch2 = {
+      id: "batch-2",
+      requestedCount: 13,
+      etsyTitle: "Calendar 2026",
+      status: "completed",
+      autoStatus: null,
+      jobs: [],
+    };
 
     vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([batch1, batch2] as unknown as never);
 

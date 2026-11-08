@@ -163,7 +163,34 @@ describe("auto-sync-publish", () => {
     // Batch set to retrying
     expect(prisma.generationBatch.update).toHaveBeenCalledWith({
       where: { id: "batch-partial" },
-      data: { autoStatus: "retrying" },
+      data: { autoStatus: "retrying", autoError: null },
+    });
+  });
+
+  it("không tăng autoRetryCount và giữ autoStatus khi regenerateJobFreshPrompt throw (LLM/Colab tắt)", async () => {
+    const mockBatch = {
+      id: "batch-llm-down",
+      requestedCount: 13,
+      etsyTitle: "Calendar 2026",
+      status: "partial",
+      autoStatus: null,
+      jobs: [{ id: "job-fail-llm", status: "failed", autoRetryCount: 0, indexInBatch: 1 }],
+    };
+
+    vi.mocked(prisma.generationBatch.findMany).mockResolvedValue([mockBatch as unknown as never]);
+    vi.mocked(regenerateJobFreshPrompt).mockRejectedValue(new Error("LLM service offline"));
+
+    await runSyncTick();
+
+    // autoRetryCount NOT incremented
+    expect(prisma.generationJob.update).not.toHaveBeenCalled();
+
+    // Batch autoStatus NOT set to failed, but error message recorded
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith({
+      where: { id: "batch-llm-down" },
+      data: {
+        autoError: expect.stringContaining("LLM service offline"),
+      },
     });
   });
 

@@ -105,23 +105,36 @@ export async function processAutoWorkflow(): Promise<void> {
       const retryableJobs = failedJobs.filter((j) => j.autoRetryCount < 2);
 
       if (retryableJobs.length > 0) {
-        for (const job of retryableJobs) {
-          await prisma.generationJob.update({
-            where: { id: job.id },
-            data: { autoRetryCount: { increment: 1 } },
-          });
+        let anySuccess = false;
+        let lastErrorMsg = "";
 
+        for (const job of retryableJobs) {
           try {
             await regenerateJobFreshPrompt(job.id);
+            await prisma.generationJob.update({
+              where: { id: job.id },
+              data: { autoRetryCount: { increment: 1 } },
+            });
+            anySuccess = true;
           } catch (err) {
+            lastErrorMsg = err instanceof Error ? err.message : String(err);
             console.error(`[auto-sync] retry job ${job.id} thất bại:`, err);
           }
         }
 
-        await prisma.generationBatch.update({
-          where: { id: batch.id },
-          data: { autoStatus: "retrying" },
-        });
+        if (anySuccess) {
+          await prisma.generationBatch.update({
+            where: { id: batch.id },
+            data: { autoStatus: "retrying", autoError: null },
+          });
+        } else {
+          await prisma.generationBatch.update({
+            where: { id: batch.id },
+            data: {
+              autoError: `Chưa thể sinh lại (LLM/ComfyUI lỗi): ${lastErrorMsg}`,
+            },
+          });
+        }
       } else {
         const failedLabels = failedJobs.map((j) => slotLabel(j.indexInBatch)).join(", ");
         const autoError = failedLabels

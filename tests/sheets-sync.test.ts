@@ -118,12 +118,12 @@ describe("sheets-sync", () => {
     // Check addSheet called for khong-che (since da-che already in existingTitles)
     const addSheetCall = fetchCalls.find((c) => c.url.includes(":batchUpdate"));
     expect(addSheetCall).toBeDefined();
-    expect(addSheetCall?.body.requests[0].addSheet.properties.title).toBe(SHEET_TAB_KHONG_CHE);
+    expect(addSheetCall?.body?.requests?.[0]?.addSheet?.properties?.title).toBe(SHEET_TAB_KHONG_CHE);
 
     // Check header written
     const headerPuts = fetchCalls.filter((c) => c.method === "PUT" && c.url.includes("A1"));
     expect(headerPuts.length).toBeGreaterThanOrEqual(1);
-    expect(headerPuts[0].body.values[0]).toEqual(FULL_SHEET_HEADER);
+    expect(headerPuts[0]?.body?.values?.[0]).toEqual(FULL_SHEET_HEADER);
 
     // Check append called
     const appendCalls = fetchCalls.filter((c) => c.method === "POST" && c.url.includes(":append"));
@@ -216,14 +216,14 @@ describe("sheets-sync", () => {
       (c) => c.method === "PUT" && decodeURIComponent(c.url).includes("'da-che'!A3"),
     );
     expect(updateCall).toBeDefined();
-    expect(updateCall?.body.values[0][0]).toBe("CAL-ANI-2611-TEST-11-CEN");
+    expect(updateCall?.body?.values?.[0]?.[0]).toBe("CAL-ANI-2611-TEST-11-CEN");
 
     // khong-che SKU was new -> POST append to A1
     const appendCall = fetchCalls.find(
       (c) => c.method === "POST" && decodeURIComponent(c.url).includes("'khong-che'!A1:append"),
     );
     expect(appendCall).toBeDefined();
-    expect(appendCall?.body.values[0][0]).toBe("CAL-ANI-2611-TEST-11-ORG");
+    expect(appendCall?.body?.values?.[0]?.[0]).toBe("CAL-ANI-2611-TEST-11-ORG");
 
     vi.unstubAllGlobals();
   });

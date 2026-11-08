@@ -8,6 +8,8 @@ import {
   runSyncTick,
   resetAutoSyncStateForTest,
   autoSyncState,
+  startAutoSyncPoller,
+  resetInterruptedBatches,
 } from "@/lib/comfyui/auto-sync";
 
 vi.mock("@/lib/db", () => ({
@@ -15,6 +17,7 @@ vi.mock("@/lib/db", () => ({
     generationBatch: {
       findMany: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     generationJob: {
       update: vi.fn(),
@@ -58,6 +61,7 @@ describe("auto-sync-publish", () => {
     } as unknown as never);
 
     vi.mocked(prisma.generationBatch.update).mockResolvedValue({} as unknown as never);
+    vi.mocked(prisma.generationBatch.updateMany).mockResolvedValue({ count: 1 } as unknown as never);
     vi.mocked(prisma.generationJob.update).mockResolvedValue({} as unknown as never);
     vi.mocked(runAutoPublishExclusive).mockReturnValue(Promise.resolve({ status: "done" }));
   });
@@ -244,5 +248,31 @@ describe("auto-sync-publish", () => {
     // Allow promise microtasks to settle
     await new Promise((r) => setTimeout(r, 10));
     expect(autoSyncState.isPublishing).toBe(false);
+  });
+
+  it("startAutoSyncPoller reset batch kẹt pending/processing về null đúng 1 lần dù gọi nhiều lần", async () => {
+    vi.mocked(prisma.generationBatch.updateMany).mockResolvedValue({ count: 2 } as unknown as never);
+
+    startAutoSyncPoller();
+    startAutoSyncPoller();
+    startAutoSyncPoller();
+
+    // Allow promise to settle
+    await new Promise((r) => setTimeout(r, 10));
+
+    expect(prisma.generationBatch.updateMany).toHaveBeenCalledTimes(1);
+    expect(prisma.generationBatch.updateMany).toHaveBeenCalledWith({
+      where: {
+        autoStatus: { in: ["pending", "processing"] },
+      },
+      data: {
+        autoStatus: null,
+      },
+    });
+
+    // Directly test resetInterruptedBatches
+    const count = await resetInterruptedBatches();
+    expect(count).toBe(2);
+    expect(prisma.generationBatch.updateMany).toHaveBeenCalledTimes(2);
   });
 });

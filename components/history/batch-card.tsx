@@ -97,7 +97,8 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
   const resyncMutation = useResyncBatch();
   const autoPublishMutation = useAutoPublishBatch();
 
-  const canRetryAuto = batch.autoStatus === "failed" || batch.autoStatus === "legacy";
+  const canRetryAuto =
+    batch.autoStatus === "failed" || batch.autoStatus === "legacy" || batch.autoStatus === "skipped";
 
   function handleRetryAuto(e: React.MouseEvent) {
     e.stopPropagation();

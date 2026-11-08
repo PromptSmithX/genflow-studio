@@ -25,8 +25,30 @@ const store = globalThis as typeof globalThis & { __animaAutoSync?: AutoSyncGlob
 export const autoSyncState: AutoSyncGlobal = (store.__animaAutoSync ??= {});
 
 export function resetAutoSyncStateForTest(): void {
+  if (autoSyncState.interval) {
+    clearInterval(autoSyncState.interval);
+    autoSyncState.interval = undefined;
+  }
+  autoSyncState.started = false;
   autoSyncState.isTicking = false;
   autoSyncState.isPublishing = false;
+}
+
+export async function resetInterruptedBatches(): Promise<number> {
+  try {
+    const result = await prisma.generationBatch.updateMany({
+      where: {
+        autoStatus: { in: ["pending", "processing"] },
+      },
+      data: {
+        autoStatus: null,
+      },
+    });
+    return result.count;
+  } catch (error) {
+    console.error("[auto-sync] reset batch bị gián đoạn thất bại:", error);
+    return 0;
+  }
 }
 
 export async function processAutoWorkflow(): Promise<void> {
@@ -174,6 +196,9 @@ export async function runSyncTick(): Promise<void> {
 export function startAutoSyncPoller(): void {
   if (autoSyncState.started) return;
   autoSyncState.started = true;
+  void resetInterruptedBatches().catch((err) => {
+    console.error("[auto-sync] reset batch bị gián đoạn thất bại:", err);
+  });
   autoSyncState.interval = setInterval(() => {
     void runSyncTick();
   }, POLL_INTERVAL_MS);

@@ -95,6 +95,17 @@ export async function regenerateJobFreshPrompt(jobId: string) {
     throw new GenerationSetupError("Không tìm thấy batch chứa job này", "not_found");
   }
 
+  if (job.status === "queued" || job.status === "running") {
+    throw new GenerationSetupError("Ảnh này đang được tạo, vui lòng đợi", "conflict");
+  }
+
+  if (batch.autoStatus === "pending" || batch.autoStatus === "processing") {
+    throw new GenerationSetupError(
+      "Bộ lịch đang cập nhật kho & Google Sheet, vui lòng đợi xong rồi thử lại",
+      "conflict",
+    );
+  }
+
   const settings = await getOrCreateSettings();
   if (!settings.comfyBaseUrl) {
     throw new GenerationSetupError("Chưa cấu hình URL kết nối ComfyUI", "not_configured");
@@ -140,6 +151,7 @@ export async function regenerateJobFreshPrompt(jobId: string) {
       submittedAt: null,
       startedAt: null,
       finishedAt: null,
+      autoRetryCount: 0,
       // Giữ nguyên seed chung của batch để gương mặt đồng nhất với các trang khác.
     },
   });
@@ -154,6 +166,8 @@ export async function regenerateJobFreshPrompt(jobId: string) {
       backCoverStatus: null,
       finalExportStatus: null,
       mockupStatus: null,
+      autoStage: null,
+      autoError: null,
       ...(batch.autoStatus !== "legacy" ? { autoStatus: null } : {}),
     },
   });

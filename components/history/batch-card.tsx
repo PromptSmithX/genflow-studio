@@ -352,12 +352,6 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
                       <FileSpreadsheet className="h-5 w-5" /> Mở Google Sheet
                     </Button>
                   )}
-
-                  <EtsyMetadataCard
-                    title={batch.etsyTitle}
-                    description={batch.etsyDescription}
-                    tagsJson={batch.etsyTagsJson}
-                  />
                 </div>
               )}
             </>
@@ -412,7 +406,13 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {jobs.map((job) => (
-                <ImageTile key={job.id} job={job} exported={exported} advancedMode={advancedMode} />
+                <ImageTile
+                  key={job.id}
+                  job={job}
+                  exported={exported}
+                  advancedMode={advancedMode}
+                  autoStatus={batch.autoStatus}
+                />
               ))}
               {hasBackCover && (
                 <div className="overflow-hidden rounded-md border bg-card">
@@ -533,14 +533,17 @@ function ImageTile({
   job,
   exported,
   advancedMode,
+  autoStatus,
 }: {
   job: GenerationJobDTO;
   exported: boolean;
   advancedMode: boolean;
+  autoStatus?: string | null;
 }) {
   const label = slotLabel(job.indexInBatch);
   const image = job.images[0];
   const pending = isPending(job);
+  const isAutoSyncing = !advancedMode && (autoStatus === "pending" || autoStatus === "processing");
 
   return (
     <div
@@ -573,6 +576,9 @@ function ImageTile({
               <>
                 <AlertTriangle className="h-5 w-5 text-red-600" />
                 <span className="text-red-700 dark:text-red-400">Tạo ảnh bị lỗi</span>
+                {!advancedMode && (
+                  <span className="text-xs text-muted-foreground">Bấm Tạo lại để thử lại</span>
+                )}
               </>
             )}
           </div>
@@ -580,7 +586,16 @@ function ImageTile({
       </Link>
       <div className="flex items-center justify-between gap-2 p-2">
         <span className="truncate text-sm font-medium">{label}</span>
-        {!pending && advancedMode && <RegenerateButton jobId={job.id} label={label} exported={exported} />}
+        {!pending && (
+          <RegenerateButton
+            jobId={job.id}
+            label={label}
+            exported={exported}
+            simple={!advancedMode}
+            disabled={isAutoSyncing}
+            title={isAutoSyncing ? "Đang cập nhật kho & Google Sheet, đợi xong rồi thử lại" : undefined}
+          />
+        )}
       </div>
     </div>
   );

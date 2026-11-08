@@ -17,7 +17,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
     await prisma.generationBatch.update({
       where: { id: batchId },
-      data: { autoStatus: "pending", autoError: null },
+      data: { autoStatus: "pending", autoStage: null, autoError: null },
     });
 
     const result = await runAutoPublishExclusive(batchId);

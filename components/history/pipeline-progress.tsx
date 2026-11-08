@@ -26,6 +26,7 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
   const isFailed = batch.autoStatus === "failed";
   const isRetrying = batch.autoStatus === "retrying";
   const isSkipped = batch.autoStatus === "skipped";
+  const isProcessing = batch.autoStatus === "processing";
   const autoStage = batch.autoStage;
 
   // Derive step states ONLY from autoStatus + autoStage + job counts
@@ -76,21 +77,21 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
     // Normal in-progress / pending state
     if (pendingCount > 0) {
       step1State = "active";
-    } else if (readyCount >= total || autoStage !== null) {
+    } else if (readyCount >= total || (isProcessing && autoStage !== null)) {
       step1State = "done";
     } else {
       step1State = "waiting";
     }
 
-    if (autoStage === "export") {
+    if (isProcessing && autoStage === "export") {
       step2State = "active";
       step3State = "waiting";
       step4State = "waiting";
-    } else if (autoStage === "r2") {
+    } else if (isProcessing && autoStage === "r2") {
       step2State = "done";
       step3State = "active";
       step4State = "waiting";
-    } else if (autoStage === "sheet") {
+    } else if (isProcessing && autoStage === "sheet") {
       step2State = "done";
       step3State = "done";
       step4State = "active";

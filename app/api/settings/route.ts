@@ -51,6 +51,8 @@ export async function PUT(request: NextRequest) {
           : {}),
         ...(body.maxImagesPerBatch !== undefined ? { maxImagesPerBatch: body.maxImagesPerBatch } : {}),
         ...(body.outputDirectory !== undefined ? { outputDirectory: body.outputDirectory } : {}),
+        ...(body.autoPublish !== undefined ? { autoPublish: body.autoPublish } : {}),
+        ...(body.autoFormatId !== undefined ? { autoFormatId: body.autoFormatId } : {}),
         ...(body.llmModel !== undefined ? { llmModel: body.llmModel || null } : {}),
         ...(body.llmSystemPrompt !== undefined ? { llmSystemPrompt: body.llmSystemPrompt || null } : {}),
       },

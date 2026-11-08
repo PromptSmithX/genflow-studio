@@ -9,7 +9,13 @@ export interface HistoryFilters {
 function hasUnsettledJob(pages: HistoryListResponse[] | undefined): boolean {
   if (!pages) return false;
   return pages.some((page) =>
-    page.batches.some((batch) => batch.jobs.some((job) => job.status === "queued" || job.status === "running")),
+    page.batches.some(
+      (batch) =>
+        batch.jobs.some((job) => job.status === "queued" || job.status === "running") ||
+        batch.autoStatus === "pending" ||
+        batch.autoStatus === "processing" ||
+        batch.autoStatus === "retrying",
+    ),
   );
 }
 
@@ -62,5 +68,16 @@ export function useResyncBatch() {
   return useMutation({
     mutationFn: (batchId: string) => apiPost<GenerationBatchDTO>(`/api/generations/${batchId}/sync`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["history"] }),
+  });
+}
+
+export function useAutoPublishBatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) =>
+      apiPost<{ status: string; error?: string }>(`/api/generations/${batchId}/auto-publish`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
   });
 }

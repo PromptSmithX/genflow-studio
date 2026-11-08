@@ -149,7 +149,13 @@ export async function regenerateJobFreshPrompt(jobId: string) {
   // Bìa sau, thư mục file in và mockup đều dựng từ ảnh cũ -> đánh dấu cần xuất lại.
   await prisma.generationBatch.update({
     where: { id: batch.id },
-    data: { status: "running", backCoverStatus: null, finalExportStatus: null, mockupStatus: null },
+    data: {
+      status: "running",
+      backCoverStatus: null,
+      finalExportStatus: null,
+      mockupStatus: null,
+      ...(batch.autoStatus !== "legacy" ? { autoStatus: null } : {}),
+    },
   });
 
   const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });

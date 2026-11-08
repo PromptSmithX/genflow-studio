@@ -16,6 +16,8 @@ export interface SettingsDTO {
   defaultFixedSeed: number | null;
   maxImagesPerBatch: number;
   outputDirectory: string;
+  autoPublish: boolean;
+  autoFormatId: string;
   llmModel: string | null;
   llmSystemPrompt: string | null;
   hasLlmKey: boolean;
@@ -117,6 +119,10 @@ export interface GenerationBatchDTO {
   r2Status?: "done" | "failed" | null;
   r2PushedAt?: string | null;
   r2Error?: string | null;
+  autoStatus?: "pending" | "retrying" | "processing" | "done" | "failed" | "skipped" | "legacy" | null;
+  autoError?: string | null;
+  autoFinishedAt?: string | null;
+  sheetSyncedAt?: string | null;
 }
 
 export interface HistoryListResponse {

@@ -190,6 +190,7 @@ describe("r2-push", () => {
         batchId: "batch-ok",
         ok: true,
         skuBase: "CAL-ANI-2611-B1OK1",
+        rows: expect.any(Array),
       });
       expect(result.results[1].ok).toBe(false);
       expect(result.results[1].error).toContain("Render error on batch 2");

@@ -2,6 +2,7 @@ import { ConnectionCard } from "@/components/settings/connection-card";
 import { WorkflowCard } from "@/components/settings/workflow-card";
 import { NodeMappingCard } from "@/components/settings/node-mapping-card";
 import { DefaultsCard } from "@/components/settings/defaults-card";
+import { AutoPublishCard } from "@/components/settings/auto-publish-card";
 import { LlmCard } from "@/components/settings/llm-card";
 import { MediumCard } from "@/components/settings/medium-card";
 
@@ -12,6 +13,7 @@ export default function SettingsPage() {
       <WorkflowCard />
       <NodeMappingCard />
       <DefaultsCard />
+      <AutoPublishCard />
       <LlmCard />
       <MediumCard />
     </div>

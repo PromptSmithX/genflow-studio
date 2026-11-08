@@ -37,11 +37,12 @@ export function runAutoPublishExclusive(batchId: string): Promise<AutoPublishRes
 
 export async function runAutoPublish(batchId: string): Promise<AutoPublishResult> {
   try {
-    // 1. Set autoStatus: "processing", autoError: null
+    // 1. Set autoStatus: "processing", autoStage: null, autoError: null
     await prisma.generationBatch.update({
       where: { id: batchId },
       data: {
         autoStatus: "processing",
+        autoStage: null,
         autoError: null,
       },
     });
@@ -132,7 +133,6 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
       where: { id: batchId },
       data: {
         autoStatus: "failed",
-        autoStage: null,
         autoError: errorMsg,
         autoFinishedAt: finishedAt,
       },

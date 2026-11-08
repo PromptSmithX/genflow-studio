@@ -145,7 +145,7 @@ function renderUnifiedStatusBadge(
   if (batch.autoStatus === "skipped") {
     return (
       <Badge variant="secondary" className="text-xs">
-        Bộ không đủ 13 ảnh
+        Bỏ qua tự động
       </Badge>
     );
   }
@@ -360,35 +360,6 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
                   />
                 </div>
               )}
-
-              <section className="space-y-2">
-                <div>
-                  <p className="text-sm font-medium">Ảnh trong bộ lịch</p>
-                  <p className="text-xs text-muted-foreground">Bấm vào ảnh để xem lớn.</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {jobs.map((job) => (
-                    <ImageTile key={job.id} job={job} exported={exported} advancedMode={false} />
-                  ))}
-                  {hasBackCover && (
-                    <div className="overflow-hidden rounded-md border bg-card">
-                      <div className="relative bg-muted" style={{ aspectRatio: aspectOf(jobs[0]) }}>
-                        <Image
-                          src={`/api/generations/${batch.id}/back-cover?v=${version}`}
-                          alt="Bìa sau"
-                          fill
-                          unoptimized
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between gap-2 p-2">
-                        <span className="text-sm font-medium">Bìa sau</span>
-                        <span className="text-xs text-muted-foreground">App tự ghép</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
             </>
           ) : (
             <>
@@ -426,38 +397,46 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
                   Có {problemCount} ảnh bị lỗi. Bấm <strong>Sửa lại</strong> dưới ảnh đó để AI viết mô tả mới và tạo lại.
                 </Notice>
               )}
+            </>
+          )}
 
-              <section className="space-y-2">
-                <div>
-                  <p className="text-sm font-medium">Ảnh trong bộ lịch</p>
-                  <p className="text-xs text-muted-foreground">
-                    Bấm vào ảnh để xem lớn. Ảnh nào chưa ưng thì bấm &quot;Sửa lại&quot;.
-                  </p>
+          {/* Common Image Grid + Back Cover */}
+          <section className="space-y-2">
+            <div>
+              <p className="text-sm font-medium">Ảnh trong bộ lịch</p>
+              <p className="text-xs text-muted-foreground">
+                {advancedMode
+                  ? "Bấm vào ảnh để xem lớn. Ảnh nào chưa ưng thì bấm \"Sửa lại\"."
+                  : "Bấm vào ảnh để xem lớn."}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {jobs.map((job) => (
+                <ImageTile key={job.id} job={job} exported={exported} advancedMode={advancedMode} />
+              ))}
+              {hasBackCover && (
+                <div className="overflow-hidden rounded-md border bg-card">
+                  <div className="relative bg-muted" style={{ aspectRatio: aspectOf(jobs[0]) }}>
+                    <Image
+                      src={`/api/generations/${batch.id}/back-cover?v=${version}`}
+                      alt="Bìa sau"
+                      fill
+                      unoptimized
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 p-2">
+                    <span className="text-sm font-medium">Bìa sau</span>
+                    <span className="text-xs text-muted-foreground">App tự ghép</span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {jobs.map((job) => (
-                    <ImageTile key={job.id} job={job} exported={exported} advancedMode={true} />
-                  ))}
-                  {hasBackCover && (
-                    <div className="overflow-hidden rounded-md border bg-card">
-                      <div className="relative bg-muted" style={{ aspectRatio: aspectOf(jobs[0]) }}>
-                        <Image
-                          src={`/api/generations/${batch.id}/back-cover?v=${version}`}
-                          alt="Bìa sau"
-                          fill
-                          unoptimized
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex items-center justify-between gap-2 p-2">
-                        <span className="text-sm font-medium">Bìa sau</span>
-                        <span className="text-xs text-muted-foreground">App tự ghép</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
+              )}
+            </div>
+          </section>
 
+          {/* Advanced Mode: Export & Mockup sections */}
+          {advancedMode && (
+            <>
               {pendingCount === 0 && readyCount > 0 && (
                 <section className="space-y-3 rounded-lg border p-4">
                   <div>

@@ -363,7 +363,7 @@ export function AssistantCreateForm() {
           <CardContent className="space-y-2 p-4 text-sm">
             <ProgressStep
               state={suggestMutation.isPending ? "active" : "done"}
-              text={`AI đang viết mô tả cho ${safeImageCount} ảnh — thường mất 1–2 phút, bạn có thể làm việc khác.`}
+              text={`AI đang viết mô tả cho ${safeImageCount} ảnh — thường mất 1–2 phút, đừng đóng app hoặc chuyển trang.`}
             />
             <ProgressStep
               state={createMutation.isPending ? "active" : "waiting"}

@@ -26,71 +26,129 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
   const isFailed = batch.autoStatus === "failed";
   const isRetrying = batch.autoStatus === "retrying";
   const isSkipped = batch.autoStatus === "skipped";
+  const autoStage = batch.autoStage;
 
-  // Step 1: Tạo ảnh
+  // Derive step states ONLY from autoStatus + autoStage + job counts
   let step1State: StepState = "waiting";
-  let step1Label = `Tạo ảnh (${readyCount}/${total})`;
-  if (isRetrying) {
-    step1State = "active";
-    step1Label = "Đang tạo lại ảnh lỗi";
-  } else if (readyCount >= total || (pendingCount === 0 && problemCount === 0 && readyCount > 0)) {
-    step1State = "done";
-  } else if (problemCount > 0 && pendingCount === 0 && isFailed) {
-    step1State = "error";
-    step1Label = `${problemCount} ảnh bị lỗi`;
-  } else if (pendingCount > 0) {
-    step1State = "active";
-  } else {
-    step1State = "waiting";
-  }
-
-  // Step 2: Chuẩn bị file in & mockup
   let step2State: StepState = "waiting";
-  if (step1State === "done") {
-    if (isDone || batch.autoStage === "r2" || batch.autoStage === "sheet") {
+  let step3State: StepState = "waiting";
+  let step4State: StepState = "waiting";
+
+  if (isDone) {
+    step1State = "done";
+    step2State = "done";
+    step3State = "done";
+    step4State = "done";
+  } else if (isFailed) {
+    if (autoStage === "sheet") {
+      step1State = "done";
       step2State = "done";
-    } else if (batch.autoStage === "export") {
-      step2State = isFailed ? "error" : "active";
-    } else if (isFailed && !batch.finalExportStatus) {
+      step3State = "done";
+      step4State = "error";
+    } else if (autoStage === "r2") {
+      step1State = "done";
+      step2State = "done";
+      step3State = "error";
+      step4State = "waiting";
+    } else if (autoStage === "export") {
+      step1State = "done";
       step2State = "error";
-    } else if (batch.finalExportStatus === "done" && batch.mockupStatus === "done") {
+      step3State = "waiting";
+      step4State = "waiting";
+    } else {
+      // autoStage is null -> step 1 failed
+      step1State = "error";
+      step2State = "waiting";
+      step3State = "waiting";
+      step4State = "waiting";
+    }
+  } else if (isRetrying) {
+    step1State = "active";
+    step2State = "waiting";
+    step3State = "waiting";
+    step4State = "waiting";
+  } else if (isSkipped) {
+    step1State = readyCount >= total ? "done" : pendingCount > 0 ? "active" : "waiting";
+    step2State = "waiting";
+    step3State = "waiting";
+    step4State = "waiting";
+  } else {
+    // Normal in-progress / pending state
+    if (pendingCount > 0) {
+      step1State = "active";
+    } else if (readyCount >= total || autoStage !== null) {
+      step1State = "done";
+    } else {
+      step1State = "waiting";
+    }
+
+    if (autoStage === "export") {
+      step2State = "active";
+      step3State = "waiting";
+      step4State = "waiting";
+    } else if (autoStage === "r2") {
       step2State = "done";
+      step3State = "active";
+      step4State = "waiting";
+    } else if (autoStage === "sheet") {
+      step2State = "done";
+      step3State = "done";
+      step4State = "active";
     } else {
       step2State = "waiting";
-    }
-  }
-
-  // Step 3: Lưu lên kho dữ liệu (R2)
-  let step3State: StepState = "waiting";
-  if (step2State === "done") {
-    if (isDone || batch.autoStage === "sheet" || batch.r2Status === "done") {
-      step3State = "done";
-    } else if (batch.autoStage === "r2") {
-      step3State = isFailed ? "error" : "active";
-    } else if (isFailed && batch.r2Status === "failed") {
-      step3State = "error";
-    } else {
       step3State = "waiting";
-    }
-  }
-
-  // Step 4: Ghi Google Sheet
-  let step4State: StepState = "waiting";
-  if (step3State === "done") {
-    if (isDone) {
-      step4State = "done";
-    } else if (batch.autoStage === "sheet") {
-      step4State = isFailed ? "error" : "active";
-    } else {
       step4State = "waiting";
     }
   }
 
-  // Calculate overall percentage:
-  // Image generation = 70%, each other step = 10%
+  // Subtitles
+  let step1Subtitle = `Tạo ảnh (${readyCount}/${total})`;
+  if (isRetrying) {
+    step1Subtitle = "Đang tạo lại ảnh lỗi";
+  } else if (step1State === "error") {
+    step1Subtitle = problemCount > 0 ? `${problemCount} ảnh bị lỗi` : "Tạo ảnh thất bại";
+  } else if (step1State === "done") {
+    step1Subtitle = `Đã tạo ${readyCount}/${total} ảnh`;
+  } else if (step1State === "active") {
+    step1Subtitle = `Đang tạo ảnh (${readyCount}/${total})`;
+  }
+
+  const step2Subtitle =
+    step2State === "done"
+      ? "Đã chuẩn bị xong"
+      : step2State === "active"
+        ? "Đang chuẩn bị..."
+        : step2State === "error"
+          ? "Lỗi chuẩn bị file in & mockup"
+          : "Chờ tới lượt";
+
+  const step3Subtitle =
+    step3State === "done"
+      ? "Đã lưu kho dữ liệu"
+      : step3State === "active"
+        ? "Đang lưu..."
+        : step3State === "error"
+          ? "Lỗi lưu kho dữ liệu"
+          : "Chờ tới lượt";
+
+  const step4Subtitle =
+    step4State === "done"
+      ? "Hoàn tất"
+      : step4State === "active"
+        ? "Đang ghi sheet..."
+        : step4State === "error"
+          ? "Lỗi ghi Google Sheet"
+          : "Chờ tới lượt";
+
+  // Overall percentage: Image generation = 70%, each other step = 10%
   let overallPercent = 0;
   if (isDone) {
     overallPercent = 100;
+  } else if (isFailed) {
+    if (step4State === "error") overallPercent = 90;
+    else if (step3State === "error") overallPercent = 80;
+    else if (step2State === "error") overallPercent = 70;
+    else overallPercent = Math.min(Math.round((readyCount / Math.max(total, 1)) * 70), 70);
   } else {
     const step1Percent = Math.min(Math.round((readyCount / Math.max(total, 1)) * 70), 70);
     const step2Percent = step2State === "done" ? 10 : step2State === "active" ? 5 : 0;
@@ -110,28 +168,28 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
     {
       id: 1,
       title: "1. Tạo ảnh",
-      subtitle: step1Label,
+      subtitle: step1Subtitle,
       icon: Wand2,
       state: step1State,
     },
     {
       id: 2,
       title: "2. Chuẩn bị file in & mockup",
-      subtitle: step2State === "done" ? "Đã chuẩn bị xong" : step2State === "active" ? "Đang xử lý..." : "Chờ tới lượt",
+      subtitle: step2Subtitle,
       icon: Layers,
       state: step2State,
     },
     {
       id: 3,
       title: "3. Lưu lên kho dữ liệu",
-      subtitle: step3State === "done" ? "Đã lưu kho dữ liệu" : step3State === "active" ? "Đang lưu..." : "Chờ tới lượt",
+      subtitle: step3Subtitle,
       icon: Cloud,
       state: step3State,
     },
     {
       id: 4,
       title: "4. Ghi Google Sheet",
-      subtitle: step4State === "done" ? "Hoàn tất" : step4State === "active" ? "Đang ghi sheet..." : "Chờ tới lượt",
+      subtitle: step4Subtitle,
       icon: FileSpreadsheet,
       state: step4State,
     },
@@ -212,7 +270,7 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
       {isSkipped && (
         <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/40 p-2.5 text-xs text-muted-foreground">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-          <span>Bộ không đủ 13 ảnh nên không tự xuất.</span>
+          <span>{batch.autoError || "Bộ không đủ 13 ảnh nên không tự xuất."}</span>
         </div>
       )}
 

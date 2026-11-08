@@ -84,7 +84,7 @@ describe("auto-publish", () => {
     expect(prisma.generationBatch.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "batch-1" },
-        data: expect.objectContaining({ autoStatus: "processing", autoError: null }),
+        data: expect.objectContaining({ autoStatus: "processing", autoStage: null, autoError: null }),
       }),
     );
 
@@ -215,7 +215,6 @@ describe("auto-publish", () => {
         where: { id: "batch-4" },
         data: expect.objectContaining({
           autoStatus: "failed",
-          autoStage: null,
           autoError: expect.stringContaining("mockup"),
         }),
       }),
@@ -257,7 +256,6 @@ describe("auto-publish", () => {
         where: { id: "batch-5" },
         data: expect.objectContaining({
           autoStatus: "failed",
-          autoStage: null,
           autoError: "Network timeout while uploading",
         }),
       }),

@@ -109,9 +109,19 @@ Sau vòng sync trong `runSyncTick`, nếu `settings.autoPublish`:
 - Test cũ của `lib/r2` vẫn pass.
 
 ## 5. Definition of Done
-- [ ] Mục 1, 3.1–3.6 và 4 xong.
-- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` đều pass.
-- [ ] `git status` sạch (trừ `0.26.0`), mọi thứ đã commit trên `fix/auto_workflow`, **không push**.
-- [ ] Điền mục "Ghi chú của người thực thi": chỗ lệch spec + lý do, những gì chưa test thật được (R2/Sheets live, Colab).
+- [x] Mục 1, 3.1–3.6 và 4 xong.
+- [x] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` đều pass.
+- [x] `git status` sạch (trừ `0.26.0`), mọi thứ đã commit trên `fix/auto_workflow`, **không push**.
+- [x] Điền mục "Ghi chú của người thực thi": chỗ lệch spec + lý do, những gì chưa test thật được (R2/Sheets live, Colab).
 
 ## Ghi chú của người thực thi
+1. **Các điểm điều chỉnh nhỏ so với spec ban đầu & lý do**:
+   - `lib/comfyui/auto-sync.ts`: Prisma SQLite / TypeScript không hỗ trợ `autoStatus: { in: [null, "retrying"] }` vì toán tử `in` chỉ nhận mảng chuỗi (`string[]`). Đã chuyển sang cú pháp tương đương và an toàn kiểu: `OR: [{ autoStatus: null }, { autoStatus: "retrying" }]`.
+   - `lib/comfyui/auto-sync.ts`: Bổ sung cờ `isPublishing` trên `autoSyncState` (`globalThis`) để đảm bảo không có 2 pipeline auto-publish chạy song song trên cùng một instance server, hỗ trợ cả HMR trong môi trường dev.
+   - `components/history/batch-card.tsx`: Thẻ bao bọc card mở rộng được chuyển từ `<button>` sang `<div role="button">` có hỗ trợ bàn phím (Enter/Space) để đảm bảo HTML hợp lệ khi đặt nút "Chạy lại tự động" ở góc phải header.
+   - Thư viện `google-auth-library` được cài đặt phục vụ xác thực Google Service Account và lấy access token; toàn bộ API Google Sheets REST v4 được gọi trực tiếp bằng `fetch` native theo đúng yêu cầu không cài `googleapis`.
+
+2. **Những phần chưa test trực tiếp trên môi trường live**:
+   - Chưa đẩy file thật lên bucket Cloudflare R2 live do môi trường local không có credentials R2 thật (đã test kỹ qua mock SDK S3 / vitest).
+   - Chưa ghi trực tiếp vào Google Spreadsheet online live do không có file JSON service account thật và Google Sheet ID thật (đã test kỹ qua mock REST v4 / fetch & auth).
+   - Chưa chạy ComfyUI / Colab GPU thật (đã test qua mock ComfyClient và regenerateJobFreshPrompt).

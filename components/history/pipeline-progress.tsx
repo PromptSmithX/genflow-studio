@@ -7,29 +7,39 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { GenerationBatchDTO } from "@/lib/types";
 
-type StepState = "waiting" | "active" | "done" | "error";
+export type StepState = "waiting" | "active" | "done" | "error";
 
-interface PipelineProgressProps {
-  batch: GenerationBatchDTO;
+export interface PipelineDerivedState {
+  step1State: StepState;
+  step2State: StepState;
+  step3State: StepState;
+  step4State: StepState;
+  overallPercent: number;
 }
 
-export function PipelineProgress({ batch }: PipelineProgressProps) {
-  const autoPublishMutation = useAutoPublishBatch();
+export function derivePipelineStepStates(input: {
+  autoStatus?: string | null;
+  autoStage?: string | null;
+  readyCount: number;
+  total: number;
+  pendingCount?: number;
+  problemCount?: number;
+}): PipelineDerivedState {
+  const {
+    autoStatus,
+    autoStage,
+    readyCount,
+    total,
+    pendingCount = 0,
+    problemCount = 0,
+  } = input;
 
-  const jobs = batch.jobs ?? [];
-  const total = batch.requestedCount || jobs.length || 13;
-  const readyCount = jobs.filter((j) => j.status === "completed" && j.images.length > 0).length;
-  const pendingCount = jobs.filter((j) => j.status === "queued" || j.status === "running").length;
-  const problemCount = jobs.filter((j) => j.status === "failed" || j.status === "unknown" || (j.status === "completed" && j.images.length === 0)).length;
+  const isDone = autoStatus === "done";
+  const isFailed = autoStatus === "failed";
+  const isRetrying = autoStatus === "retrying";
+  const isSkipped = autoStatus === "skipped";
+  const isProcessing = autoStatus === "processing";
 
-  const isDone = batch.autoStatus === "done";
-  const isFailed = batch.autoStatus === "failed";
-  const isRetrying = batch.autoStatus === "retrying";
-  const isSkipped = batch.autoStatus === "skipped";
-  const isProcessing = batch.autoStatus === "processing";
-  const autoStage = batch.autoStage;
-
-  // Derive step states ONLY from autoStatus + autoStage + job counts
   let step1State: StepState = "waiting";
   let step2State: StepState = "waiting";
   let step3State: StepState = "waiting";
@@ -57,11 +67,17 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
       step3State = "waiting";
       step4State = "waiting";
     } else {
-      // autoStage is null -> step 1 failed
-      step1State = "error";
-      step2State = "waiting";
-      step3State = "waiting";
-      step4State = "waiting";
+      if (problemCount > 0 || readyCount < total) {
+        step1State = "error";
+        step2State = "waiting";
+        step3State = "waiting";
+        step4State = "waiting";
+      } else {
+        step1State = "done";
+        step2State = "waiting";
+        step3State = "waiting";
+        step4State = "waiting";
+      }
     }
   } else if (isRetrying) {
     step1State = "active";
@@ -74,7 +90,6 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
     step3State = "waiting";
     step4State = "waiting";
   } else {
-    // Normal in-progress / pending state
     if (pendingCount > 0) {
       step1State = "active";
     } else if (readyCount >= total || (isProcessing && autoStage !== null)) {
@@ -101,6 +116,59 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
       step4State = "waiting";
     }
   }
+
+  let overallPercent = 0;
+  if (isDone) {
+    overallPercent = 100;
+  } else if (isFailed) {
+    if (step4State === "error") overallPercent = 90;
+    else if (step3State === "error") overallPercent = 80;
+    else if (step2State === "error") overallPercent = 70;
+    else if (step1State === "done") overallPercent = 70;
+    else overallPercent = Math.min(Math.round((readyCount / Math.max(total, 1)) * 70), 70);
+  } else {
+    const step1Percent = Math.min(Math.round((readyCount / Math.max(total, 1)) * 70), 70);
+    const step2Percent = step2State === "done" ? 10 : step2State === "active" ? 5 : 0;
+    const step3Percent = step3State === "done" ? 10 : step3State === "active" ? 5 : 0;
+    const step4Percent = step4State === "done" ? 10 : step4State === "active" ? 5 : 0;
+    overallPercent = Math.min(step1Percent + step2Percent + step3Percent + step4Percent, 99);
+  }
+
+  return {
+    step1State,
+    step2State,
+    step3State,
+    step4State,
+    overallPercent,
+  };
+}
+
+interface PipelineProgressProps {
+  batch: GenerationBatchDTO;
+}
+
+export function PipelineProgress({ batch }: PipelineProgressProps) {
+  const autoPublishMutation = useAutoPublishBatch();
+
+  const jobs = batch.jobs ?? [];
+  const total = batch.requestedCount || jobs.length || 13;
+  const readyCount = jobs.filter((j) => j.status === "completed" && j.images.length > 0).length;
+  const pendingCount = jobs.filter((j) => j.status === "queued" || j.status === "running").length;
+  const problemCount = jobs.filter((j) => j.status === "failed" || j.status === "unknown" || (j.status === "completed" && j.images.length === 0)).length;
+
+  const isDone = batch.autoStatus === "done";
+  const isFailed = batch.autoStatus === "failed";
+  const isRetrying = batch.autoStatus === "retrying";
+  const isSkipped = batch.autoStatus === "skipped";
+
+  const { step1State, step2State, step3State, step4State, overallPercent } = derivePipelineStepStates({
+    autoStatus: batch.autoStatus,
+    autoStage: batch.autoStage,
+    readyCount,
+    total,
+    pendingCount,
+    problemCount,
+  });
 
   // Subtitles
   let step1Subtitle = `Tạo ảnh (${readyCount}/${total})`;
@@ -141,26 +209,9 @@ export function PipelineProgress({ batch }: PipelineProgressProps) {
           ? "Lỗi ghi Google Sheet"
           : "Chờ tới lượt";
 
-  // Overall percentage: Image generation = 70%, each other step = 10%
-  let overallPercent = 0;
-  if (isDone) {
-    overallPercent = 100;
-  } else if (isFailed) {
-    if (step4State === "error") overallPercent = 90;
-    else if (step3State === "error") overallPercent = 80;
-    else if (step2State === "error") overallPercent = 70;
-    else overallPercent = Math.min(Math.round((readyCount / Math.max(total, 1)) * 70), 70);
-  } else {
-    const step1Percent = Math.min(Math.round((readyCount / Math.max(total, 1)) * 70), 70);
-    const step2Percent = step2State === "done" ? 10 : step2State === "active" ? 5 : 0;
-    const step3Percent = step3State === "done" ? 10 : step3State === "active" ? 5 : 0;
-    const step4Percent = step4State === "done" ? 10 : step4State === "active" ? 5 : 0;
-    overallPercent = Math.min(step1Percent + step2Percent + step3Percent + step4Percent, 99);
-  }
-
   function handleRetry() {
     autoPublishMutation.mutate(batch.id, {
-      onSuccess: () => toast.success("Đã kích hoạt thử lại tự động"),
+      onSuccess: () => toast.success("Đã bắt đầu chạy lại, tiến trình sẽ tự cập nhật"),
       onError: (err) => toast.error(err instanceof Error ? err.message : "Thử lại thất bại"),
     });
   }

@@ -193,7 +193,7 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
   function handleRetryAuto(e: React.MouseEvent) {
     e.stopPropagation();
     autoPublishMutation.mutate(batch.id, {
-      onSuccess: () => toast.success("Đã kích hoạt chạy lại tự động"),
+      onSuccess: () => toast.success("Đã bắt đầu chạy lại, tiến trình sẽ tự cập nhật"),
       onError: (err) => toast.error(err instanceof Error ? err.message : "Chạy lại tự động thất bại"),
     });
   }

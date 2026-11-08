@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { apiGet, apiPost } from "@/lib/client/api";
 import type { GenerationBatchDTO, HistoryListResponse, JobDetailDTO } from "@/lib/types";
 
@@ -75,8 +75,33 @@ export function useAutoPublishBatch() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (batchId: string) =>
-      apiPost<{ status: string; error?: string }>(`/api/generations/${batchId}/auto-publish`),
-    onSuccess: () => {
+      apiPost<{ status: string }>(`/api/generations/${batchId}/auto-publish`),
+    onMutate: async (batchId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["history"] });
+      queryClient.setQueriesData<InfiniteData<HistoryListResponse>>(
+        { queryKey: ["history"] },
+        (oldData) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              batches: page.batches.map((batch) =>
+                batch.id === batchId
+                  ? {
+                      ...batch,
+                      autoStatus: "pending",
+                      autoStage: null,
+                      autoError: null,
+                    }
+                  : batch,
+              ),
+            })),
+          };
+        },
+      );
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["history"] });
     },
   });

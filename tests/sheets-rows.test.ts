@@ -4,6 +4,7 @@ import {
   SHEET_TAB_DA_CHE,
   SHEET_TAB_KHONG_CHE,
   FULL_SHEET_HEADER,
+  columnToLetter,
   splitAndEnrichRows,
   buildErrorRowsForTabs,
   formatLocalIso,
@@ -88,6 +89,21 @@ describe("sheets-rows", () => {
     expect(row11Org[0]).toBe("CAL-ANI-2611-B1OK1-11-ORG");
     expect(row11Org[23]).toBe("Broken Calendar Title");
     expect(row11Org[26]).toBe("Lỗi: Lỗi render ảnh mockup");
+  });
+
+  it("columnToLetter calculates accurate column letters for 0-indexed column numbers", () => {
+    expect(columnToLetter(0)).toBe("A");
+    expect(columnToLetter(25)).toBe("Z");
+    expect(columnToLetter(26)).toBe("AA");
+    expect(columnToLetter(27)).toBe("AB");
+    expect(columnToLetter(28)).toBe("AC");
+
+    const statusIndex = FULL_SHEET_HEADER.indexOf("Status");
+    const updatedIndex = FULL_SHEET_HEADER.indexOf("Updated");
+    expect(statusIndex).toBe(26);
+    expect(updatedIndex).toBe(27);
+    expect(columnToLetter(statusIndex)).toBe("AA");
+    expect(columnToLetter(updatedIndex)).toBe("AB");
   });
 
   it("formatLocalIso returns ISO string with offset", () => {

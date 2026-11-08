@@ -8,6 +8,17 @@ export const EXTRA_SHEET_COLUMNS = ["Status", "Updated", "Thumbnail"] as const;
 
 export const FULL_SHEET_HEADER = [...PRINTIFY_HEADER, ...EXTRA_SHEET_COLUMNS];
 
+export function columnToLetter(colIndex: number): string {
+  let temp = colIndex + 1;
+  let letter = "";
+  while (temp > 0) {
+    const mod = (temp - 1) % 26;
+    letter = String.fromCharCode(65 + mod) + letter;
+    temp = Math.floor((temp - mod) / 26);
+  }
+  return letter;
+}
+
 export function formatLocalIso(date: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const year = date.getFullYear();

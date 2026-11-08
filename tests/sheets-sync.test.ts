@@ -227,4 +227,86 @@ describe("sheets-sync", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("chế độ error: SKU đã có -> chỉ updateRange với range AA{n}:AB{n}, giữ nguyên các cột khác", async () => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_FILE = "/path/to/key.json";
+    process.env.GOOGLE_SHEET_ID = "mock-sheet-id";
+
+    vi.mocked(prisma.generationBatch.findUnique).mockResolvedValue({
+      id: "batch-err",
+      r2SkuBase: "CAL-ANI-2611-ERR01",
+      etsyTitle: "Calendar With Error",
+    } as unknown as never);
+
+    interface FetchCallRecord {
+      url: string;
+      method?: string;
+      body?: { range?: string; values?: string[][] };
+    }
+
+    const fetchCalls: FetchCallRecord[] = [];
+
+    const mockFetch = vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
+      const method = options?.method || "GET";
+      const body = options?.body ? JSON.parse(options.body as string) : undefined;
+      fetchCalls.push({ url, method, body });
+
+      if (url.includes("?fields=sheets.properties")) {
+        return {
+          ok: true,
+          json: async () => ({
+            sheets: [
+              { properties: { title: SHEET_TAB_DA_CHE } },
+              { properties: { title: SHEET_TAB_KHONG_CHE } },
+            ],
+          }),
+        };
+      }
+
+      if (method === "GET" && url.includes("/values/")) {
+        // da-che has CAL-ANI-2611-ERR01-11-CEN at row 5 (index 4)
+        if (url.includes(SHEET_TAB_DA_CHE)) {
+          return {
+            ok: true,
+            json: async () => ({
+              values: [
+                ["SKU"],
+                ["OTHER-1"],
+                ["OTHER-2"],
+                ["OTHER-3"],
+                ["CAL-ANI-2611-ERR01-11-CEN"],
+              ],
+            }),
+          };
+        }
+        return {
+          ok: true,
+          json: async () => ({ values: [["SKU"]] }),
+        };
+      }
+
+      return { ok: true, json: async () => ({}) };
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await syncBatchToSheet({
+      batchId: "batch-err",
+      error: "Colab GPU OOM",
+    });
+
+    expect(result).toBe("done");
+
+    // da-che row 5 already existed -> PUT called for AA5:AB5 only
+    const updateCall = fetchCalls.find(
+      (c) => c.method === "PUT" && decodeURIComponent(c.url).includes("'da-che'!AA5:AB5"),
+    );
+    expect(updateCall).toBeDefined();
+    expect(updateCall?.body?.values).toBeDefined();
+    // Only 2 cells (Status and Updated), not all 29 columns
+    expect(updateCall?.body?.values?.[0]).toHaveLength(2);
+    expect(updateCall?.body?.values?.[0]?.[0]).toBe("Lỗi: Colab GPU OOM");
+
+    vi.unstubAllGlobals();
+  });
 });

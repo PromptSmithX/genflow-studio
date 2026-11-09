@@ -8,7 +8,7 @@ export const settingsUpdateSchema = z.object({
   runpodEndpointId: z
     .string()
     .trim()
-    .regex(/^[a-z0-9-]+$/i, "Endpoint ID không hợp lệ")
+    .regex(/^[a-z0-9-]*$/i, "Endpoint ID không hợp lệ")
     .optional()
     .nullable(),
   runpodApiKey: z.string().trim().optional().nullable(),

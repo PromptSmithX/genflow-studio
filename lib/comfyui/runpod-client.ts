@@ -54,6 +54,15 @@ const runpodImageSchema = z.object({
   height: z.number().nullable().optional().transform((v) => v ?? null),
 });
 
+const VALID_STATUSES = new Set<RunpodJobStatus>([
+  "IN_QUEUE",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "FAILED",
+  "CANCELLED",
+  "TIMED_OUT",
+]);
+
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 export class RunpodClient {
@@ -156,7 +165,6 @@ export class RunpodClient {
       });
     }
 
-    let status = (data.status ?? "FAILED") as RunpodJobStatus;
     const output = data.output as { images?: unknown[]; error?: unknown } | undefined;
     const rawError = output?.error ?? data.error;
     const errorString = rawError
@@ -164,6 +172,12 @@ export class RunpodClient {
         ? rawError
         : JSON.stringify(rawError)
       : undefined;
+
+    if (!data.status || !VALID_STATUSES.has(data.status as RunpodJobStatus)) {
+      return { status: "NOT_FOUND", images: [], error: errorString };
+    }
+
+    let status = data.status as RunpodJobStatus;
 
     if (status === "COMPLETED" && errorString) {
       status = "FAILED";

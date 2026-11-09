@@ -192,6 +192,22 @@ describe("RunpodClient", () => {
     expect(res.images).toEqual([]);
   });
 
+  it("treats missing status or unknown/weird status as NOT_FOUND", async () => {
+    mockFetchOnce({
+      text: async () => JSON.stringify({ error: "job not found" }),
+    });
+    const client = new RunpodClient({ endpointId: "ep-1", apiKey: "key-1" });
+    const missingStatusRes = await client.getJobResult("job-missing-status");
+    expect(missingStatusRes.status).toBe("NOT_FOUND");
+    expect(missingStatusRes.error).toBe("job not found");
+
+    mockFetchOnce({
+      text: async () => JSON.stringify({ status: "WEIRD" }),
+    });
+    const weirdStatusRes = await client.getJobResult("job-weird");
+    expect(weirdStatusRes.status).toBe("NOT_FOUND");
+  });
+
   it("throws unauthorized on HTTP 401 and 403", async () => {
     vi.stubGlobal(
       "fetch",

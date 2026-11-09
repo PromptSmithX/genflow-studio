@@ -14,6 +14,29 @@ import { censorImages } from "@/lib/censor/run-censor";
 import { readR2Config, type R2Config } from "@/lib/r2/config";
 import { createR2Client, getObjectBuffer, deleteObject, RUNPOD_OUTPUT_PREFIX } from "@/lib/r2/client";
 
+export const UNKNOWN_GIVE_UP_MS = 2 * 60 * 60 * 1000;
+
+function resolveUnknownOrFailed(
+  job: { submittedAt?: Date | null; createdAt: Date },
+  fallbackCode: string,
+  fallbackMessage: string,
+) {
+  const since = job.submittedAt ?? job.createdAt;
+  if (Date.now() - since.getTime() > UNKNOWN_GIVE_UP_MS) {
+    return {
+      status: "failed" as const,
+      errorCode: "sync_timeout",
+      errorMessage: "Không đồng bộ được kết quả sau 2 giờ — bấm Tạo lại",
+      finishedAt: new Date(),
+    };
+  }
+  return {
+    status: "unknown" as const,
+    errorCode: fallbackCode,
+    errorMessage: fallbackMessage,
+  };
+}
+
 export async function syncJob(jobId: string, client: RunpodClient, outputRoot: string): Promise<void> {
   const job = await prisma.generationJob.findUnique({
     where: { id: jobId },
@@ -30,7 +53,7 @@ export async function syncJob(jobId: string, client: RunpodClient, outputRoot: s
     if (error instanceof RunpodApiError) {
       await prisma.generationJob.update({
         where: { id: jobId },
-        data: { status: "unknown", errorCode: error.code, errorMessage: error.message },
+        data: resolveUnknownOrFailed(job, error.code, error.message),
       });
       return;
     }
@@ -143,7 +166,7 @@ export async function syncJob(jobId: string, client: RunpodClient, outputRoot: s
     const message = error instanceof Error ? error.message : "Chưa cấu hình Cloudflare R2";
     await prisma.generationJob.update({
       where: { id: jobId },
-      data: { status: "unknown", errorCode: "download_failed", errorMessage: message },
+      data: resolveUnknownOrFailed(job, "download_failed", message),
     });
     return;
   }
@@ -165,11 +188,11 @@ export async function syncJob(jobId: string, client: RunpodClient, outputRoot: s
       if (!rawBuffer) {
         await prisma.generationJob.update({
           where: { id: jobId },
-          data: {
-            status: "unknown",
-            errorCode: "download_failed",
-            errorMessage: "Không thể tải ảnh từ Cloudflare R2",
-          },
+          data: resolveUnknownOrFailed(
+            job,
+            "download_failed",
+            "Không thể tải ảnh từ Cloudflare R2",
+          ),
         });
         return;
       }
@@ -242,7 +265,7 @@ export async function syncJob(jobId: string, client: RunpodClient, outputRoot: s
     const message = error instanceof Error ? error.message : "Lỗi không xác định khi lưu ảnh output";
     await prisma.generationJob.update({
       where: { id: jobId },
-      data: { status: "unknown", errorCode: "download_failed", errorMessage: message },
+      data: resolveUnknownOrFailed(job, "download_failed", message),
     });
     return;
   }
@@ -285,7 +308,14 @@ export async function syncBatch(batchId: string, client: RunpodClient, outputRoo
   }
 
   const updatedJobs = await prisma.generationJob.findMany({ where: { batchId } });
-  const statuses = new Set(updatedJobs.map((job) => job.status));
+  const statuses = new Set(
+    updatedJobs.map((job) => {
+      if (job.status === "unknown" && job.promptId) {
+        return "running";
+      }
+      return job.status;
+    }),
+  );
   let batchStatus: "queued" | "running" | "completed" | "partial" | "failed";
   if (statuses.has("running") || statuses.has("queued")) {
     batchStatus = statuses.size === 1 ? (statuses.has("queued") ? "queued" : "running") : "running";

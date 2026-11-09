@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import fs from "node:fs/promises";
 import { prisma } from "@/lib/db";
-import { syncJob } from "@/lib/comfyui/job-sync";
+import { syncJob, syncBatch, UNKNOWN_GIVE_UP_MS } from "@/lib/comfyui/job-sync";
 import { RunpodClient, RunpodApiError } from "@/lib/comfyui/runpod-client";
 import { getObjectBuffer, deleteObject } from "@/lib/r2/client";
 import { readR2Config } from "@/lib/r2/config";
@@ -403,11 +403,12 @@ describe("job-sync", () => {
     );
   });
 
-  it("lỗi RunpodApiError cập nhật status unknown", async () => {
+  it("lỗi RunpodApiError trong vòng 2 giờ cập nhật status unknown", async () => {
     vi.mocked(prisma.generationJob.findUnique).mockResolvedValueOnce({
       id: "job-1",
       promptId: "rp-prompt-1",
       status: "running",
+      submittedAt: new Date(Date.now() - 30_000),
       images: [],
       batch: defaultBatch,
     } as unknown as never);
@@ -425,6 +426,51 @@ describe("job-sync", () => {
           errorCode: "network",
           errorMessage: "Mạng lỗi",
         }),
+      }),
+    );
+  });
+
+  it("lỗi RunpodApiError khi job submit > 2 giờ thì cập nhật failed sync_timeout", async () => {
+    vi.mocked(prisma.generationJob.findUnique).mockResolvedValueOnce({
+      id: "job-1",
+      promptId: "rp-prompt-1",
+      status: "running",
+      submittedAt: new Date(Date.now() - (UNKNOWN_GIVE_UP_MS + 10_000)),
+      images: [],
+      batch: defaultBatch,
+    } as unknown as never);
+
+    vi.mocked(mockClient.getJobResult).mockRejectedValueOnce(
+      new RunpodApiError("Mạng lỗi", "network"),
+    );
+
+    await syncJob("job-1", mockClient, "C:/tmp/outputs");
+
+    expect(prisma.generationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "failed",
+          errorCode: "sync_timeout",
+          errorMessage: "Không đồng bộ được kết quả sau 2 giờ — bấm Tạo lại",
+        }),
+      }),
+    );
+  });
+
+  it("syncBatch coi job unknown có promptId là đang chạy (batch -> running)", async () => {
+    vi.mocked(prisma.generationJob.findMany)
+      .mockResolvedValueOnce([]) // for loop
+      .mockResolvedValueOnce([
+        { id: "j1", status: "completed", promptId: "p1" },
+        { id: "j2", status: "unknown", promptId: "p2" },
+      ] as unknown as never);
+
+    await syncBatch("batch-1", mockClient, "C:/tmp/outputs");
+
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "batch-1" },
+        data: { status: "running" },
       }),
     );
   });

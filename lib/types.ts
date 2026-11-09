@@ -21,6 +21,7 @@ export interface SettingsDTO {
   autoPublish: boolean;
   autoFormatId: string;
   advancedMode: boolean;
+  llmBaseUrl: string | null;
   llmModel: string | null;
   llmSystemPrompt: string | null;
   hasLlmKey: boolean;

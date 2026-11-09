@@ -32,24 +32,9 @@ RUN mkdir -p /comfyui/models/vae && \
     wget -c --show-progress https://huggingface.co/Comfy-Org/Wan-2.1/resolve/main/split_files/vae/wan_2.1_vae.safetensors -O /comfyui/models/vae/wan_2.1_vae.safetensors && \
     [ $(stat -c%s /comfyui/models/vae/wan_2.1_vae.safetensors) -ge 220000000 ] || (echo "VAE download invalid" && exit 1)
 
-# Download NudeNet 640m detector with mirror fallback and size check
-RUN mkdir -p /models && python -c '\
-import urllib.request, os, sys;\
-mirrors = [\
-    "https://huggingface.co/ServiceStack/comfy-gateway/resolve/main/640m.onnx",\
-    "https://huggingface.co/spaces/xxparthparekhxx/NudeNet-FastAPI/resolve/main/640m.onnx"\
-];\
-dest = "/models/640m.onnx";\
-for url in mirrors:\
-    try:\
-        urllib.request.urlretrieve(url, dest);\
-        if 90 * 1024 * 1024 <= os.path.getsize(dest) <= 130 * 1024 * 1024:\
-            sys.exit(0);\
-        os.remove(dest);\
-    except Exception:\
-        pass;\
-sys.exit(1);\
-'
+# Download NudeNet 640m detector using standalone python script
+COPY download_nudenet.py /tmp/download_nudenet.py
+RUN python /tmp/download_nudenet.py && rm /tmp/download_nudenet.py
 
 # Download LUSTIFY checkpoint using BuildKit secret mount
 COPY download_model.py /tmp/download_model.py

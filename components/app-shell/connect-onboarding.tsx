@@ -5,44 +5,49 @@ import { toast } from "sonner";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
+import { useUpdateSettings } from "@/hooks/use-settings";
 import { useConnectionTest, useHeaderConnectionState } from "@/hooks/use-connection";
 
-/**
- * A full-width banner shown on every studio page while ComfyUI isn't
- * connected -- the first thing a non-technical user needs to do each time
- * the dev hands them a fresh Colab tunnel link. Hidden once connected.
- */
 export function ConnectOnboarding() {
   const { state } = useHeaderConnectionState();
-  const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
   const testMutation = useConnectionTest();
-  const [url, setUrl] = useState("");
+  const [endpointId, setEndpointId] = useState("");
+  const [apiKey, setApiKey] = useState("");
 
   if (state === "connected" || state === "checking") return null;
 
   function handleConnect() {
-    if (!url.trim()) {
-      toast.error("Dán link Colab vào ô trước khi kiểm tra");
+    if (!endpointId.trim()) {
+      toast.error("Nhập Endpoint ID trước khi kiểm tra");
       return;
     }
-    testMutation.mutate(url, {
-      onSuccess: (result) => {
-        if (result.state !== "connected") {
-          toast.error(result.error?.message ?? "Không kết nối được, kiểm tra lại link");
-          return;
-        }
-        updateSettings.mutate(
-          { comfyBaseUrl: url },
-          {
-            onSuccess: () => toast.success("Đã kết nối! Bạn có thể bắt đầu tạo ảnh."),
-            onError: () => toast.error("Kết nối OK nhưng lưu link bị lỗi, thử lại"),
-          },
-        );
+    if (!apiKey.trim()) {
+      toast.error("Nhập API Key trước khi kiểm tra");
+      return;
+    }
+    testMutation.mutate(
+      { endpointId: endpointId.trim(), apiKey: apiKey.trim() },
+      {
+        onSuccess: (result) => {
+          if (result.state !== "connected") {
+            toast.error(result.error?.message ?? "Không kết nối được, kiểm tra lại thông tin");
+            return;
+          }
+          updateSettings.mutate(
+            {
+              runpodEndpointId: endpointId.trim(),
+              runpodApiKey: apiKey.trim(),
+            },
+            {
+              onSuccess: () => toast.success("Đã kết nối! Bạn có thể bắt đầu tạo ảnh."),
+              onError: () => toast.error("Kết nối OK nhưng lưu cấu hình bị lỗi, thử lại"),
+            },
+          );
+        },
+        onError: () => toast.error("Không kết nối được, kiểm tra lại thông tin"),
       },
-      onError: () => toast.error("Không kết nối được, kiểm tra lại link"),
-    });
+    );
   }
 
   const isBusy = testMutation.isPending || updateSettings.isPending;
@@ -53,21 +58,25 @@ export function ConnectOnboarding() {
         <Sparkles className="h-5 w-5 shrink-0 text-amber-600" aria-hidden />
         <div className="min-w-[220px] flex-1">
           <p className="text-sm font-medium text-amber-900">
-            {settings?.comfyBaseUrl
-              ? "Mất kết nối tới Colab — dán link mới ở đây"
-              : "Dán link Colab vào đây để bắt đầu"}
+            Nhập RunPod Endpoint ID + API Key để bắt đầu
           </p>
           <p className="text-xs text-amber-700">
-            Lấy link từ notebook Colab đang chạy, dạng https://xxxx.trycloudflare.com hoặc
-            https://xxxx.loca.lt
+            Lấy Endpoint ID và API Key từ RunPod Console (Serverless Endpoints)
           </p>
         </div>
-        <div className="flex w-full gap-2 sm:w-auto">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://xxxx.trycloudflare.com"
-            className="bg-white sm:w-72"
+            value={endpointId}
+            onChange={(e) => setEndpointId(e.target.value)}
+            placeholder="Endpoint ID"
+            className="bg-white sm:w-44"
+          />
+          <Input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="RunPod API Key"
+            className="bg-white sm:w-52"
           />
           <Button onClick={handleConnect} disabled={isBusy}>
             {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kiểm tra kết nối"}

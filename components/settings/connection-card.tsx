@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
@@ -19,42 +18,69 @@ export function ConnectionCard() {
   const updateSettings = useUpdateSettings();
   const testMutation = useConnectionTest();
 
-  const [url, setUrl] = useState("");
+  const [endpointId, setEndpointId] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [lastResult, setLastResult] = useState<ConnectionTestResponse | null>(null);
   const [syncedSettings, setSyncedSettings] = useState<typeof settings>(undefined);
-  const hasUnsavedChanges = url !== (settings?.comfyBaseUrl ?? "");
+
+  const hasUnsavedChanges =
+    endpointId !== (settings?.runpodEndpointId ?? "") || Boolean(apiKey);
 
   if (settings !== syncedSettings) {
     setSyncedSettings(settings);
-    if (settings) setUrl(settings.comfyBaseUrl ?? "");
+    if (settings) {
+      setEndpointId(settings.runpodEndpointId ?? "");
+      setApiKey("");
+    }
   }
 
   function handleTest() {
-    testMutation.mutate(url || undefined, {
-      onSuccess: (result) => {
-        setLastResult(result);
-        if (result.state === "connected") toast.success("Kết nối ComfyUI thành công");
-        else toast.error(result.error?.message ?? "Không kết nối được");
+    testMutation.mutate(
+      {
+        endpointId: endpointId || undefined,
+        apiKey: apiKey || undefined,
       },
-      onError: () => toast.error("Không kết nối được tới ComfyUI"),
-    });
+      {
+        onSuccess: (result) => {
+          setLastResult(result);
+          if (result.state === "connected") {
+            toast.success("Kết nối RunPod thành công");
+          } else {
+            toast.error(result.error?.message ?? "Không kết nối được");
+          }
+        },
+        onError: () => toast.error("Không kết nối được tới RunPod"),
+      },
+    );
   }
 
   function handleSave() {
     updateSettings.mutate(
-      { comfyBaseUrl: url },
       {
-        onSuccess: () => toast.success("Đã lưu URL kết nối"),
+        runpodEndpointId: endpointId,
+        runpodApiKey: apiKey || undefined,
+      },
+      {
+        onSuccess: () => {
+          setApiKey("");
+          toast.success("Đã lưu cấu hình RunPod");
+        },
         onError: (e) => toast.error(e instanceof Error ? e.message : "Lưu thất bại"),
       },
     );
   }
 
   function handleClear() {
-    setUrl("");
+    setEndpointId("");
+    setApiKey("");
+    setLastResult(null);
     updateSettings.mutate(
-      { comfyBaseUrl: null },
-      { onSuccess: () => { setLastResult(null); toast.success("Đã xóa URL đã lưu"); } },
+      { runpodEndpointId: null, runpodApiKey: null },
+      {
+        onSuccess: () => {
+          toast.success("Đã xóa cấu hình RunPod");
+        },
+      },
     );
   }
 
@@ -67,36 +93,61 @@ export function ConnectionCard() {
     );
   }
 
+  const isConfiguredOrHasInput = Boolean(endpointId || settings?.runpodEndpointId);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Kết nối ComfyUI / Colab</CardTitle>
-        <CardDescription>Dán URL tunnel hiện tại từ Colab rồi kiểm tra kết nối.</CardDescription>
+        <CardTitle>Kết nối GPU (RunPod Serverless)</CardTitle>
+        <CardDescription>
+          GPU tự bật khi có yêu cầu và tự tắt khi rảnh. Lần đầu có thể mất 1–2 phút để khởi động.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="comfy-url">ComfyUI base URL</Label>
+          <Label htmlFor="endpoint-id">Endpoint ID</Label>
           <Input
-            id="comfy-url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://xxxx.loca.lt"
+            id="endpoint-id"
+            value={endpointId}
+            onChange={(e) => setEndpointId(e.target.value)}
+            placeholder="vd: vllm-xxxxxx hoặc xxxxxxxxxx"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="api-key">RunPod API Key</Label>
+          <Input
+            id="api-key"
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={
+              settings?.hasRunpodKey ? "Đã lưu — để trống nếu không đổi" : "rpa_xxxx..."
+            }
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={handleTest} disabled={testMutation.isPending || !url}>
+          <Button onClick={handleTest} disabled={testMutation.isPending || !isConfiguredOrHasInput}>
             {testMutation.isPending ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
           </Button>
-          <Button variant="outline" onClick={handleSave} disabled={updateSettings.isPending || !hasUnsavedChanges}>
-            Lưu URL
+          <Button
+            variant="outline"
+            onClick={handleSave}
+            disabled={updateSettings.isPending || !hasUnsavedChanges}
+          >
+            Lưu
           </Button>
-          <Button variant="ghost" onClick={handleClear} disabled={!settings?.comfyBaseUrl}>
-            Xóa URL đã lưu
+          <Button
+            variant="ghost"
+            onClick={handleClear}
+            disabled={!settings?.runpodEndpointId && !settings?.hasRunpodKey}
+          >
+            Xóa cấu hình
           </Button>
           {hasUnsavedChanges && (
             <Badge variant="destructive" className="ml-1">
-              Có thay đổi chưa lưu — bấm &quot;Lưu URL&quot; trước khi rời trang
+              Có thay đổi chưa lưu — bấm &quot;Lưu&quot; trước khi rời trang
             </Badge>
           )}
         </div>
@@ -117,36 +168,21 @@ export function ConnectionCard() {
             <div>
               {lastResult.state === "connected" ? (
                 <>
-                  <p className="font-medium">Đã kết nối</p>
-                  <p className="text-xs">
-                    Phiên bản ComfyUI: {lastResult.version ?? "—"} · GPU: {lastResult.gpu ?? "—"}
-                    {lastResult.vramFreeMb != null && lastResult.vramTotalMb != null
-                      ? ` · VRAM trống: ${lastResult.vramFreeMb}/${lastResult.vramTotalMb} MB`
-                      : ""}
+                  <p className="font-medium">
+                    Đã kết nối — worker: {lastResult.workers?.idle ?? 0} rảnh, {lastResult.workers?.running ?? 0} đang chạy; job chờ: {lastResult.jobs?.inQueue ?? 0}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Kiểm tra lúc {new Date(lastResult.checkedAt).toLocaleTimeString("vi-VN")}
                   </p>
                 </>
               ) : (
-                <>
-                  <p className="font-medium">Không kết nối được</p>
-                  <p className="text-xs">{lastResult.error?.message}</p>
-                </>
+                <p className="font-medium">
+                  Không kết nối được: {lastResult.error?.message ?? "Lỗi không xác định"}
+                </p>
               )}
             </div>
           </div>
         )}
-
-        <Alert variant="destructive" className="border-amber-300 bg-amber-50 text-amber-900">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Cảnh báo bảo mật</AlertTitle>
-          <AlertDescription className="text-amber-800">
-            LocalTunnel URL trực tiếp tới ComfyUI không có lớp đăng nhập API. Bất kỳ ai biết URL này đều có thể
-            gửi tác vụ đến server của bạn. Chỉ dùng cho thử nghiệm cá nhân, không chia sẻ URL, và dừng tunnel khi
-            không dùng. Đây không phải là một cơ chế bảo vệ đủ mạnh cho sử dụng thực tế/chia sẻ.
-          </AlertDescription>
-        </Alert>
       </CardContent>
     </Card>
   );

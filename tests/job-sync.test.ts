@@ -223,7 +223,7 @@ describe("job-sync", () => {
     await syncJob("job-1", mockClient, "C:/tmp/outputs");
 
     expect(censorImages).toHaveBeenCalled();
-    expect(vi.mocked(censorImages).mock.calls[0][1]).toBeUndefined();
+    expect(vi.mocked(censorImages).mock.calls[0]).toHaveLength(1);
     expect(prisma.generatedImage.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "img-1" },

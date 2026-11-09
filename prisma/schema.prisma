@@ -99,6 +99,7 @@ model AppSettings {
   autoPublish       Boolean  @default(true)
   // Khổ template lịch mặc định dùng cho auto publish (vd premade_wall_11x8_5).
   autoFormatId      String   @default("premade_wall_11x8_5")
+  advancedMode      Boolean  @default(false)
   llmBaseUrl        String?
   llmModel          String?
   llmSystemPrompt   String?
@@ -192,6 +193,8 @@ model GenerationBatch {
 
   // Tiến độ tự động xuất và đẩy pipeline: "pending" | "retrying" | "processing" | "done" | "failed" | "skipped" | "legacy" | null.
   autoStatus     String?
+  // Bước đang chạy trong pipeline khi autoStatus == "processing": "export" | "r2" | "sheet" | null.
+  autoStage      String?
   // Chi tiết lỗi khi chạy pipeline tự động thất bại.
   autoError      String?
   // Thời điểm kết thúc chạy pipeline tự động gần nhất.

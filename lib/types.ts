@@ -18,6 +18,7 @@ export interface SettingsDTO {
   outputDirectory: string;
   autoPublish: boolean;
   autoFormatId: string;
+  advancedMode: boolean;
   llmModel: string | null;
   llmSystemPrompt: string | null;
   hasLlmKey: boolean;
@@ -120,6 +121,7 @@ export interface GenerationBatchDTO {
   r2PushedAt?: string | null;
   r2Error?: string | null;
   autoStatus?: "pending" | "retrying" | "processing" | "done" | "failed" | "skipped" | "legacy" | null;
+  autoStage?: "export" | "r2" | "sheet" | null;
   autoError?: string | null;
   autoFinishedAt?: string | null;
   sheetSyncedAt?: string | null;

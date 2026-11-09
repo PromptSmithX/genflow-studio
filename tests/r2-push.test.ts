@@ -197,6 +197,24 @@ describe("r2-push", () => {
 
       // 2. Exactly 61 uploads for the successful batch (28 x 2 formats + 5 previews)
       expect(clientModule.putObject).toHaveBeenCalledTimes(61);
+      // Object keys passed to putObject MUST NOT have ?v= query
+      for (const call of vi.mocked(clientModule.putObject).mock.calls) {
+        const key = call[2];
+        expect(key).not.toContain("?v=");
+        expect(key).not.toContain("&v=");
+      }
+
+      // URLs written to rows/CSV MUST have ?v= cache-busting timestamp
+      const rows = result.results[0].rows!;
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        for (let i = 1; i <= 14; i++) {
+          expect(row[i]).toMatch(/\?v=\d+$/);
+        }
+        for (let i = 15; i <= 19; i++) {
+          expect(row[i]).toMatch(/\?v=\d+$/);
+        }
+      }
 
       // 3. Staging directory is cleaned up for BOTH batches (in finally block)
       expect(fs.rm).toHaveBeenCalledTimes(2);

@@ -86,7 +86,7 @@ describe("job-sync", () => {
       createdAt: new Date(),
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "COMPLETED",
@@ -112,7 +112,7 @@ describe("job-sync", () => {
       jobId: "job-1",
       relativePath: "batch_folder/img.png",
       filename: "rp-prompt-1_0.png",
-    } as any);
+    } as unknown as never);
 
     await syncJob("job-1", mockClient, "C:/tmp/outputs");
 
@@ -154,7 +154,7 @@ describe("job-sync", () => {
       status: "queued",
       images: [{ filename: "rp-prompt-1_0.png" }],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "COMPLETED",
@@ -192,7 +192,7 @@ describe("job-sync", () => {
       createdAt: new Date(),
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "COMPLETED",
@@ -215,7 +215,7 @@ describe("job-sync", () => {
       jobId: "job-1",
       relativePath: "batch_folder/img.png",
       filename: "rp-prompt-1_0.png",
-    } as any);
+    } as unknown as never);
     vi.mocked(censorImages).mockResolvedValueOnce([
       { status: "clean", input: "in", output: "out" },
     ]);
@@ -241,7 +241,7 @@ describe("job-sync", () => {
       status: "running",
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "FAILED",
@@ -296,7 +296,7 @@ describe("job-sync", () => {
       createdAt: new Date(),
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "NOT_FOUND",
@@ -314,7 +314,7 @@ describe("job-sync", () => {
       jobId: "job-1",
       relativePath: "batch_folder/img.png",
       filename: "rp-prompt-1_0.png",
-    } as any);
+    } as unknown as never);
 
     await syncJob("job-1", mockClient, "C:/tmp/outputs");
 
@@ -336,7 +336,7 @@ describe("job-sync", () => {
       submittedAt: new Date(Date.now() - 150_000), // > 2 phút
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "NOT_FOUND",
@@ -364,7 +364,7 @@ describe("job-sync", () => {
       submittedAt: new Date(Date.now() - 30_000), // 30s
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "NOT_FOUND",
@@ -385,7 +385,7 @@ describe("job-sync", () => {
       createdAt: new Date(),
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockResolvedValueOnce({
       status: "IN_PROGRESS",
@@ -410,7 +410,7 @@ describe("job-sync", () => {
       status: "running",
       images: [],
       batch: defaultBatch,
-    } as any);
+    } as unknown as never);
 
     vi.mocked(mockClient.getJobResult).mockRejectedValueOnce(
       new RunpodApiError("Mạng lỗi", "network"),

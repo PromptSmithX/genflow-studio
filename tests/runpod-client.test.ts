@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { RunpodClient, RunpodApiError, getRunpodClient } from "@/lib/comfyui/runpod-client";
 import { GenerationSetupError } from "@/lib/generations/errors";
+import type { WorkflowApiJson } from "@/lib/comfyui/workflow-mapper";
 
 function mockFetchOnce(response: Partial<Response> & { text: () => Promise<string> }) {
   vi.stubGlobal(
@@ -49,7 +50,9 @@ describe("RunpodClient", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new RunpodClient({ endpointId: "my-endpoint", apiKey: "secret-key" });
-    const result = await client.submitJob({ "1": { class_type: "KSampler", inputs: {} } } as any);
+    const result = await client.submitJob({
+      "1": { class_type: "KSampler", inputs: {} },
+    } as unknown as WorkflowApiJson);
 
     expect(result.jobId).toBe("job-rp-456");
     expect(fetchMock).toHaveBeenCalledWith(

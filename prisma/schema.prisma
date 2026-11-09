@@ -103,6 +103,7 @@ model AppSettings {
   autoFormatId      String   @default("premade_wall_11x8_5")
   advancedMode      Boolean  @default(false)
   llmBaseUrl        String?
+  llmApiKey         String?
   llmModel          String?
   llmSystemPrompt   String?
   createdAt         DateTime @default(now())

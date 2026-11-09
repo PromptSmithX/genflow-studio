@@ -98,13 +98,30 @@ Chữ ký: `syncJob(jobId: string, client: RunpodClient, outputRoot: string)`; `
 - `tests/comfy-client.test.ts` giữ nguyên (P4 mới xóa).
 
 ## 8. Definition of Done
-- [ ] Không còn chỗ nào trong luồng sinh ảnh/đồng bộ/test kết nối khởi tạo `ComfyClient` (grep `new ComfyClient` trong `app/ lib/` → 0).
-- [ ] `job-sync.ts` không còn `/censor`, `getActivePromptIds`, `getBaseUrl`.
-- [ ] API key RunPod không xuất hiện trong response nào (`GET /api/settings`, connection routes) và không bị log.
-- [ ] Migration mới + template DB đã build.
-- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` xanh — ghi số test vào Ghi chú.
-- [ ] `lib/pipeline/*`, `lib/r2/push-batches.ts`, `lib/sheets/*` không bị sửa.
-- [ ] Điền "Ghi chú của người thực thi"; `worker_done` liệt kê commit + điều chưa test được (RunPod thật).
+- [x] Không còn chỗ nào trong luồng sinh ảnh/đồng bộ/test kết nối khởi tạo `ComfyClient` (grep `new ComfyClient` trong `app/ lib/` → 0).
+- [x] `job-sync.ts` không còn `/censor`, `getActivePromptIds`, `getBaseUrl`.
+- [x] API key RunPod không xuất hiện trong response nào (`GET /api/settings`, connection routes) và không bị log.
+- [x] Migration mới + template DB đã build (`20261109174422_add_runpod_settings`, `resources/template/anima.sqlite`).
+- [x] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` xanh — 28 test suites, 192 tests passed.
+- [x] `lib/pipeline/*`, `lib/r2/push-batches.ts`, `lib/sheets/*` không bị sửa.
+- [x] Điền "Ghi chú của người thực thi"; `worker_done` liệt kê commit + điều chưa test được (RunPod thật).
 
 ## Ghi chú của người thực thi
-(agent điền)
+- Đã hoàn thành Task P2 theo đúng thiết kế và quy tắc bắt buộc.
+- Kết quả kiểm thử:
+  + `npm test`: 28 test files passed, 192 tests passed (bao gồm test mới `runpod-client.test.ts` và `job-sync.test.ts`).
+  + `npx tsc --noEmit`: Xanh, không có lỗi TypeScript.
+  + `npm run lint`: Xanh, 0 lỗi / 0 cảnh báo.
+  + `npm run build`: Next.js Turbopack build thành công mọi static & dynamic routes.
+- Danh sách commit:
+  + `a1ec6af`: docs: add serverless migration handoff, p1 review and p2 task spec
+  + `bf59242`: feat(prisma): add runpodEndpointId and runpodApiKey to AppSettings
+  + `fc80a09`: feat(comfyui): add RunpodClient and R2 getObjectBuffer/deleteObject helpers
+  + `a15d90d`: feat(generations): submit jobs to RunPod Serverless instead of ComfyUI
+  + `74175a8`: feat(comfyui): rewrite job-sync and auto-sync for RunPod Serverless
+  + `6326291`: feat(api): update connection, sync, and settings routes for RunPod Serverless
+  + `849b000`: feat(ui): update connection card and onboarding banner for RunPod Serverless
+  + `d01c704`: test: add tests for runpod client and job sync, update regenerate-fresh and auto-sync tests
+  + `e412c66`: test(job-sync): fix CensorResult shape in test mock
+  + `9174761`: test: clean up eslint explicit any types in tests
+- Điều chưa test được: Chưa gửi request tới RunPod serverless thật và tải ảnh thật từ R2 bucket production do cần Endpoint ID + API key thật và container image worker đang chạy. Toàn bộ logic đã được bao phủ bởi 20 test mới trong `runpod-client.test.ts` và `job-sync.test.ts`.

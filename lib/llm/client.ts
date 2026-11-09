@@ -34,13 +34,7 @@ export interface GeneratePromptsInput {
 // cao hơn tránh bị huỷ sớm (biểu hiện là lỗi 502 code=timeout ở /suggest).
 const DEFAULT_TIMEOUT_MS = 180_000;
 
-/**
- * Thin server-only client for any OpenAI-compatible Chat Completions
- * endpoint (OpenAI, OpenRouter, Groq, or a local server like Ollama/LM
- * Studio). Mirrors ComfyClient's shape (timeout via AbortController, a
- * typed error class) so both HTTP integrations in this app behave the same
- * way under network/timeout/non-JSON failures.
- */
+// Thin server-only client for any OpenAI-compatible Chat Completions endpoint.
 export class LlmClient {
   private readonly baseUrl: string;
   private readonly apiKey?: string | null;
@@ -69,10 +63,6 @@ export class LlmClient {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Bỏ qua trang interstitial của LocalTunnel/Cloudflare khi baseUrl đi
-          // qua gateway Colab -- mirror ComfyClient.headers() và
-          // censorViaHttp() (lib/comfyui/client.ts, lib/censor/run-censor.ts).
-          "bypass-tunnel-reminder": "1",
           ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
         },
         body: JSON.stringify({
@@ -82,9 +72,7 @@ export class LlmClient {
             { role: "user", content: userMessage },
           ],
           response_format: { type: "json_object" },
-          // Nhiều provider mặc định gần-deterministic (đặc biệt ở JSON mode) --
-          // không set temperature khiến cùng 1 ý tưởng luôn ra cùng style/layout
-          // chữ. Ép temperature/top_p cao để output đa dạng giữa các lần gen.
+          // Set temperature/top_p high for variety between generation batches.
           temperature: 1,
           top_p: 1,
         }),

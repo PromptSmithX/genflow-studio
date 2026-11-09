@@ -29,7 +29,11 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/settings", () => ({
-  getOrCreateSettings: vi.fn().mockResolvedValue({ comfyBaseUrl: "http://127.0.0.1:8188" }),
+  getOrCreateSettings: vi.fn().mockResolvedValue({
+    comfyBaseUrl: "http://127.0.0.1:8188",
+    runpodEndpointId: "ep-test",
+    runpodApiKey: "rpa-test",
+  }),
   getOrCreateGlobalPrompt: vi.fn().mockResolvedValue({ positivePrompt: "", negativePrompt: "" }),
 }));
 
@@ -57,15 +61,18 @@ vi.mock("@/lib/comfyui/workflow-store", () => ({
   parseNodeMapping: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("@/lib/comfyui/client", () => ({
-  ComfyClient: class {
-    submitPrompt = vi.fn().mockResolvedValue({ promptId: "prompt-123" });
+vi.mock("@/lib/comfyui/runpod-client", () => ({
+  RunpodClient: class {
+    submitJob = vi.fn().mockResolvedValue({ jobId: "rp-123" });
   },
-  ComfyApiError: class extends Error {
+  RunpodApiError: class extends Error {
     constructor(message: string, public code: string) {
       super(message);
     }
   },
+  getRunpodClient: vi.fn().mockReturnValue({
+    submitJob: vi.fn().mockResolvedValue({ jobId: "rp-123" }),
+  }),
 }));
 
 describe("regenerateJobFreshPrompt", () => {
@@ -247,13 +254,24 @@ describe("regenerateJobFreshPrompt", () => {
 
     await regenerateJobFreshPrompt("job-fail");
 
-    // Verify job update resets autoRetryCount to 0
+    // Verify job update resets autoRetryCount to 0 and records promptId rp-123
     expect(prisma.generationJob.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "job-fail" },
         data: expect.objectContaining({
           status: "queued",
           autoRetryCount: 0,
+        }),
+      }),
+    );
+
+    expect(prisma.generationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "job-fail" },
+        data: expect.objectContaining({
+          status: "queued",
+          promptId: "rp-123",
+          submittedAt: expect.any(Date),
         }),
       }),
     );

@@ -56,7 +56,9 @@ describe("auto-sync-publish", () => {
 
     vi.mocked(getOrCreateSettings).mockResolvedValue({
       id: "main",
-      comfyBaseUrl: null, // skip ComfyUI sync loop in tests
+      comfyBaseUrl: null,
+      runpodEndpointId: null,
+      runpodApiKey: null, // skip RunPod sync loop in tests
       autoPublish: true,
     } as unknown as never);
 
@@ -70,6 +72,8 @@ describe("auto-sync-publish", () => {
     vi.mocked(getOrCreateSettings).mockResolvedValue({
       id: "main",
       comfyBaseUrl: null,
+      runpodEndpointId: null,
+      runpodApiKey: null,
       autoPublish: false, // disabled
     } as unknown as never);
 
@@ -81,6 +85,8 @@ describe("auto-sync-publish", () => {
     vi.mocked(getOrCreateSettings).mockResolvedValue({
       id: "main",
       comfyBaseUrl: null,
+      runpodEndpointId: null,
+      runpodApiKey: null,
       autoPublish: true,
     } as unknown as never);
 

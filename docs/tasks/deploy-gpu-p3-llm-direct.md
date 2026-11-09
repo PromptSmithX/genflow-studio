@@ -54,12 +54,24 @@ export function resolveLlmConfig(settings: { llmBaseUrl: string | null; llmApiKe
 - Validation: `llmBaseUrl` `""` hợp lệ, `"not a url"` không hợp lệ.
 
 ## 8. Definition of Done
-- [ ] Grep `comfyBaseUrl` trong `lib/llm/`, `app/api/generations/suggest/`, `lib/settings.ts` (phần `hasLlmKey`) → không còn liên quan LLM.
-- [ ] `GET /api/settings` không chứa `llmApiKey`/`runpodApiKey`.
-- [ ] Migration mới + template DB build.
-- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` xanh — ghi số test vào Ghi chú.
-- [ ] `lib/pipeline/*`, `lib/r2/*`, `lib/sheets/*`, `lib/comfyui/*` không bị sửa.
-- [ ] Điền "Ghi chú của người thực thi"; `worker_done` liệt kê commit + điều chưa test được (gọi provider thật).
+- [x] Grep `comfyBaseUrl` trong `lib/llm/`, `app/api/generations/suggest/`, `lib/settings.ts` (phần `hasLlmKey`) → không còn liên quan LLM.
+- [x] `GET /api/settings` không chứa `llmApiKey`/`runpodApiKey`.
+- [x] Migration mới + template DB build.
+- [x] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` xanh — ghi số test vào Ghi chú.
+- [x] `lib/pipeline/*`, `lib/r2/*`, `lib/sheets/*`, `lib/comfyui/*` không bị sửa.
+- [x] Điền "Ghi chú của người thực thi"; `worker_done` liệt kê commit + điều chưa test được (gọi provider thật).
 
 ## Ghi chú của người thực thi
-(agent điền)
+- Đã hoàn thành toàn bộ các hạng mục của Task P3 theo đúng thiết kế và chuỗi commit quy định:
+  1. `bed5aca`: `docs: add task p3 spec for direct llm provider`
+  2. `700de5e`: `feat(prisma): add llmApiKey to AppSettings`
+  3. `39730fc`: `feat(llm): resolve direct llm config with apiKey and update callers`
+  4. `d88feab`: `feat(settings): support llmBaseUrl and llmApiKey in settings API and DTO`
+  5. `86afe7e`: `feat(ui): update llm settings card and assistant create form for direct provider`
+  6. `49b3cc7`: `test(llm): add and update tests for direct llm config, redact, and validation`
+- Kết quả kiểm thử và build:
+  - `npm test`: 31/31 files pass, 208/208 tests pass.
+  - `npx tsc --noEmit`: sạch lỗi type.
+  - `npm run lint`: sạch lỗi lint.
+  - `npm run build`: compile và sinh page thành công.
+- Điều chưa test tự động được: Gửi request trực tiếp tới API provider thật qua Internet với API key thật (đã được bao phủ thông qua unit test và mock HTTP client).

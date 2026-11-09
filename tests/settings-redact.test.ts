@@ -3,10 +3,8 @@ import { redactSettings } from "@/lib/settings";
 import type { AppSettings } from "@prisma/client";
 
 describe("redactSettings", () => {
-  const dummySettings: AppSettings = {
+  const dummySettings = {
     id: "main",
-    comfyBaseUrl: "http://127.0.0.1:8188",
-    hasGatewayToken: false,
     runpodEndpointId: "test-ep-123",
     runpodApiKey: "rpa-secret-key-123",
     defaultWidth: 1024,
@@ -26,7 +24,7 @@ describe("redactSettings", () => {
     llmSystemPrompt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-  };
+  } as unknown as AppSettings;
 
   it("never exposes llmApiKey or runpodApiKey", () => {
     const redacted = redactSettings(dummySettings);
@@ -41,25 +39,22 @@ describe("redactSettings", () => {
     expect(redacted.llmBaseUrl).toBe("https://api.x.ai/v1");
   });
 
-  it("determines hasLlmKey strictly based on llmApiKey, not comfyBaseUrl", () => {
+  it("determines hasLlmKey strictly based on llmApiKey", () => {
     const withLlmKey = redactSettings({
       ...dummySettings,
       llmApiKey: "xai-real-key",
-      comfyBaseUrl: null,
     });
     expect(withLlmKey.hasLlmKey).toBe(true);
 
     const withoutLlmKey = redactSettings({
       ...dummySettings,
       llmApiKey: null,
-      comfyBaseUrl: "http://127.0.0.1:8188",
     });
     expect(withoutLlmKey.hasLlmKey).toBe(false);
 
     const withEmptyLlmKey = redactSettings({
       ...dummySettings,
       llmApiKey: "",
-      comfyBaseUrl: "http://127.0.0.1:8188",
     });
     expect(withEmptyLlmKey.hasLlmKey).toBe(false);
   });

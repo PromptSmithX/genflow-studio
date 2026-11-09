@@ -20,8 +20,6 @@ export async function getOrCreateGlobalPrompt() {
 
 export function redactSettings(settings: AppSettings) {
   return {
-    comfyBaseUrl: settings.comfyBaseUrl,
-    hasGatewayToken: Boolean(process.env.COMFY_GATEWAY_TOKEN),
     runpodEndpointId: settings.runpodEndpointId,
     hasRunpodKey: Boolean(settings.runpodApiKey),
     defaultWidth: settings.defaultWidth,

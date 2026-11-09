@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api/errors";
 import { settingsUpdateSchema } from "@/lib/validations/settings";
-import { parseComfyBaseUrl } from "@/lib/validations/url";
 import { getOrCreateSettings, redactSettings } from "@/lib/settings";
 
 export const runtime = "nodejs";
@@ -19,22 +18,6 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const body = settingsUpdateSchema.parse(await request.json());
-
-    let comfyBaseUrl: string | null | undefined = undefined;
-    if (body.comfyBaseUrl !== undefined) {
-      if (body.comfyBaseUrl === null || body.comfyBaseUrl === "") {
-        comfyBaseUrl = null;
-      } else {
-        const parsed = parseComfyBaseUrl(body.comfyBaseUrl);
-        if (!parsed.ok) {
-          return NextResponse.json(
-            { error: { code: "invalid_url", message: parsed.error } },
-            { status: 400 },
-          );
-        }
-        comfyBaseUrl = parsed.url;
-      }
-    }
 
     let runpodEndpointId: string | null | undefined = undefined;
     if (body.runpodEndpointId !== undefined) {
@@ -70,7 +53,6 @@ export async function PUT(request: NextRequest) {
       data: {
         ...(runpodEndpointId !== undefined ? { runpodEndpointId } : {}),
         ...(runpodApiKey !== undefined ? { runpodApiKey } : {}),
-        ...(comfyBaseUrl !== undefined ? { comfyBaseUrl } : {}),
         ...(body.defaultWidth !== undefined ? { defaultWidth: body.defaultWidth } : {}),
         ...(body.defaultHeight !== undefined ? { defaultHeight: body.defaultHeight } : {}),
         ...(body.defaultSteps !== undefined ? { defaultSteps: body.defaultSteps } : {}),
@@ -90,13 +72,6 @@ export async function PUT(request: NextRequest) {
         ...(body.llmSystemPrompt !== undefined ? { llmSystemPrompt: body.llmSystemPrompt || null } : {}),
       },
     });
-
-    // Gateway token chỉ đọc từ env; LLM API key lưu cục bộ trong AppSettings.
-    if (body.gatewayToken) {
-      console.warn(
-        "A gateway token was submitted via the API but is not persisted. Set COMFY_GATEWAY_TOKEN in the server environment instead.",
-      );
-    }
 
     return NextResponse.json(redactSettings(updated));
   } catch (error) {

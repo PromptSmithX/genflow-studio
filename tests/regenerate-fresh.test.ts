@@ -31,7 +31,6 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/settings", () => ({
   getOrCreateSettings: vi.fn().mockResolvedValue({
-    comfyBaseUrl: "http://127.0.0.1:8188",
     runpodEndpointId: "ep-test",
     runpodApiKey: "rpa-test",
     llmApiKey: "mock-key",

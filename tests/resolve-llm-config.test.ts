@@ -77,20 +77,18 @@ describe("resolveLlmConfig", () => {
     expect(configCustom?.model).toBe("gpt-4o-mini");
   });
 
-  it("does not depend on comfyBaseUrl", () => {
-    const inputWithComfy = {
+  it("resolves default baseUrl when llmBaseUrl is null or empty", () => {
+    const inputNull = {
       llmBaseUrl: null,
       llmApiKey: "test-key",
       llmModel: null,
-      comfyBaseUrl: "http://127.0.0.1:8188",
     };
-    const inputWithoutComfy = {
-      llmBaseUrl: null,
+    const inputEmpty = {
+      llmBaseUrl: "",
       llmApiKey: "test-key",
       llmModel: null,
-      comfyBaseUrl: null,
     };
-    expect(resolveLlmConfig(inputWithComfy)).toEqual(resolveLlmConfig(inputWithoutComfy));
-    expect(resolveLlmConfig(inputWithComfy)?.baseUrl).toBe(DEFAULT_LLM_BASE_URL);
+    expect(resolveLlmConfig(inputNull)).toEqual(resolveLlmConfig(inputEmpty));
+    expect(resolveLlmConfig(inputNull)?.baseUrl).toBe(DEFAULT_LLM_BASE_URL);
   });
 });

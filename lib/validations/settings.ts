@@ -3,8 +3,6 @@ import { z } from "zod";
 export const seedModeSchema = z.enum(["random", "fixed"]);
 
 export const settingsUpdateSchema = z.object({
-  comfyBaseUrl: z.string().trim().optional().nullable(),
-  gatewayToken: z.string().trim().optional().nullable(),
   runpodEndpointId: z
     .string()
     .trim()

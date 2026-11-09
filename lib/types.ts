@@ -6,8 +6,6 @@ export type MediumDTO = MediumPreset;
 export type GeneratedImageDTO = GeneratedImage;
 
 export interface SettingsDTO {
-  comfyBaseUrl: string | null;
-  hasGatewayToken: boolean;
   runpodEndpointId: string | null;
   hasRunpodKey: boolean;
   defaultWidth: number;

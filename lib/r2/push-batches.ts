@@ -9,7 +9,7 @@ import { listCalendarFormats } from "@/lib/calendar/formats";
 import { readR2Config } from "./config";
 import { createR2Client, putObject } from "./client";
 import { ensureSkuBase } from "./sku";
-import { buildR2Folder, pageKey, previewKey, publicUrl, PAGE_FILENAMES } from "./keys";
+import { buildR2Folder, pageKey, previewKey, publicUrl, versionedUrl, PAGE_FILENAMES } from "./keys";
 import { mapFormatToR2 } from "./formats";
 import { renderBatchPages } from "./render-pages";
 import { buildCsv, buildRowsForBatch, type BatchUrlsInput } from "./csv";
@@ -155,6 +155,7 @@ export async function pushBatches(batchIds: string[]): Promise<PushBatchesResult
         batch.r2Folder = r2Folder;
       }
 
+      const version = Date.now();
       const batchUrlsInput: BatchUrlsInput = {
         skuBase,
         etsyTitle: batch.etsyTitle,
@@ -180,7 +181,7 @@ export async function pushBatches(batchIds: string[]): Promise<PushBatchesResult
           const filename = PAGE_FILENAMES[i];
           const key = pageKey(config.keyPrefix, r2Folder, info.size, "org", filename);
           uploadTasks.push({ key, filePath: org[i] });
-          batchUrlsInput.pages[info.code].org.push(publicUrl(config.publicBaseUrl, key));
+          batchUrlsInput.pages[info.code].org.push(versionedUrl(publicUrl(config.publicBaseUrl, key), version));
         }
 
         // Trang cen
@@ -188,7 +189,7 @@ export async function pushBatches(batchIds: string[]): Promise<PushBatchesResult
           const filename = PAGE_FILENAMES[i];
           const key = pageKey(config.keyPrefix, r2Folder, info.size, "cen", filename);
           uploadTasks.push({ key, filePath: cen[i] });
-          batchUrlsInput.pages[info.code].cen.push(publicUrl(config.publicBaseUrl, key));
+          batchUrlsInput.pages[info.code].cen.push(versionedUrl(publicUrl(config.publicBaseUrl, key), version));
         }
 
         await runWithConcurrency(uploadTasks, 4, async ({ key, filePath }) => {
@@ -214,7 +215,7 @@ export async function pushBatches(batchIds: string[]): Promise<PushBatchesResult
         const mappedName = `0${i + 1}_${cleanName}`;
         const key = previewKey(config.keyPrefix, r2Folder, mappedName);
         previewTasks.push({ key, filePath: path.join(mockupDir, rawName) });
-        batchUrlsInput.previews.push(publicUrl(config.publicBaseUrl, key));
+        batchUrlsInput.previews.push(versionedUrl(publicUrl(config.publicBaseUrl, key), version));
       }
 
       await runWithConcurrency(previewTasks, 4, async ({ key, filePath }) => {

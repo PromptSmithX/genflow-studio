@@ -84,15 +84,39 @@ describe("auto-publish", () => {
     expect(prisma.generationBatch.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "batch-1" },
-        data: expect.objectContaining({ autoStatus: "processing", autoError: null }),
+        data: expect.objectContaining({ autoStatus: "processing", autoStage: null, autoError: null }),
+      }),
+    );
+
+    // Check autoStage set before upscaleBatch
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "batch-1" },
+        data: { autoStage: "export" },
       }),
     );
 
     // Check upscale called with formatId
     expect(upscaleBatch).toHaveBeenCalledWith("batch-1", "premade_wall_11x8_5");
 
+    // Check autoStage set before pushBatches
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "batch-1" },
+        data: { autoStage: "r2" },
+      }),
+    );
+
     // Check push called
     expect(pushBatches).toHaveBeenCalledWith(["batch-1"]);
+
+    // Check autoStage set before syncBatchToSheet
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "batch-1" },
+        data: { autoStage: "sheet" },
+      }),
+    );
 
     // Check sheet sync called with rows
     expect(syncBatchToSheet).toHaveBeenCalledWith({
@@ -106,6 +130,7 @@ describe("auto-publish", () => {
         where: { id: "batch-1" },
         data: expect.objectContaining({
           autoStatus: "done",
+          autoStage: null,
           autoError: null,
           autoFinishedAt: expect.any(Date),
         }),
@@ -131,6 +156,7 @@ describe("auto-publish", () => {
         where: { id: "batch-2" },
         data: expect.objectContaining({
           autoStatus: "skipped",
+          autoStage: null,
           autoError: expect.stringContaining("requestedCount = 4"),
         }),
       }),
@@ -155,6 +181,7 @@ describe("auto-publish", () => {
         where: { id: "batch-3" },
         data: expect.objectContaining({
           autoStatus: "skipped",
+          autoStage: null,
           autoError: "Batch thiếu Etsy title",
         }),
       }),
@@ -277,6 +304,7 @@ describe("auto-publish", () => {
         where: { id: "batch-6" },
         data: expect.objectContaining({
           autoStatus: "done",
+          autoStage: null,
           autoError: expect.stringContaining("Đã đẩy R2 nhưng ghi Google Sheet lỗi"),
         }),
       }),

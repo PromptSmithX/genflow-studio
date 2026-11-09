@@ -66,3 +66,8 @@ export function publicUrl(baseUrl: string, key: string): string {
   const cleanKey = key.replace(/^\/+/, "");
   return `${base}/${cleanKey}`;
 }
+
+export function versionedUrl(url: string, version: number | string): string {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${version}`;
+}

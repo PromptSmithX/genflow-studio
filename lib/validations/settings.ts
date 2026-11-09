@@ -15,6 +15,7 @@ export const settingsUpdateSchema = z.object({
   outputDirectory: z.string().trim().min(1).optional(),
   autoPublish: z.boolean().optional(),
   autoFormatId: z.string().trim().min(1).optional(),
+  advancedMode: z.boolean().optional(),
   // Trợ lý AI đi qua cùng gateway Colab với ComfyUI (route "/llm") -- không
   // còn base URL/API key riêng để nhập ở app. llmModel vẫn tuỳ chọn override
   // nếu model mặc định phía Colab (Cell 7.6) khác. Xem lib/llm/resolve-config.ts.

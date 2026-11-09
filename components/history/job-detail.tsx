@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RegenerateButton } from "@/components/history/regenerate-button";
 import { useJobDetail } from "@/hooks/use-history";
+import { useAdvancedMode } from "@/hooks/use-settings";
 import { slotLabel } from "@/lib/calendar/slot-label";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ function copyToClipboard(text: string, label: string) {
 
 export function JobDetail({ jobId }: { jobId: string }) {
   const { data: job, isLoading } = useJobDetail(jobId);
+  const advancedMode = useAdvancedMode();
   const [variant, setVariant] = useState<Variant>("original");
 
   if (isLoading || !job) {
@@ -81,14 +83,16 @@ export function JobDetail({ jobId }: { jobId: string }) {
           <h2 className="text-lg font-semibold">{label}</h2>
           <p className="line-clamp-1 text-sm text-muted-foreground">{job.batch.ideaPrompt}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">{STATUS_LABEL[job.status]}</Badge>
-          {!pending && <RegenerateButton jobId={job.id} label={label} exported={exported} size="default" />}
-        </div>
+        {advancedMode && (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{STATUS_LABEL[job.status]}</Badge>
+            {!pending && <RegenerateButton jobId={job.id} label={label} exported={exported} size="default" />}
+          </div>
+        )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <div className="space-y-3">
+      {!advancedMode ? (
+        <div className="mx-auto max-w-4xl space-y-3">
           {imageSrc ? (
             <div className="relative w-full overflow-hidden rounded-md border bg-muted" style={{ aspectRatio }}>
               <Image src={imageSrc} alt={label} fill unoptimized className="object-contain" />
@@ -105,90 +109,124 @@ export function JobDetail({ jobId }: { jobId: string }) {
               ) : (
                 <>
                   <AlertTriangle className="h-6 w-6 text-red-600" />
-                  <span>Ảnh này bị lỗi. Bấm &quot;Sửa lại&quot; để AI viết mô tả mới và tạo lại.</span>
+                  <span>Ảnh này bị lỗi.</span>
                 </>
               )}
             </div>
           )}
 
-          {image && (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 p-1">
-                {variantOptions.map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => option.available && setVariant(option.key)}
-                    disabled={!option.available}
-                    title={option.available ? option.hint : "Chưa có — bản in có sau khi bấm Xuất file in"}
-                    className={cn(
-                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                      active.key === option.key
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              {downloadHref && (
-                <Button variant="outline" nativeButton={false} render={<a href={downloadHref} download />}>
-                  <Download /> Tải {active.label.toLowerCase()}
-                </Button>
-              )}
+          {downloadHref && (
+            <div className="flex justify-end">
+              <Button variant="outline" nativeButton={false} render={<a href={downloadHref} download />}>
+                <Download className="mr-1 h-4 w-4" /> Tải ảnh
+              </Button>
             </div>
           )}
-          {image && <p className="text-xs text-muted-foreground">{active.hint}.</p>}
         </div>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+          <div className="space-y-3">
+            {imageSrc ? (
+              <div className="relative w-full overflow-hidden rounded-md border bg-muted" style={{ aspectRatio }}>
+                <Image src={imageSrc} alt={label} fill unoptimized className="object-contain" />
+              </div>
+            ) : (
+              <div
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground"
+                style={{ aspectRatio }}
+              >
+                {pending ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" /> {STATUS_LABEL[job.status]}... trang tự cập nhật.
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                    <span>Ảnh này bị lỗi. Bấm &quot;Sửa lại&quot; để AI viết mô tả mới và tạo lại.</span>
+                  </>
+                )}
+              </div>
+            )}
 
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="space-y-2 p-4 text-sm">
-              {image?.maskStatus && (
-                <p>
-                  <span className="text-muted-foreground">Che ảnh: </span>
-                  {MASK_STATUS_LABEL[image.maskStatus] ?? image.maskStatus}
-                </p>
-              )}
-              <p className="text-muted-foreground">
-                {image?.upscaleStatus === "done"
-                  ? `Đã có bản in ${image.upscaledWidth}×${image.upscaledHeight}px.`
-                  : "Ảnh sẽ được phóng to đúng khổ in khi bạn bấm \"Xuất file in\" ở bộ lịch."}
-              </p>
-              {exported && (
-                <p className="text-amber-700 dark:text-amber-400">
-                  Bộ lịch đã xuất file in. Nếu sửa lại ảnh này, nhớ bấm &quot;Xuất lại file in&quot; ở bộ lịch.
-                </p>
-              )}
-              {job.errorMessage && (
-                <p className="text-red-700 dark:text-red-400">Lỗi: {job.errorMessage}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Accordion>
-            <AccordionItem value="technical">
-              <AccordionTrigger>Thông tin kỹ thuật (không cần xem)</AccordionTrigger>
-              <AccordionContent className="space-y-3 pt-2 text-sm">
-                <PromptRow title="Mô tả gửi cho máy tạo ảnh" text={job.positiveFinal} copyLabel="mô tả" />
-                <PromptRow title="Những thứ cần tránh" text={job.negativeFinal} copyLabel="phần cần tránh" />
-                <div className="grid grid-cols-2 gap-3">
-                  <Info label="Seed" value={job.seed ?? "—"} />
-                  <Info label="Kích thước" value={`${job.width ?? "—"}×${job.height ?? "—"}`} />
-                  <Info label="Steps" value={job.steps ?? "—"} />
-                  <Info label="CFG" value={job.cfg ?? "—"} />
-                  <Info label="Bắt đầu" value={job.startedAt ? new Date(job.startedAt).toLocaleString("vi-VN") : "—"} />
-                  <Info label="Kết thúc" value={job.finishedAt ? new Date(job.finishedAt).toLocaleString("vi-VN") : "—"} />
-                  <div className="col-span-2">
-                    <Info label="ComfyUI prompt ID" value={job.promptId ?? "—"} />
-                  </div>
+            {image && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border bg-muted/30 p-1">
+                  {variantOptions.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => option.available && setVariant(option.key)}
+                      disabled={!option.available}
+                      title={option.available ? option.hint : "Chưa có — bản in có sau khi bấm Xuất file in"}
+                      className={cn(
+                        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                        active.key === option.key
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                {downloadHref && (
+                  <Button variant="outline" nativeButton={false} render={<a href={downloadHref} download />}>
+                    <Download /> Tải {active.label.toLowerCase()}
+                  </Button>
+                )}
+              </div>
+            )}
+            {image && <p className="text-xs text-muted-foreground">{active.hint}.</p>}
+          </div>
+
+          <div className="space-y-4">
+            <Card>
+              <CardContent className="space-y-2 p-4 text-sm">
+                {image?.maskStatus && (
+                  <p>
+                    <span className="text-muted-foreground">Che ảnh: </span>
+                    {MASK_STATUS_LABEL[image.maskStatus] ?? image.maskStatus}
+                  </p>
+                )}
+                <p className="text-muted-foreground">
+                  {image?.upscaleStatus === "done"
+                    ? `Đã có bản in ${image.upscaledWidth}×${image.upscaledHeight}px.`
+                    : "Ảnh sẽ được phóng to đúng khổ in khi bạn bấm \"Xuất file in\" ở bộ lịch."}
+                </p>
+                {exported && (
+                  <p className="text-amber-700 dark:text-amber-400">
+                    Bộ lịch đã xuất file in. Nếu sửa lại ảnh này, nhớ bấm &quot;Xuất lại file in&quot; ở bộ lịch.
+                  </p>
+                )}
+                {job.errorMessage && (
+                  <p className="text-red-700 dark:text-red-400">Lỗi: {job.errorMessage}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Accordion>
+              <AccordionItem value="technical">
+                <AccordionTrigger>Thông tin kỹ thuật (không cần xem)</AccordionTrigger>
+                <AccordionContent className="space-y-3 pt-2 text-sm">
+                  <PromptRow title="Mô tả gửi cho máy tạo ảnh" text={job.positiveFinal} copyLabel="mô tả" />
+                  <PromptRow title="Những thứ cần tránh" text={job.negativeFinal} copyLabel="phần cần tránh" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Info label="Seed" value={job.seed ?? "—"} />
+                    <Info label="Kích thước" value={`${job.width ?? "—"}×${job.height ?? "—"}`} />
+                    <Info label="Steps" value={job.steps ?? "—"} />
+                    <Info label="CFG" value={job.cfg ?? "—"} />
+                    <Info label="Bắt đầu" value={job.startedAt ? new Date(job.startedAt).toLocaleString("vi-VN") : "—"} />
+                    <Info label="Kết thúc" value={job.finishedAt ? new Date(job.finishedAt).toLocaleString("vi-VN") : "—"} />
+                    <div className="col-span-2">
+                      <Info label="ComfyUI prompt ID" value={job.promptId ?? "—"} />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

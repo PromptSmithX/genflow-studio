@@ -1,43 +1,33 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { S3Client } from "@aws-sdk/client-s3";
 import { prisma } from "@/lib/db";
-import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
+import {
+  RunpodClient,
+  RunpodApiError,
+  type RunpodJobResult,
+  type RunpodOutputImage,
+} from "./runpod-client";
 import { resolveSafePath, buildOutputFilename, buildBatchFolder } from "@/lib/files/safe-output";
 import { resolveCensoredRoot } from "@/lib/output-dir";
 import { censorImages } from "@/lib/censor/run-censor";
+import { readR2Config, type R2Config } from "@/lib/r2/config";
+import { createR2Client, getObjectBuffer, deleteObject, RUNPOD_OUTPUT_PREFIX } from "@/lib/r2/client";
 
-function mimeTypeFromFilename(filename: string): string {
-  const ext = path.extname(filename).toLowerCase();
-  switch (ext) {
-    case ".png":
-      return "image/png";
-    case ".jpg":
-    case ".jpeg":
-      return "image/jpeg";
-    case ".webp":
-      return "image/webp";
-    default:
-      return "application/octet-stream";
-  }
-}
-
-/**
- * Syncs a single queued/running job against ComfyUI's /history endpoint,
- * downloading any new output images exactly once. Safe to call repeatedly
- * (e.g. from polling or a manual "sync" click) without creating duplicate
- * GeneratedImage rows, since it checks existing rows by filename first.
- */
-export async function syncJob(jobId: string, client: ComfyClient, outputRoot: string): Promise<void> {
-  const job = await prisma.generationJob.findUnique({ where: { id: jobId }, include: { images: true, batch: true } });
+export async function syncJob(jobId: string, client: RunpodClient, outputRoot: string): Promise<void> {
+  const job = await prisma.generationJob.findUnique({
+    where: { id: jobId },
+    include: { images: true, batch: true },
+  });
   if (!job) return;
   if (job.status === "completed" || job.status === "failed") return;
   if (!job.promptId) return;
 
-  let history;
+  let result: RunpodJobResult;
   try {
-    history = await client.getHistory(job.promptId);
+    result = await client.getJobResult(job.promptId);
   } catch (error) {
-    if (error instanceof ComfyApiError) {
+    if (error instanceof RunpodApiError) {
       await prisma.generationJob.update({
         where: { id: jobId },
         data: { status: "unknown", errorCode: error.code, errorMessage: error.message },
@@ -47,61 +37,113 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
     throw error;
   }
 
-  if (history.status === "not_found") {
-    // Not in /history yet does NOT mean lost: ComfyUI only moves a prompt into
-    // history after it finishes, so while queued/running it lives in /queue.
-    let activeIds: Set<string>;
-    try {
-      activeIds = await client.getActivePromptIds();
-    } catch {
-      activeIds = new Set();
-    }
+  if (result.status === "IN_QUEUE") {
+    return;
+  }
 
-    if (activeIds.has(job.promptId)) {
-      await prisma.generationJob.update({
-        where: { id: jobId },
-        data: { status: "running", startedAt: job.startedAt ?? new Date(), errorCode: null, errorMessage: null },
-      });
-      return;
-    }
+  if (result.status === "IN_PROGRESS") {
+    await prisma.generationJob.update({
+      where: { id: jobId },
+      data: { status: "running", startedAt: job.startedAt ?? new Date(), errorCode: null, errorMessage: null },
+    });
+    return;
+  }
 
-    // Neither in history nor in the queue. Allow a grace window after submit
-    // for the brief handoff between leaving the queue and appearing in
-    // history (and transient network hiccups) before declaring it lost.
-    const GRACE_MS = 120_000;
-    const since = job.submittedAt ?? job.createdAt;
-    if (Date.now() - since.getTime() < GRACE_MS) {
-      return; // keep current queued/running status, let polling retry
-    }
-
+  if (result.status === "FAILED" || result.status === "CANCELLED" || result.status === "TIMED_OUT") {
+    const errorCodeMap = {
+      FAILED: "runpod_failed",
+      CANCELLED: "runpod_cancelled",
+      TIMED_OUT: "runpod_timed_out",
+    } as const;
+    const defaultMsgMap = {
+      FAILED: "Lỗi xử lý trên RunPod Serverless",
+      CANCELLED: "Job đã bị hủy trên RunPod",
+      TIMED_OUT: "Job quá thời gian chờ trên RunPod",
+    };
     await prisma.generationJob.update({
       where: { id: jobId },
       data: {
-        status: "unknown",
-        errorCode: "history_not_found",
-        errorMessage: "Không tìm thấy job trong lịch sử ComfyUI. Runtime Colab có thể đã dừng.",
+        status: "failed",
+        errorCode: errorCodeMap[result.status],
+        errorMessage: result.error ?? defaultMsgMap[result.status],
+        finishedAt: new Date(),
       },
     });
     return;
   }
 
-  if (history.status === "running") {
-    await prisma.generationJob.update({
-      where: { id: jobId },
-      data: { status: "running", startedAt: job.startedAt ?? new Date() },
-    });
-    return;
+  if (result.status === "NOT_FOUND") {
+    let recoveredImages: RunpodOutputImage[] | null = null;
+    try {
+      const r2Config = readR2Config();
+      const r2Client = createR2Client(r2Config);
+      const prefix = RUNPOD_OUTPUT_PREFIX;
+      const origKey = `${prefix}/${job.promptId}/0.png`;
+      const maskedKey = `${prefix}/${job.promptId}/0.masked.png`;
+
+      const origBuf = await getObjectBuffer(r2Client, r2Config.bucket, origKey);
+      if (origBuf) {
+        const maskedBuf = await getObjectBuffer(r2Client, r2Config.bucket, maskedKey);
+        recoveredImages = [
+          {
+            index: 0,
+            filename: `${job.promptId}_0.png`,
+            key: origKey,
+            masked_key: maskedBuf ? maskedKey : null,
+            mask_status: maskedBuf ? "censored" : "failed",
+            width: null,
+            height: null,
+          },
+        ];
+      }
+    } catch {
+      // R2 unconfigured or error
+    }
+
+    if (recoveredImages && recoveredImages.length > 0) {
+      result = { status: "COMPLETED", images: recoveredImages };
+    } else {
+      const since = job.submittedAt ?? job.createdAt;
+      const GRACE_MS = 120_000;
+      if (Date.now() - since.getTime() < GRACE_MS) {
+        return;
+      }
+      await prisma.generationJob.update({
+        where: { id: jobId },
+        data: {
+          status: "failed",
+          errorCode: "result_expired",
+          errorMessage: "Không còn kết quả trên RunPod (quá 30 phút) — bấm Tạo lại",
+          finishedAt: new Date(),
+        },
+      });
+      return;
+    }
   }
 
-  if (history.images.length === 0) {
+  if (result.status === "COMPLETED" && result.images.length === 0) {
     await prisma.generationJob.update({
       where: { id: jobId },
       data: {
         status: "failed",
         errorCode: "no_output_images",
-        errorMessage: "ComfyUI báo hoàn thành nhưng không có ảnh output",
+        errorMessage: "RunPod báo hoàn thành nhưng không có ảnh output",
         finishedAt: new Date(),
       },
+    });
+    return;
+  }
+
+  let r2Config: R2Config;
+  let r2Client: S3Client;
+  try {
+    r2Config = readR2Config();
+    r2Client = createR2Client(r2Config);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Chưa cấu hình Cloudflare R2";
+    await prisma.generationJob.update({
+      where: { id: jobId },
+      data: { status: "unknown", errorCode: "download_failed", errorMessage: message },
     });
     return;
   }
@@ -109,17 +151,31 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   const existingFilenames = new Set(job.images.map((image) => image.filename));
   const censoredRoot = resolveCensoredRoot(outputRoot);
   const batchFolder = buildBatchFolder(job.batch);
-
-  const newImageIds: { id: string; relativePath: string }[] = [];
+  const keysToDelete: string[] = [];
 
   try {
-    for (const imageRef of history.images) {
-      if (existingFilenames.has(imageRef.filename)) continue;
+    for (const image of result.images) {
+      if (existingFilenames.has(image.filename)) {
+        if (image.key) keysToDelete.push(image.key);
+        if (image.masked_key) keysToDelete.push(image.masked_key);
+        continue;
+      }
 
-      const rawBuffer: Buffer = Buffer.from(await client.viewImage(imageRef));
-      const outRelativePath = `${batchFolder}/${buildOutputFilename(job.id, imageRef.filename)}`;
-      const mimeType = mimeTypeFromFilename(imageRef.filename);
+      const rawBuffer = await getObjectBuffer(r2Client, r2Config.bucket, image.key);
+      if (!rawBuffer) {
+        await prisma.generationJob.update({
+          where: { id: jobId },
+          data: {
+            status: "unknown",
+            errorCode: "download_failed",
+            errorMessage: "Không thể tải ảnh từ Cloudflare R2",
+          },
+        });
+        return;
+      }
+      keysToDelete.push(image.key);
 
+      const outRelativePath = `${batchFolder}/${buildOutputFilename(job.id, image.filename)}`;
       const outPath = resolveSafePath(outputRoot, outRelativePath);
       await fs.mkdir(path.dirname(outPath), { recursive: true });
       await fs.writeFile(outPath, rawBuffer);
@@ -128,61 +184,74 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
         data: {
           jobId: job.id,
           relativePath: outRelativePath,
-          filename: imageRef.filename,
-          mimeType,
+          filename: image.filename,
+          mimeType: "image/png",
+          width: image.width,
+          height: image.height,
         },
       });
-      newImageIds.push({ id: created.id, relativePath: created.relativePath });
+
+      let hasMasked = false;
+      if (image.masked_key && image.mask_status !== "failed") {
+        keysToDelete.push(image.masked_key);
+        try {
+          const maskedBuffer = await getObjectBuffer(r2Client, r2Config.bucket, image.masked_key);
+          if (maskedBuffer) {
+            const maskedOutPath = resolveSafePath(censoredRoot, outRelativePath);
+            await fs.mkdir(path.dirname(maskedOutPath), { recursive: true });
+            await fs.writeFile(maskedOutPath, maskedBuffer);
+            await prisma.generatedImage.update({
+              where: { id: created.id },
+              data: {
+                maskStatus: image.mask_status,
+                maskedRelativePath: outRelativePath,
+              },
+            });
+            hasMasked = true;
+          }
+        } catch (maskedErr) {
+          console.warn(`[job-sync] Tải ảnh che thất bại cho job ${job.id}:`, maskedErr);
+        }
+      }
+
+      if (!hasMasked) {
+        try {
+          const maskedOutPath = resolveSafePath(censoredRoot, outRelativePath);
+          await fs.mkdir(path.dirname(maskedOutPath), { recursive: true });
+          const results = await censorImages([{
+            input: outPath,
+            output: maskedOutPath,
+          }]);
+          const censorResult = results[0];
+          if (censorResult) {
+            const hasMaskedFile = censorResult.status === "censored" || censorResult.status === "clean";
+            await prisma.generatedImage.update({
+              where: { id: created.id },
+              data: {
+                maskStatus: censorResult.status,
+                maskedRelativePath: hasMaskedFile ? outRelativePath : null,
+              },
+            });
+          }
+        } catch (censorErr) {
+          console.error(`[job-sync] Fallback censor thất bại cho job ${job.id}:`, censorErr);
+        }
+      }
     }
   } catch (error) {
-    // Tải/lưu ảnh thất bại (timeout, tunnel interstitial, lỗi đĩa...). Đánh
-    // dấu job này là "unknown" thay vì ném lỗi ra ngoài, để một job lỗi
-    // không chặn việc đồng bộ các job khác trong cùng batch. Người dùng có
-    // thể bấm "Thử lại" (regenerate) trên job này.
-    const message = error instanceof Error ? error.message : "Lỗi không xác định khi tải ảnh output";
-    const code = error instanceof ComfyApiError ? error.code : "download_failed";
+    const message = error instanceof Error ? error.message : "Lỗi không xác định khi lưu ảnh output";
     await prisma.generationJob.update({
       where: { id: jobId },
-      data: { status: "unknown", errorCode: code, errorMessage: message },
+      data: { status: "unknown", errorCode: "download_failed", errorMessage: message },
     });
     return;
   }
 
-  if (newImageIds.length > 0) {
-    // Mọi ảnh của job này đều ghi vào cùng folder batch, nên 1 mkdir là đủ
-    // (resolveSafePath(censoredRoot, relativePath) chỉ ổn khi folder cha tồn tại
-    // -- censorImages/run-censor.ts tự writeFile, không tự mkdir).
-    await fs.mkdir(path.dirname(resolveSafePath(censoredRoot, newImageIds[0].relativePath)), { recursive: true });
-
-    // Che vùng nhạy cảm cho cả job trong 1 lần gọi, để model chỉ nạp một lần.
-    // Dịch vụ censor (NudeNet 640m, GPU) chạy trên cùng máy Colab với ComfyUI,
-    // sau CÙNG tunnel -- không cần URL riêng, chỉ ghép thêm /censor vào base URL
-    // đã cấu hình. Lỗi/thiếu cấu hình không được chặn job hoàn tất -- ảnh vẫn
-    // xem/tải được bản gốc, chỉ thiếu bản đã che.
+  for (const key of keysToDelete) {
     try {
-      const censorUrl = `${client.getBaseUrl()}/censor`;
-      const results = await censorImages(
-        newImageIds.map((image) => ({
-          input: resolveSafePath(outputRoot, image.relativePath),
-          output: resolveSafePath(censoredRoot, image.relativePath),
-        })),
-        censorUrl,
-      );
-
-      for (let i = 0; i < newImageIds.length; i += 1) {
-        const result = results[i];
-        if (!result) continue;
-        const hasMaskedFile = result.status === "censored" || result.status === "clean";
-        await prisma.generatedImage.update({
-          where: { id: newImageIds[i].id },
-          data: {
-            maskStatus: result.status,
-            maskedRelativePath: hasMaskedFile ? newImageIds[i].relativePath : null,
-          },
-        });
-      }
-    } catch (error) {
-      console.error(`[censorImages] bỏ qua che ảnh cho job ${job.id}:`, error);
+      await deleteObject(r2Client, r2Config.bucket, key);
+    } catch (err) {
+      console.warn(`[job-sync] Không thể xóa object ${key} trên R2:`, err);
     }
   }
 
@@ -192,13 +261,9 @@ export async function syncJob(jobId: string, client: ComfyClient, outputRoot: st
   });
 }
 
-// Per-batch in-flight promises so concurrent callers (BatchTracker poll, the
-// manual "Đồng bộ lại" button, and the background auto-sync poller) never run
-// syncBatch for the same batch at the same time -- which could otherwise
-// download the same output twice and create duplicate GeneratedImage rows.
 const inFlightBatchSyncs = new Map<string, Promise<void>>();
 
-export function syncBatchExclusive(batchId: string, client: ComfyClient, outputRoot: string): Promise<void> {
+export function syncBatchExclusive(batchId: string, client: RunpodClient, outputRoot: string): Promise<void> {
   const existing = inFlightBatchSyncs.get(batchId);
   if (existing) return existing;
 
@@ -209,15 +274,12 @@ export function syncBatchExclusive(batchId: string, client: ComfyClient, outputR
   return run;
 }
 
-export async function syncBatch(batchId: string, client: ComfyClient, outputRoot: string): Promise<void> {
+export async function syncBatch(batchId: string, client: RunpodClient, outputRoot: string): Promise<void> {
   const jobs = await prisma.generationJob.findMany({ where: { batchId }, orderBy: { indexInBatch: "asc" } });
   for (const job of jobs) {
     try {
       await syncJob(job.id, client, outputRoot);
     } catch (error) {
-      // Lỗi bất ngờ khi đồng bộ một job (vd lỗi DB) không được phép chặn
-      // việc đồng bộ các job còn lại trong batch; job này sẽ được thử lại
-      // ở lần poll kế tiếp.
       console.error(`syncJob thất bại cho job ${job.id}`, error);
     }
   }

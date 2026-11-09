@@ -10,7 +10,7 @@ import {
 } from "@/lib/comfyui/workflow-mapper";
 import { buildPrompts } from "@/lib/prompts/build-prompts";
 import { resolveSeeds } from "@/lib/seed";
-import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
+import { getRunpodClient, RunpodApiError } from "@/lib/comfyui/runpod-client";
 import type { CreateGenerationInput } from "@/lib/validations/generations";
 
 import { GenerationSetupError } from "./errors";
@@ -26,9 +26,7 @@ export { GenerationSetupError };
  */
 export async function createAndSubmitBatch(input: CreateGenerationInput) {
   const settings = await getOrCreateSettings();
-  if (!settings.comfyBaseUrl) {
-    throw new GenerationSetupError("Chưa cấu hình URL kết nối ComfyUI", "not_configured");
-  }
+  const client = getRunpodClient(settings);
 
   const workflowConfig = await getWorkflowConfig();
   if (!workflowConfig) {
@@ -152,8 +150,6 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     jobs.push(job);
   }
 
-  const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });
-
   for (const job of jobs) {
     const values: ApplyMappingValues = {
       positivePrompt: job.positiveFinal,
@@ -170,14 +166,14 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
 
     try {
       const mappedWorkflow = applyWorkflowMapping(workflow, mapping, values);
-      const result = await client.submitPrompt(mappedWorkflow, batch.id);
+      const result = await client.submitJob(mappedWorkflow);
       await prisma.generationJob.update({
         where: { id: job.id },
-        data: { promptId: result.promptId, status: "queued", submittedAt: new Date() },
+        data: { promptId: result.jobId, status: "queued", submittedAt: new Date() },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Lỗi không xác định khi gửi job";
-      const code = error instanceof ComfyApiError ? error.code : "submit_failed";
+      const code = error instanceof RunpodApiError ? error.code : "submit_failed";
       logSubmitError(job.id, error);
       await prisma.generationJob.update({
         where: { id: job.id },
@@ -190,18 +186,16 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
 }
 
 /**
- * Logs a failed ComfyUI submit to the Next.js terminal for diagnosis. Only the
- * error message + its structured `details` (node_errors) are logged -- never
- * request headers, so the gateway token/authorization header is never printed.
+ * Logs a failed RunPod submit to the Next.js terminal for diagnosis.
  */
 function logSubmitError(jobId: string, error: unknown): void {
-  if (error instanceof ComfyApiError) {
+  if (error instanceof RunpodApiError) {
     console.error(
-      `[ComfyUI submit] job=${jobId} code=${error.code} ${error.message}\n` +
+      `[RunPod submit] job=${jobId} code=${error.code} ${error.message}\n` +
         `details=${JSON.stringify(error.details)}`,
     );
   } else {
-    console.error(`[ComfyUI submit] job=${jobId}`, error);
+    console.error(`[RunPod submit] job=${jobId}`, error);
   }
 }
 
@@ -221,9 +215,7 @@ export async function regenerateJob(sourceJobId: string, options: RegenerateOpti
   }
 
   const settings = await getOrCreateSettings();
-  if (!settings.comfyBaseUrl) {
-    throw new GenerationSetupError("Chưa cấu hình URL kết nối ComfyUI", "not_configured");
-  }
+  const client = getRunpodClient(settings);
 
   const workflowConfig = await getWorkflowConfig();
   if (!workflowConfig) {
@@ -270,7 +262,6 @@ export async function regenerateJob(sourceJobId: string, options: RegenerateOpti
     },
   });
 
-  const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });
   const values: ApplyMappingValues = {
     positivePrompt: job.positiveFinal,
     negativePrompt: job.negativeFinal,
@@ -286,14 +277,14 @@ export async function regenerateJob(sourceJobId: string, options: RegenerateOpti
 
   try {
     const mappedWorkflow = applyWorkflowMapping(workflow, mapping, values);
-    const result = await client.submitPrompt(mappedWorkflow, batch.id);
+    const result = await client.submitJob(mappedWorkflow);
     await prisma.generationJob.update({
       where: { id: job.id },
-      data: { promptId: result.promptId, status: "queued", submittedAt: new Date() },
+      data: { promptId: result.jobId, status: "queued", submittedAt: new Date() },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Lỗi không xác định khi gửi job";
-    const code = error instanceof ComfyApiError ? error.code : "submit_failed";
+    const code = error instanceof RunpodApiError ? error.code : "submit_failed";
     logSubmitError(job.id, error);
     await prisma.generationJob.update({
       where: { id: job.id },

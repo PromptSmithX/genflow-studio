@@ -7,7 +7,6 @@ import { ConnectOnboarding } from "@/components/app-shell/connect-onboarding";
 
 const TITLES: Record<string, string> = {
   "/create": "Tạo ảnh",
-  "/prompts": "Thư viện prompt",
   "/history": "Kết quả",
   "/settings": "Cài đặt",
 };

@@ -37,11 +37,12 @@ export function runAutoPublishExclusive(batchId: string): Promise<AutoPublishRes
 
 export async function runAutoPublish(batchId: string): Promise<AutoPublishResult> {
   try {
-    // 1. Set autoStatus: "processing", autoError: null
+    // 1. Set autoStatus: "processing", autoStage: null, autoError: null
     await prisma.generationBatch.update({
       where: { id: batchId },
       data: {
         autoStatus: "processing",
+        autoStage: null,
         autoError: null,
       },
     });
@@ -60,6 +61,7 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
         where: { id: batchId },
         data: {
           autoStatus: "skipped",
+          autoStage: null,
           autoError: skipReason,
           autoFinishedAt: new Date(),
         },
@@ -68,6 +70,11 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
     }
 
     // 3. upscaleBatch (gồm bìa sau + xuất thư mục + mockup)
+    await prisma.generationBatch.update({
+      where: { id: batchId },
+      data: { autoStage: "export" },
+    });
+
     const settings = await getOrCreateSettings();
     const formatId = settings.autoFormatId || "premade_wall_11x8_5";
     const upscaleResult = await upscaleBatch(batchId, formatId);
@@ -80,6 +87,11 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
     }
 
     // 4. pushBatches
+    await prisma.generationBatch.update({
+      where: { id: batchId },
+      data: { autoStage: "r2" },
+    });
+
     const pushResult = await pushBatches([batchId]);
     const batchPush = pushResult.results.find((r) => r.batchId === batchId);
     if (!batchPush || !batchPush.ok) {
@@ -87,6 +99,11 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
     }
 
     // 5. syncBatchToSheet (lỗi Sheet không làm fail pipeline)
+    await prisma.generationBatch.update({
+      where: { id: batchId },
+      data: { autoStage: "sheet" },
+    });
+
     let sheetError: string | null = null;
     try {
       await syncBatchToSheet({ batchId, rows: batchPush.rows });
@@ -101,6 +118,7 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
       where: { id: batchId },
       data: {
         autoStatus: "done",
+        autoStage: null,
         autoError: sheetError,
         autoFinishedAt: finishedAt,
       },

@@ -26,12 +26,18 @@ export function RegenerateButton({
   jobId,
   label,
   exported,
+  simple = false,
+  disabled = false,
+  title,
   size = "sm",
   className,
 }: {
   jobId: string;
   label: string;
   exported: boolean;
+  simple?: boolean;
+  disabled?: boolean;
+  title?: string;
   size?: "sm" | "default";
   className?: string;
 }) {
@@ -40,8 +46,14 @@ export function RegenerateButton({
 
   function run() {
     regenerateMutation.mutate(jobId, {
-      onSuccess: () => toast.success(`Đang tạo lại "${label}" với mô tả mới...`),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Sửa lại thất bại"),
+      onSuccess: () =>
+        toast.success(
+          simple ? `Đang tạo lại "${label}"...` : `Đang tạo lại "${label}" với mô tả mới...`,
+        ),
+      onError: (e) =>
+        toast.error(
+          e instanceof Error ? e.message : simple ? "Tạo lại thất bại" : "Sửa lại thất bại",
+        ),
       onSettled: () => setConfirmOpen(false),
     });
   }
@@ -49,38 +61,52 @@ export function RegenerateButton({
   function handleClick(event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
-    if (exported) setConfirmOpen(true);
+    if (simple || exported) setConfirmOpen(true);
     else run();
   }
 
+  const button = (
+    <Button
+      type="button"
+      size={size}
+      variant="secondary"
+      onClick={handleClick}
+      disabled={disabled || regenerateMutation.isPending}
+      className={className}
+      title={title}
+    >
+      {regenerateMutation.isPending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+      {simple ? "Tạo lại" : "Sửa lại"}
+    </Button>
+  );
+
   return (
     <>
-      <Button
-        type="button"
-        size={size}
-        variant="secondary"
-        onClick={handleClick}
-        disabled={regenerateMutation.isPending}
-        className={className}
-      >
-        {regenerateMutation.isPending ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-        Sửa lại
-      </Button>
+      {disabled && title ? (
+        <span className="inline-flex" title={title}>
+          {button}
+        </span>
+      ) : (
+        button
+      )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sửa lại &quot;{label}&quot;?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {simple ? `Tạo lại "${label}"?` : `Sửa lại "${label}"?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Bộ lịch này đã xuất file in. Sau khi ảnh mới tạo xong, bạn cần bấm &quot;Xuất file in&quot; lại để thư mục
-              trên máy và ảnh mockup được cập nhật theo ảnh mới.
+              {simple
+                ? `Ảnh ${label} sẽ được tạo lại (khoảng 1 phút). Xong app tự cập nhật lên kho dữ liệu và Google Sheet, bạn không cần làm gì thêm.`
+                : `Bộ lịch này đã xuất file in. Sau khi ảnh mới tạo xong, bạn cần bấm "Xuất file in" lại để thư mục trên máy và ảnh mockup được cập nhật theo ảnh mới.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Thôi</AlertDialogCancel>
             <AlertDialogAction onClick={run} disabled={regenerateMutation.isPending}>
               {regenerateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              Sửa lại ảnh này
+              {simple ? "Tạo lại" : "Sửa lại ảnh này"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

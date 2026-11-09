@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  FileSpreadsheet,
   FileText,
   Folder,
   Loader2,
@@ -23,7 +24,10 @@ import { OpenFolderButton } from "@/components/history/open-folder-button";
 import { EtsyMetadataCard } from "@/components/history/etsy-metadata-card";
 import { BatchMockupSection } from "@/components/history/batch-mockup-section";
 import { RegenerateButton } from "@/components/history/regenerate-button";
+import { PipelineProgress } from "@/components/history/pipeline-progress";
 import { useResyncBatch, useAutoPublishBatch } from "@/hooks/use-history";
+import { useAdvancedMode } from "@/hooks/use-settings";
+import { useSheetUrl } from "@/hooks/use-sheets";
 import { slotLabel } from "@/lib/calendar/slot-label";
 import type { GenerationBatchDTO, GenerationJobDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -92,8 +96,94 @@ function renderAutoStatusBadge(status?: string | null) {
   }
 }
 
+function renderUnifiedStatusBadge(
+  batch: GenerationBatchDTO,
+  pendingCount: number,
+  readyCount: number,
+  total: number,
+  problemCount: number,
+  exported: boolean,
+) {
+  if (batch.autoStatus === "done") {
+    return (
+      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs">
+        <Check className="mr-1 h-3 w-3" />
+        Hoàn tất
+      </Badge>
+    );
+  }
+  if (batch.autoStatus === "retrying") {
+    return (
+      <Badge variant="secondary" className="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 text-xs">
+        <RefreshCcw className="mr-1 h-3 w-3 animate-spin" />
+        Đang tạo lại ảnh lỗi
+      </Badge>
+    );
+  }
+  if (batch.autoStatus === "processing") {
+    let text = "Đang xử lý";
+    if (batch.autoStage === "export") text = "Đang chuẩn bị file in & mockup";
+    else if (batch.autoStage === "r2") text = "Đang lưu kho dữ liệu";
+    else if (batch.autoStage === "sheet") text = "Đang ghi Google Sheet";
+    else if (pendingCount > 0) text = `Đang tạo ảnh ${readyCount}/${total}`;
+
+    return (
+      <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-xs">
+        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+        {text}
+      </Badge>
+    );
+  }
+  if (batch.autoStatus === "failed") {
+    return (
+      <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 text-xs">
+        <AlertTriangle className="mr-1 h-3 w-3" />
+        Lỗi xử lý
+      </Badge>
+    );
+  }
+  if (batch.autoStatus === "skipped") {
+    return (
+      <Badge variant="secondary" className="text-xs">
+        Bỏ qua tự động
+      </Badge>
+    );
+  }
+  if (pendingCount > 0) {
+    return (
+      <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-xs">
+        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+        Đang tạo ảnh {readyCount}/{total}
+      </Badge>
+    );
+  }
+  if (problemCount > 0) {
+    return (
+      <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 text-xs">
+        <AlertTriangle className="mr-1 h-3 w-3" />
+        {problemCount} ảnh lỗi
+      </Badge>
+    );
+  }
+  if (exported) {
+    return (
+      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs">
+        <Check className="mr-1 h-3 w-3" />
+        Hoàn tất
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 text-xs">
+      Chờ xử lý
+    </Badge>
+  );
+}
+
 export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const advancedMode = useAdvancedMode();
+  const sheetUrl = useSheetUrl();
   const resyncMutation = useResyncBatch();
   const autoPublishMutation = useAutoPublishBatch();
 
@@ -103,13 +193,13 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
   function handleRetryAuto(e: React.MouseEvent) {
     e.stopPropagation();
     autoPublishMutation.mutate(batch.id, {
-      onSuccess: () => toast.success("Đã kích hoạt chạy lại tự động"),
+      onSuccess: () => toast.success("Đã bắt đầu chạy lại, tiến trình sẽ tự cập nhật"),
       onError: (err) => toast.error(err instanceof Error ? err.message : "Chạy lại tự động thất bại"),
     });
   }
 
   const jobs = [...batch.jobs].sort((a, b) => a.indexInBatch - b.indexInBatch);
-  const total = jobs.length;
+  const total = batch.requestedCount || jobs.length || 13;
   const pendingCount = jobs.filter(isPending).length;
   const problemCount = jobs.filter(isProblem).length;
   const readyCount = total - pendingCount - problemCount;
@@ -158,33 +248,39 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
             <span>{new Date(batch.createdAt).toLocaleString("vi-VN")}</span>
             <span>·</span>
             <span>{total} ảnh</span>
-            {batch.r2SkuBase && (
+            {advancedMode && batch.r2SkuBase && (
               <>
                 <span>·</span>
                 <span className="font-mono text-xs">SKU: {batch.r2SkuBase}</span>
               </>
             )}
-            {batch.r2Status === "done" && (
+            {advancedMode && batch.r2Status === "done" && (
               <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-xs">
                 Đã đẩy R2
               </Badge>
             )}
-            {renderAutoStatusBadge(batch.autoStatus)}
-            <Badge
-              variant="secondary"
-              className={cn(
-                "text-xs",
-                summary.tone === "success" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-                summary.tone === "warn" && "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
-                summary.tone === "danger" && "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-                summary.tone === "info" && "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-              )}
-            >
-              {pendingCount > 0 && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-              {summary.text}
-            </Badge>
+            {advancedMode ? (
+              <>
+                {renderAutoStatusBadge(batch.autoStatus)}
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "text-xs",
+                    summary.tone === "success" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+                    summary.tone === "warn" && "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
+                    summary.tone === "danger" && "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+                    summary.tone === "info" && "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
+                  )}
+                >
+                  {pendingCount > 0 && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                  {summary.text}
+                </Badge>
+              </>
+            ) : (
+              renderUnifiedStatusBadge(batch, pendingCount, readyCount, total, problemCount, exported)
+            )}
           </div>
-          {batch.autoError && (
+          {advancedMode && batch.autoError && (
             <p className="text-xs text-red-600 dark:text-red-400 line-clamp-1" title={batch.autoError}>
               {batch.autoError}
             </p>
@@ -203,7 +299,7 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
           )}
         </div>
         <div className="flex items-center gap-2">
-          {canRetryAuto && (
+          {advancedMode && canRetryAuto && (
             <Button
               variant="outline"
               size="sm"
@@ -229,51 +325,94 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
 
       {open && (
         <div className="space-y-6 border-t p-4">
-          <Stepper current={currentStep} />
+          {!advancedMode ? (
+            <>
+              <PipelineProgress batch={batch} />
 
-          {pendingCount > 0 && (
-            <div className="space-y-2">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${Math.round(((total - pendingCount) / Math.max(total, 1)) * 100)}%` }}
-                />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>
-                  Mỗi ảnh mất khoảng 1 phút. Trang tự cập nhật, bạn không cần tải lại. Có thể chuyển sang việc khác.
-                </span>
-                <Button variant="ghost" size="sm" onClick={handleResync} disabled={resyncMutation.isPending}>
-                  <RefreshCcw className={resyncMutation.isPending ? "animate-spin" : undefined} />
-                  Ảnh lâu chưa hiện? Kiểm tra lại
-                </Button>
-              </div>
-            </div>
+              {batch.autoStatus === "done" && (
+                <div className="space-y-4">
+                  {batch.autoError && (
+                    <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span>{batch.autoError}</span>
+                    </div>
+                  )}
+
+                  {sheetUrl ? (
+                    <Button
+                      size="lg"
+                      className="w-full text-base font-semibold"
+                      nativeButton={false}
+                      render={<a href={sheetUrl} target="_blank" rel="noopener noreferrer" />}
+                    >
+                      <FileSpreadsheet className="h-5 w-5" /> Mở Google Sheet
+                    </Button>
+                  ) : (
+                    <Button size="lg" className="w-full text-base font-semibold" disabled title="Chưa cấu hình Google Sheet">
+                      <FileSpreadsheet className="h-5 w-5" /> Mở Google Sheet
+                    </Button>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <Stepper current={currentStep} />
+
+              {pendingCount > 0 && (
+                <div className="space-y-2">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.round(((total - pendingCount) / Math.max(total, 1)) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Mỗi ảnh mất khoảng 1 phút. Trang tự cập nhật, bạn không cần tải lại. Có thể chuyển sang việc khác.
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={handleResync} disabled={resyncMutation.isPending}>
+                      <RefreshCcw className={resyncMutation.isPending ? "animate-spin" : undefined} />
+                      Ảnh lâu chưa hiện? Kiểm tra lại
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {exportStale && pendingCount === 0 && (
+                <Notice tone="warn">
+                  Có ảnh vừa được sửa lại nên thư mục trên máy và ảnh mockup đang là bản cũ. Hãy bấm{" "}
+                  <strong>Xuất lại file in</strong> để cập nhật.
+                </Notice>
+              )}
+
+              {problemCount > 0 && pendingCount === 0 && (
+                <Notice tone="danger">
+                  Có {problemCount} ảnh bị lỗi. Bấm <strong>Sửa lại</strong> dưới ảnh đó để AI viết mô tả mới và tạo lại.
+                </Notice>
+              )}
+            </>
           )}
 
-          {exportStale && pendingCount === 0 && (
-            <Notice tone="warn">
-              Có ảnh vừa được sửa lại nên thư mục trên máy và ảnh mockup đang là bản cũ. Hãy bấm{" "}
-              <strong>Xuất lại file in</strong> để cập nhật.
-            </Notice>
-          )}
-
-          {problemCount > 0 && pendingCount === 0 && (
-            <Notice tone="danger">
-              Có {problemCount} ảnh bị lỗi. Bấm <strong>Sửa lại</strong> dưới ảnh đó để AI viết mô tả mới và tạo lại.
-            </Notice>
-          )}
-
+          {/* Common Image Grid + Back Cover */}
           <section className="space-y-2">
             <div>
               <p className="text-sm font-medium">Ảnh trong bộ lịch</p>
               <p className="text-xs text-muted-foreground">
-                Bấm vào ảnh để xem lớn. Ảnh nào chưa ưng thì bấm &quot;Sửa lại&quot;.
+                {advancedMode
+                  ? "Bấm vào ảnh để xem lớn. Ảnh nào chưa ưng thì bấm \"Sửa lại\"."
+                  : "Bấm vào ảnh để xem lớn."}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {jobs.map((job) => (
-                <ImageTile key={job.id} job={job} exported={exported} />
+                <ImageTile
+                  key={job.id}
+                  job={job}
+                  exported={exported}
+                  advancedMode={advancedMode}
+                  autoStatus={batch.autoStatus}
+                />
               ))}
               {hasBackCover && (
                 <div className="overflow-hidden rounded-md border bg-card">
@@ -295,42 +434,47 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
             </div>
           </section>
 
-          {pendingCount === 0 && readyCount > 0 && (
-            <section className="space-y-3 rounded-lg border p-4">
-              <div>
-                <p className="text-sm font-medium">{exported ? "File in đã xuất" : "Xuất file in"}</p>
-                <p className="text-xs text-muted-foreground">
-                  {exported
-                    ? "Muốn đổi khổ lịch hoặc vừa sửa ảnh? Chọn khổ rồi bấm Xuất lại."
-                    : "Ưng ý hết rồi thì chọn khổ lịch và bấm Xuất file in. App sẽ phóng to ảnh, ghép bìa sau và tạo mockup."}
-                </p>
-              </div>
-              {problemCount > 0 && !exported && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  Nên sửa ảnh lỗi trước — nếu thiếu trang, thư mục sẽ không đủ và không tạo được mockup.
-                </p>
-              )}
-              <BatchUpscaleButton batchId={batch.id} imageCount={readyCount} isReExport={exported || exportStale} />
+          {/* Advanced Mode: Export & Mockup sections */}
+          {advancedMode && (
+            <>
+              {pendingCount === 0 && readyCount > 0 && (
+                <section className="space-y-3 rounded-lg border p-4">
+                  <div>
+                    <p className="text-sm font-medium">{exported ? "File in đã xuất" : "Xuất file in"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {exported
+                        ? "Muốn đổi khổ lịch hoặc vừa sửa ảnh? Chọn khổ rồi bấm Xuất lại."
+                        : "Ưng ý hết rồi thì chọn khổ lịch và bấm Xuất file in. App sẽ phóng to ảnh, ghép bìa sau và tạo mockup."}
+                    </p>
+                  </div>
+                  {problemCount > 0 && !exported && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      Nên sửa ảnh lỗi trước — nếu thiếu trang, thư mục sẽ không đủ và không tạo được mockup.
+                    </p>
+                  )}
+                  <BatchUpscaleButton batchId={batch.id} imageCount={readyCount} isReExport={exported || exportStale} />
 
-              {exported && batch.finalExportRelativePath && (
-                <FolderSummary
-                  batch={batch}
-                  pageCount={readyCount + (hasBackCover ? 1 : 0)}
-                  hasEtsy={Boolean(batch.etsyTitle || batch.etsyDescription || batch.etsyTagsJson)}
-                />
+                  {exported && batch.finalExportRelativePath && (
+                    <FolderSummary
+                      batch={batch}
+                      pageCount={readyCount + (hasBackCover ? 1 : 0)}
+                      hasEtsy={Boolean(batch.etsyTitle || batch.etsyDescription || batch.etsyTagsJson)}
+                    />
+                  )}
+                </section>
               )}
-            </section>
-          )}
 
-          {exported && (
-            <section className="space-y-6 rounded-lg border p-4">
-              <BatchMockupSection batchId={batch.id} mockupStatus={batch.mockupStatus} />
-              <EtsyMetadataCard
-                title={batch.etsyTitle}
-                description={batch.etsyDescription}
-                tagsJson={batch.etsyTagsJson}
-              />
-            </section>
+              {exported && (
+                <section className="space-y-6 rounded-lg border p-4">
+                  <BatchMockupSection batchId={batch.id} mockupStatus={batch.mockupStatus} />
+                  <EtsyMetadataCard
+                    title={batch.etsyTitle}
+                    description={batch.etsyDescription}
+                    tagsJson={batch.etsyTagsJson}
+                  />
+                </section>
+              )}
+            </>
           )}
         </div>
       )}
@@ -385,10 +529,21 @@ function Notice({ tone, children }: { tone: "warn" | "danger"; children: ReactNo
   );
 }
 
-function ImageTile({ job, exported }: { job: GenerationJobDTO; exported: boolean }) {
+function ImageTile({
+  job,
+  exported,
+  advancedMode,
+  autoStatus,
+}: {
+  job: GenerationJobDTO;
+  exported: boolean;
+  advancedMode: boolean;
+  autoStatus?: string | null;
+}) {
   const label = slotLabel(job.indexInBatch);
   const image = job.images[0];
   const pending = isPending(job);
+  const isAutoSyncing = !advancedMode && (autoStatus === "pending" || autoStatus === "processing");
 
   return (
     <div
@@ -421,6 +576,9 @@ function ImageTile({ job, exported }: { job: GenerationJobDTO; exported: boolean
               <>
                 <AlertTriangle className="h-5 w-5 text-red-600" />
                 <span className="text-red-700 dark:text-red-400">Tạo ảnh bị lỗi</span>
+                {!advancedMode && (
+                  <span className="text-xs text-muted-foreground">Bấm Tạo lại để thử lại</span>
+                )}
               </>
             )}
           </div>
@@ -428,7 +586,16 @@ function ImageTile({ job, exported }: { job: GenerationJobDTO; exported: boolean
       </Link>
       <div className="flex items-center justify-between gap-2 p-2">
         <span className="truncate text-sm font-medium">{label}</span>
-        {!pending && <RegenerateButton jobId={job.id} label={label} exported={exported} />}
+        {!pending && (
+          <RegenerateButton
+            jobId={job.id}
+            label={label}
+            exported={exported}
+            simple={!advancedMode}
+            disabled={isAutoSyncing}
+            title={isAutoSyncing ? "Đang cập nhật kho & Google Sheet, đợi xong rồi thử lại" : undefined}
+          />
+        )}
       </div>
     </div>
   );

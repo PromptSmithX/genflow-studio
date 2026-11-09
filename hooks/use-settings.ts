@@ -10,6 +10,10 @@ export function useSettings() {
   });
 }
 
+export function useAdvancedMode(): boolean {
+  return useSettings().data?.advancedMode ?? false;
+}
+
 export function useUpdateSettings() {
   const queryClient = useQueryClient();
   return useMutation({

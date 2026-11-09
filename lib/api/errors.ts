@@ -35,7 +35,8 @@ export function handleApiError(error: unknown) {
     return apiError(error.code, error.message, error.code === "no_config" ? 400 : 502);
   }
   if (error instanceof GenerationSetupError) {
-    return apiError(error.code, error.message, 400);
+    const status = error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : 400;
+    return apiError(error.code, error.message, status);
   }
   if (error instanceof WorkflowMappingError) {
     return apiError("mapping_error", error.message, 400, {

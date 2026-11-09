@@ -5,6 +5,7 @@ import {
   pageKey,
   previewKey,
   publicUrl,
+  versionedUrl,
   PAGE_FILENAMES,
 } from "@/lib/r2/keys";
 
@@ -94,6 +95,23 @@ describe("r2-keys", () => {
       );
       expect(publicUrl("https://pub-cdn.r2.dev/", "/calendars/anima/img.png")).toBe(
         "https://pub-cdn.r2.dev/calendars/anima/img.png",
+      );
+    });
+  });
+
+  describe("versionedUrl", () => {
+    it("appends ?v= when no query string exists", () => {
+      expect(versionedUrl("https://pub.r2.dev/img.png", 1731060000000)).toBe(
+        "https://pub.r2.dev/img.png?v=1731060000000",
+      );
+      expect(versionedUrl("https://pub.r2.dev/img.png", "v1")).toBe(
+        "https://pub.r2.dev/img.png?v=v1",
+      );
+    });
+
+    it("appends &v= when query string already exists", () => {
+      expect(versionedUrl("https://pub.r2.dev/img.png?token=abc", 123)).toBe(
+        "https://pub.r2.dev/img.png?token=abc&v=123",
       );
     });
   });

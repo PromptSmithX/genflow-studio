@@ -147,7 +147,7 @@ def extract_images_from_history(history_data: dict, prompt_id: str) -> tuple[lis
     return images, None
 
 # Read width and height from PNG IHDR chunk
-def get_png_dimensions(data_or_path) -> tuple[int, int]:
+def get_png_dimensions(data_or_path) -> tuple[int | None, int | None]:
     try:
         if isinstance(data_or_path, (str, Path)):
             with open(data_or_path, "rb") as f:
@@ -165,10 +165,10 @@ def get_png_dimensions(data_or_path) -> tuple[int, int]:
             return int(img.width), int(img.height)
     except Exception:
         pass
-    return 1024, 1536
+    return None, None
 
 # Build object keys and filenames according to output contract
-def build_r2_keys(job_id: str, index: int, prefix: str, mask_status: str, width: int, height: int) -> dict:
+def build_r2_keys(job_id: str, index: int, prefix: str, mask_status: str, width: int | None, height: int | None) -> dict:
     return {
         "index": index,
         "filename": f"{job_id}_{index}.png",
@@ -311,7 +311,9 @@ def handler(job: dict) -> dict:
                 masked_path = job_tmp / f"{idx}.masked.png"
                 orig_path.write_bytes(view_resp.content)
                 width, height = get_png_dimensions(orig_path)
-                mask_status, _ = run_censor_subprocess(orig_path, masked_path, timeout=120)
+                mask_status, censor_err = run_censor_subprocess(orig_path, masked_path, timeout=120)
+                if mask_status == "failed":
+                    print(f"[censor] job={job_id} index={idx} failed: {censor_err}", flush=True)
                 img_contract = build_r2_keys(job_id, idx, prefix, mask_status, width, height)
                 try:
                     s3_client.upload_file(

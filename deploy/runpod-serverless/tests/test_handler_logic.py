@@ -150,8 +150,8 @@ def test_get_png_dimensions_valid_header():
 # Test fallback dimensions for non-PNG content
 def test_get_png_dimensions_fallback():
     w, h = get_png_dimensions(b"non-png-data")
-    assert isinstance(w, int)
-    assert isinstance(h, int)
+    assert w is None
+    assert h is None
 
 # Test building R2 keys for censored, clean, and failed mask statuses
 def test_build_r2_keys():

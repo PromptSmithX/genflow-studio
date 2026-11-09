@@ -91,7 +91,11 @@ Không có GPU trong môi trường này. Tối thiểu: `python -m py_compile` 
    - Commit 1 (Dockerfile): `1b7f095` - `feat(deploy): add RunPod serverless Dockerfile and model download script`
    - Commit 2 (Censor): `a9b3cc8` - `feat(deploy): implement balanced image censorship library and CLI`
    - Commit 3 (Handler): `143baf5` - `feat(deploy): implement RunPod serverless handler and unit tests`
-   - Commit 4 (README & test input): `feat(deploy): add test input, complete README guide, and finalize P1 task`
+   - Commit 4 (README & test input): `7c008d1` - `feat(deploy): add test input, complete README guide, and finalize P1 task`
+   - Commit 5 (Review 1 - Blocker 1): `3002579` - `fix(deploy): extract 640m.onnx downloader into standalone script and add tests`
+   - Commit 6 (Review 1 - Blocker 2): `e4fe267` - `fix(deploy): parse ComfyUI prompt response and allow empty node_errors`
+   - Commit 7 (Review 1 - Item 3): `aa09a11` - `fix(deploy): ensure temporary files cleanup runs via try-finally and supports subfolders`
+   - Commit 8 (Review 1 - Items 4, 5, 6): `fix(deploy): log censor errors, fallback PNG dims to null, and pin pip dependencies`
 
 2. **Phiên bản & Pinning:**
    - Base image: `pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime` (đã xác thực tồn tại trên Docker Hub registry).

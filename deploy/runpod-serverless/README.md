@@ -15,6 +15,7 @@ Worker chạy dưới dạng container serverless trên nền tảng [RunPod Ser
   - `wan_2.1_vae.safetensors` (~220MB, VAE Wan 2.1) từ HuggingFace.
   - `640m.onnx` (~104MB, NudeNet 640m detector) từ HuggingFace mirrors.
 - **Auto-censor:** Tách riêng vào virtual environment `/opt/censor-venv` (`nudenet==3.4.2`, `numpy>=1.26,<3`, `onnxruntime`, `Pillow`) tránh xung đột version numpy/torch với ComfyUI.
+- **Main environment dependencies:** Pin phiên bản cụ thể cho môi trường chính (`runpod==2.1.0`, `boto3==1.43.126`, `requests==2.32.3`) đảm bảo image hoàn toàn có thể tái lập.
 - **Lưu trữ Cloudflare R2:** Ảnh gốc và ảnh che luôn được upload trực tiếp lên R2 bucket theo hợp đồng key cố định, worker chỉ trả về object keys (không trả base64 qua payload API).
 
 ---
@@ -57,6 +58,7 @@ Tài liệu RunPod Endpoint API: [docs.runpod.io/serverless/endpoints/endpoint-a
 - `runpodJobId`: ID của job do RunPod cấp (`job["id"]`).
 - `mask_status`: `censored` (đã che vùng nhạy cảm), `clean` (ảnh an toàn, không có vùng cần che), hoặc `failed` (lỗi khi chạy censor).
 - Nếu `mask_status` là `failed`, `masked_key` sẽ có giá trị `null` và job vẫn được coi là thành công.
+- `width` và `height`: Kích thước pixel đọc trực tiếp từ header PNG IHDR (nếu không đọc được từ header, trả về `null`).
 - Khi có lỗi (workflow không hợp lệ, ComfyUI từ chối, timeout, upload R2 thất bại), handler trả về `{"error": "<mô tả ngắn, có node_errors nếu có>"}` để RunPod đánh dấu job là FAILED.
 
 ---
@@ -183,4 +185,5 @@ Theo tài liệu RunPod SDK, có 3 cách kiểm tra cục bộ:
   1. Kiểm tra commit mới nhất: `git ls-remote https://github.com/Comfy-Org/ComfyUI.git HEAD`.
   2. Cập nhật commit SHA trong `deploy/runpod-serverless/Dockerfile`.
   3. Kiểm tra tính tương thích của các custom node Krea2/Qwen3VL/Wan2.1 với version mới.
-- **Quản lý dung lượng đĩa:** Sau mỗi job sinh ảnh thành công hoặc thất bại, handler sẽ tự động xóa thư mục `/tmp/<jobId>` và ảnh sinh ra trong `/comfyui/output/` nhằm bảo vệ container disk không bị đầy khi worker hoạt động lâu dài.
+- **Quản lý dung lượng đĩa:** Sau mỗi job sinh ảnh thành công hoặc thất bại, khối `try/finally` trong handler sẽ luôn tự động dọn dẹp thư mục tạm `/tmp/<jobId>` và toàn bộ ảnh sinh ra trong `/comfyui/output/` (bao gồm cả thư mục con nếu có `subfolder`) nhằm bảo vệ container disk không bị đầy khi worker hoạt động lâu dài.
+- **Ghi log lỗi censor:** Khi tiến trình che ảnh gặp sự cố (`mask_status: failed`), chi tiết lỗi sẽ được log rõ ràng ra stdout của worker theo định dạng `[censor] job=<id> index=<i> failed: <msg>` để người vận hành dễ dàng chẩn đoán trên RunPod Console.

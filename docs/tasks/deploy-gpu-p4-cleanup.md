@@ -51,11 +51,43 @@ Grep phải sạch trong `app/ lib/ components/ hooks/`: `ComfyClient`, `` /cens
 - Ghi số test trước/sau vào Ghi chú (giảm do xóa test là bình thường — liệt kê file đã xóa).
 
 ## 8. Definition of Done
-- [ ] Mọi grep ở 6.3, 6.5, 6.6 sạch (dán kết quả grep vào Ghi chú).
-- [ ] Không migration mới; `prisma/schema.prisma` không đổi.
-- [ ] `lib/pipeline/*`, `lib/r2/*`, `lib/sheets/*`, `lib/comfyui/runpod-client.ts`, `lib/comfyui/workflow-*` không đổi hành vi.
-- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` xanh.
-- [ ] Điền "Ghi chú của người thực thi" (tổng kết P4); `worker_done` liệt kê commit.
+- [x] Mọi grep ở 6.3, 6.5, 6.6 sạch (dán kết quả grep vào Ghi chú).
+- [x] Không migration mới; `prisma/schema.prisma` không đổi.
+- [x] `lib/pipeline/*`, `lib/r2/*`, `lib/sheets/*`, `lib/comfyui/runpod-client.ts`, `lib/comfyui/workflow-*` không đổi hành vi.
+- [x] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` xanh.
+- [x] Điền "Ghi chú của người thực thi" (tổng kết P4); `worker_done` liệt kê commit.
 
 ## Ghi chú của người thực thi
-(agent điền)
+
+### 1. Kết quả Grep kiểm tra tiêu chí
+- **Grep 6.3** (`git grep -n "comfyBaseUrl\|hasGatewayToken\|gatewayToken\|COMFY_GATEWAY_TOKEN" app/ lib/ components/ hooks/ tests/`):
+  -> **0 kết quả** (chỉ còn trong `prisma/schema.prisma` và `prisma/migrations/`).
+- **Grep 6.5** (`git grep -in "colab\|tunnel\|loca\.lt\|trycloudflare\|localtunnel" app/ lib/ components/ hooks/`):
+  -> **0 kết quả**.
+- **Grep 6.6** (`ComfyClient`, `` /censor` ``, `` }/llm ``, `getActivePromptIds`, `viewImage(`, `submitPrompt(` trong `app/ lib/ components/ hooks/`):
+  -> **0 kết quả** cho tất cả pattern.
+
+### 2. Thống kê Test
+- **Trước**: 31 test files, 208 passed.
+- **Sau**: 30 test files, 197 passed.
+- **Files test đã xóa (-14 tests)**:
+  - `tests/comfy-client.test.ts` (9 tests)
+  - `tests/url-validator.test.ts` (5 tests)
+- **Files test thêm mới / cập nhật (+3 tests)**:
+  - `tests/run-censor.test.ts` (2 tests mới: xử lý rỗng và kiểm tra `CENSOR_PYTHON` không set -> mọi item `skipped`)
+  - `tests/llm-client.test.ts` (+1 test: kiểm tra headers chuẩn, không có `bypass-tunnel-reminder`)
+- **Tất cả test suite**: 30/30 files pass, 197/197 tests pass.
+
+### 3. Verification & Typecheck & Build
+- `npx tsc --noEmit`: Clean (0 errors).
+- `npm run lint`: Clean (0 errors).
+- `npm run build`: Compiled and built successfully (26 static/dynamic routes).
+
+### 4. Danh sách commit trong P4
+- (a) `4d4360b`: `docs: add task p4 cleanup spec`
+- (b) `2a735e9`: `refactor(comfyui): remove ComfyClient and ComfyApiError`
+- (c) `47443d9`: `refactor(censor): remove HTTP censor and keep local CPU fallback`
+- (d) `906ac27`: `refactor(settings): remove comfyBaseUrl and gatewayToken from API and DTO`
+- (e) `98b2ffd`: `refactor(llm): remove bypass-tunnel-reminder header and old comments`
+- (f) `5d176c2`: `docs: update UI text, README, and env example for RunPod Serverless`
+- (g) `ac03310`: `docs: update task p4 execution notes and definition of done`

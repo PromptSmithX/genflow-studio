@@ -36,10 +36,26 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    let runpodEndpointId: string | null | undefined = undefined;
+    if (body.runpodEndpointId !== undefined) {
+      runpodEndpointId = body.runpodEndpointId || null;
+    }
+
+    let runpodApiKey: string | null | undefined = undefined;
+    if (body.runpodApiKey !== undefined) {
+      if (body.runpodApiKey === null) {
+        runpodApiKey = null;
+      } else if (body.runpodApiKey !== "") {
+        runpodApiKey = body.runpodApiKey;
+      }
+    }
+
     await getOrCreateSettings();
     const updated = await prisma.appSettings.update({
       where: { id: "main" },
       data: {
+        ...(runpodEndpointId !== undefined ? { runpodEndpointId } : {}),
+        ...(runpodApiKey !== undefined ? { runpodApiKey } : {}),
         ...(comfyBaseUrl !== undefined ? { comfyBaseUrl } : {}),
         ...(body.defaultWidth !== undefined ? { defaultWidth: body.defaultWidth } : {}),
         ...(body.defaultHeight !== undefined ? { defaultHeight: body.defaultHeight } : {}),

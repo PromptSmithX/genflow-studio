@@ -5,6 +5,13 @@ export const seedModeSchema = z.enum(["random", "fixed"]);
 export const settingsUpdateSchema = z.object({
   comfyBaseUrl: z.string().trim().optional().nullable(),
   gatewayToken: z.string().trim().optional().nullable(),
+  runpodEndpointId: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9-]+$/i, "Endpoint ID không hợp lệ")
+    .optional()
+    .nullable(),
+  runpodApiKey: z.string().trim().optional().nullable(),
   defaultWidth: z.number().int().min(64).max(4096).optional(),
   defaultHeight: z.number().int().min(64).max(4096).optional(),
   defaultSteps: z.number().int().min(1).max(200).optional(),
@@ -24,7 +31,8 @@ export const settingsUpdateSchema = z.object({
 });
 
 export const connectionTestSchema = z.object({
-  baseUrl: z.string().trim().min(1, "URL không được để trống"),
+  endpointId: z.string().trim().optional(),
+  apiKey: z.string().trim().optional(),
 });
 
 export type SettingsUpdateInput = z.infer<typeof settingsUpdateSchema>;

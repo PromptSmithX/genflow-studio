@@ -12,8 +12,8 @@ export function useConnectionStatus() {
 export function useConnectionTest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (baseUrl?: string) =>
-      apiPost<ConnectionTestResponse>("/api/connection/test", baseUrl ? { baseUrl } : undefined),
+    mutationFn: (candidate?: { endpointId?: string; apiKey?: string }) =>
+      apiPost<ConnectionTestResponse>("/api/connection/test", candidate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["connection"] });
       queryClient.invalidateQueries({ queryKey: ["settings"] });

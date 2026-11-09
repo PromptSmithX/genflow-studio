@@ -41,9 +41,10 @@ async function generateFreshPromptForJob({
   isCover: boolean;
 }): Promise<FreshPrompt> {
   const settings = await getOrCreateSettings();
+  // LLM gọi trực tiếp nhà cung cấp bằng API key từ AppSettings.
   const llmConfig = resolveLlmConfig(settings);
   if (!llmConfig) {
-    throw new LlmApiError("Chưa cấu hình URL ComfyUI, vui lòng cấu hình ở trang Cài đặt", "no_config");
+    throw new LlmApiError("Chưa cấu hình Trợ lý AI (API key) — vào Cài đặt", "no_config");
   }
 
   let styleHint: string | undefined;
@@ -67,7 +68,11 @@ async function generateFreshPromptForJob({
   const baseSystemPrompt = isAnimeMedium ? CALENDAR_SYSTEM_PROMPT_ANIME : CALENDAR_SYSTEM_PROMPT_REAL;
   const systemPrompt = SHARED_BIAS_PROMPT.trim() ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}` : baseSystemPrompt;
 
-  const client = new LlmClient({ baseUrl: llmConfig.baseUrl, model: llmConfig.model });
+  const client = new LlmClient({
+    baseUrl: llmConfig.baseUrl,
+    apiKey: llmConfig.apiKey,
+    model: llmConfig.model,
+  });
   const result = await client.generatePrompts({ systemPrompt, userMessage, expectedCount: 2 });
 
   // images[0] = bìa (vai trò ảnh #1 trong system prompt), images[1] = artwork.

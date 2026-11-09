@@ -9,7 +9,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from handler import (
+    TEMP_BASE,
     build_r2_keys,
+    cleanup_job_files,
     extract_images_from_history,
     get_png_dimensions,
     handler,
@@ -237,3 +239,75 @@ def test_handler_mocked_success(monkeypatch):
     assert img["mask_status"] == "censored"
     assert img["width"] == 1024
     assert img["height"] == 1536
+
+# Test cleanup_job_files removes subfolder files and temp directory
+def test_cleanup_job_files_subfolder(monkeypatch):
+    import handler as h_mod
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+        monkeypatch.setattr(h_mod, "TEMP_BASE", base / "temp_base")
+        monkeypatch.setattr(h_mod, "COMFY_DIR", base / "comfy")
+        job_tmp = h_mod.TEMP_BASE / "job_clean_test"
+        job_tmp.mkdir(parents=True, exist_ok=True)
+        (job_tmp / "0.png").write_text("dummy")
+        comfy_out = h_mod.COMFY_DIR / "output"
+        sub_dir = comfy_out / "sub1"
+        sub_dir.mkdir(parents=True, exist_ok=True)
+        out_file = sub_dir / "gen_001.png"
+        out_file.write_text("comfy_image")
+
+        assert job_tmp.exists()
+        assert out_file.exists()
+        cleanup_job_files("job_clean_test", [{"filename": "gen_001.png", "subfolder": "sub1"}])
+        assert not job_tmp.exists()
+        assert not out_file.exists()
+
+# Test handler cleans up temp directory even when R2 upload fails
+def test_handler_cleanup_on_upload_error(monkeypatch):
+    import handler as h_mod
+    monkeypatch.setattr(h_mod, "COMFY_READY", True)
+    monkeypatch.setenv("R2_ACCOUNT_ID", "mock-account")
+    monkeypatch.setenv("R2_ACCESS_KEY_ID", "mock-access")
+    monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "mock-secret")
+    monkeypatch.setenv("R2_BUCKET", "mock-bucket")
+    png_sig = b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(">II", 1024, 1536)
+
+    def mock_post(url, json=None, timeout=None):
+        m = MagicMock()
+        m.status_code = 200
+        m.json.return_value = {"prompt_id": "mock-p-err", "number": 0, "node_errors": {}}
+        return m
+
+    def mock_get(url, params=None, timeout=None):
+        m = MagicMock()
+        m.status_code = 200
+        if "/history/" in url:
+            m.json.return_value = {
+                "mock-p-err": {
+                    "status": {"status_str": "success", "completed": True},
+                    "outputs": {"9": {"images": [{"filename": "out_0.png", "subfolder": "", "type": "output"}]}},
+                }
+            }
+        elif "/view" in url:
+            m.content = png_sig + b"\x00" * 100
+        return m
+
+    mock_s3 = MagicMock()
+    mock_s3.upload_file.side_effect = RuntimeError("S3 upload failed: bucket permission denied")
+
+    monkeypatch.setattr("requests.post", mock_post)
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr(h_mod, "get_r2_client", lambda: (mock_s3, "mock-bucket", None))
+    monkeypatch.setattr(h_mod, "run_censor_subprocess", lambda in_p, out_p, timeout=120: ("clean", None))
+
+    job_id = "test_cleanup_fail_job"
+    job_payload = {
+        "id": job_id,
+        "input": {"workflow": {"1": {"class_type": "KSampler"}}},
+    }
+    result = h_mod.handler(job_payload)
+    assert "error" in result
+    assert "Lỗi upload R2" in result["error"]
+    job_tmp = h_mod.TEMP_BASE / job_id
+    assert not job_tmp.exists()

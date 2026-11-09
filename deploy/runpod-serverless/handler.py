@@ -224,14 +224,20 @@ def get_r2_client() -> tuple[Any, str | None, str | None]:
     return client, bucket, None
 
 # Remove temporary job directory and generated images
-def cleanup_job_files(job_id: str, filenames: list[str]) -> None:
+def cleanup_job_files(job_id: str, image_targets: list[dict | str] | None = None) -> None:
     tmp_dir = TEMP_BASE / job_id
     if tmp_dir.exists():
         shutil.rmtree(tmp_dir, ignore_errors=True)
     comfy_out = COMFY_DIR / "output"
-    if comfy_out.exists():
-        for fn in filenames:
-            (comfy_out / fn).unlink(missing_ok=True)
+    if comfy_out.exists() and image_targets:
+        for target in image_targets:
+            if isinstance(target, dict):
+                fn = target.get("filename", "")
+                sub = target.get("subfolder", "")
+                target_path = (comfy_out / sub / fn) if sub else (comfy_out / fn)
+                target_path.unlink(missing_ok=True)
+            elif isinstance(target, str) and target:
+                (comfy_out / target).unlink(missing_ok=True)
 
 # Main handler for RunPod serverless job execution
 def handler(job: dict) -> dict:
@@ -263,68 +269,70 @@ def handler(job: dict) -> dict:
         prompt_id, prompt_err = parse_prompt_response(prompt_resp.status_code, prompt_data)
         if prompt_err:
             return {"error": prompt_err}
-        start_time = time.time()
-        completed_images = []
-        while time.time() - start_time < timeout_s:
-            try:
-                hist_resp = requests.get(f"{COMFY_BASE_URL}/history/{prompt_id}", timeout=10)
-                if hist_resp.status_code == 200:
-                    hist_data = hist_resp.json()
-                    if prompt_id in hist_data:
-                        extracted, hist_err = extract_images_from_history(hist_data, prompt_id)
-                        if hist_err:
-                            return {"error": hist_err}
-                        completed_images = extracted
-                        break
-            except Exception:
-                pass
-            time.sleep(1)
-        if not completed_images:
-            return {"error": f"Quá thời gian chờ ComfyUI sinh ảnh ({timeout_s}s)"}
-        job_tmp = TEMP_BASE / job_id
-        job_tmp.mkdir(parents=True, exist_ok=True)
-        result_images = []
-        raw_filenames = []
-        for idx, img_info in enumerate(completed_images):
-            raw_fn = img_info.get("filename", "")
-            subfolder = img_info.get("subfolder", "")
-            img_type = img_info.get("type", "output")
-            raw_filenames.append(raw_fn)
-            try:
-                view_resp = requests.get(
-                    f"{COMFY_BASE_URL}/view",
-                    params={"filename": raw_fn, "subfolder": subfolder, "type": img_type},
-                    timeout=60,
-                )
-                if view_resp.status_code != 200:
-                    return {"error": f"Không tải được ảnh {raw_fn} từ ComfyUI (HTTP {view_resp.status_code})"}
-            except Exception as exc:
-                return {"error": f"Lỗi tải ảnh {raw_fn}: {exc}"}
-            orig_path = job_tmp / f"{idx}.png"
-            masked_path = job_tmp / f"{idx}.masked.png"
-            orig_path.write_bytes(view_resp.content)
-            width, height = get_png_dimensions(orig_path)
-            mask_status, _ = run_censor_subprocess(orig_path, masked_path, timeout=120)
-            img_contract = build_r2_keys(job_id, idx, prefix, mask_status, width, height)
-            try:
-                s3_client.upload_file(
-                    str(orig_path),
-                    bucket,
-                    img_contract["key"],
-                    ExtraArgs={"ContentType": "image/png"},
-                )
-                if mask_status != "failed" and masked_path.exists():
+        raw_images = []
+        try:
+            start_time = time.time()
+            completed_images = []
+            while time.time() - start_time < timeout_s:
+                try:
+                    hist_resp = requests.get(f"{COMFY_BASE_URL}/history/{prompt_id}", timeout=10)
+                    if hist_resp.status_code == 200:
+                        hist_data = hist_resp.json()
+                        if prompt_id in hist_data:
+                            extracted, hist_err = extract_images_from_history(hist_data, prompt_id)
+                            if hist_err:
+                                return {"error": hist_err}
+                            completed_images = extracted
+                            break
+                except Exception:
+                    pass
+                time.sleep(1)
+            if not completed_images:
+                return {"error": f"Quá thời gian chờ ComfyUI sinh ảnh ({timeout_s}s)"}
+            raw_images = completed_images
+            job_tmp = TEMP_BASE / job_id
+            job_tmp.mkdir(parents=True, exist_ok=True)
+            result_images = []
+            for idx, img_info in enumerate(completed_images):
+                raw_fn = img_info.get("filename", "")
+                subfolder = img_info.get("subfolder", "")
+                img_type = img_info.get("type", "output")
+                try:
+                    view_resp = requests.get(
+                        f"{COMFY_BASE_URL}/view",
+                        params={"filename": raw_fn, "subfolder": subfolder, "type": img_type},
+                        timeout=60,
+                    )
+                    if view_resp.status_code != 200:
+                        return {"error": f"Không tải được ảnh {raw_fn} từ ComfyUI (HTTP {view_resp.status_code})"}
+                except Exception as exc:
+                    return {"error": f"Lỗi tải ảnh {raw_fn}: {exc}"}
+                orig_path = job_tmp / f"{idx}.png"
+                masked_path = job_tmp / f"{idx}.masked.png"
+                orig_path.write_bytes(view_resp.content)
+                width, height = get_png_dimensions(orig_path)
+                mask_status, _ = run_censor_subprocess(orig_path, masked_path, timeout=120)
+                img_contract = build_r2_keys(job_id, idx, prefix, mask_status, width, height)
+                try:
                     s3_client.upload_file(
-                        str(masked_path),
+                        str(orig_path),
                         bucket,
-                        img_contract["masked_key"],
+                        img_contract["key"],
                         ExtraArgs={"ContentType": "image/png"},
                     )
-            except Exception as exc:
-                return {"error": f"Lỗi upload R2: {exc}"}
-            result_images.append(img_contract)
-        cleanup_job_files(job_id, raw_filenames)
-        return {"images": result_images}
+                    if mask_status != "failed" and masked_path.exists():
+                        s3_client.upload_file(
+                            str(masked_path),
+                            bucket,
+                            img_contract["masked_key"],
+                            ExtraArgs={"ContentType": "image/png"},
+                        )
+                except Exception as exc:
+                    return {"error": f"Lỗi upload R2: {exc}"}
+                result_images.append(img_contract)
+            return {"images": result_images}
+        finally:
+            cleanup_job_files(job_id, raw_images)
     except Exception as exc:
         return {"error": f"Lỗi không xác định: {exc}"}
 

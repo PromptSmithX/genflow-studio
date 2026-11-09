@@ -13,12 +13,8 @@ import { resolveSeeds } from "@/lib/seed";
 import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
 import type { CreateGenerationInput } from "@/lib/validations/generations";
 
-export class GenerationSetupError extends Error {
-  constructor(message: string, public readonly code: string) {
-    super(message);
-    this.name = "GenerationSetupError";
-  }
-}
+import { GenerationSetupError } from "./errors";
+export { GenerationSetupError };
 
 /**
  * Creates a GenerationBatch with one GenerationJob per requested image.

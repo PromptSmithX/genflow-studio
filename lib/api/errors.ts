@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { ComfyApiError } from "@/lib/comfyui/client";
+import { RunpodApiError } from "@/lib/comfyui/runpod-client";
 import { LlmApiError } from "@/lib/llm/client";
 import { WorkflowMappingError } from "@/lib/comfyui/workflow-mapper";
 import { GenerationSetupError } from "@/lib/generations/create-batch";
@@ -29,6 +30,9 @@ export function handleApiError(error: unknown) {
     return apiError("validation_error", "Dữ liệu gửi lên không hợp lệ", 400, error.flatten());
   }
   if (error instanceof ComfyApiError) {
+    return apiError(error.code, error.message, 502, error.details);
+  }
+  if (error instanceof RunpodApiError) {
     return apiError(error.code, error.message, 502, error.details);
   }
   if (error instanceof LlmApiError) {

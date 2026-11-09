@@ -7,6 +7,7 @@ import { POST } from "@/app/api/history/[jobId]/regenerate-fresh/route";
 import type { NextRequest } from "next/server";
 
 const mockGeneratePrompts = vi.fn();
+const mockLlmClientConstructor = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -33,16 +34,24 @@ vi.mock("@/lib/settings", () => ({
     comfyBaseUrl: "http://127.0.0.1:8188",
     runpodEndpointId: "ep-test",
     runpodApiKey: "rpa-test",
+    llmApiKey: "mock-key",
   }),
   getOrCreateGlobalPrompt: vi.fn().mockResolvedValue({ positivePrompt: "", negativePrompt: "" }),
 }));
 
 vi.mock("@/lib/llm/resolve-config", () => ({
-  resolveLlmConfig: vi.fn().mockReturnValue({ baseUrl: "http://mock-llm", model: "mock-model" }),
+  resolveLlmConfig: vi.fn().mockReturnValue({
+    baseUrl: "http://mock-llm",
+    apiKey: "mock-key",
+    model: "mock-model",
+  }),
 }));
 
 vi.mock("@/lib/llm/client", () => ({
   LlmClient: class {
+    constructor(options: unknown) {
+      mockLlmClientConstructor(options);
+    }
     generatePrompts = mockGeneratePrompts;
   },
   LlmApiError: class extends Error {
@@ -253,6 +262,13 @@ describe("regenerateJobFreshPrompt", () => {
     } as unknown as never);
 
     await regenerateJobFreshPrompt("job-fail");
+
+    // Verify LlmClient was constructed with apiKey from resolved config
+    expect(mockLlmClientConstructor).toHaveBeenCalledWith({
+      baseUrl: "http://mock-llm",
+      apiKey: "mock-key",
+      model: "mock-model",
+    });
 
     // Verify job update resets autoRetryCount to 0 and records promptId rp-123
     expect(prisma.generationJob.update).toHaveBeenCalledWith(

@@ -217,7 +217,7 @@ describe("job-sync", () => {
       filename: "rp-prompt-1_0.png",
     } as any);
     vi.mocked(censorImages).mockResolvedValueOnce([
-      { status: "clean", inputPath: "in", outputPath: "out" },
+      { status: "clean", input: "in", output: "out" },
     ]);
 
     await syncJob("job-1", mockClient, "C:/tmp/outputs");

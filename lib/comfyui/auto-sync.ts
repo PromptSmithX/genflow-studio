@@ -9,8 +9,7 @@ import { runAutoPublishExclusive, getCalendarSkipReason } from "@/lib/pipeline/a
 import { syncBatchToSheet } from "@/lib/sheets/sync";
 
 const POLL_INTERVAL_MS = 15_000;
-// Chỉ đồng bộ batch gần đây; batch cũ hơn ngưỡng này sẽ không poll nữa để
-// tránh gọi ComfyUI vô hạn cho các batch kẹt lâu (vd Colab đã tắt từ lâu).
+// Chỉ đồng bộ batch gần đây; batch cũ hơn ngưỡng này sẽ không poll nữa để tránh gọi RunPod vô hạn.
 export const MAX_BATCH_AGE_MS = 24 * 60 * 60 * 1000;
 
 interface AutoSyncGlobal {

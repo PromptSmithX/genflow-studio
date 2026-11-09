@@ -13,6 +13,7 @@ from handler import (
     extract_images_from_history,
     get_png_dimensions,
     handler,
+    parse_prompt_response,
     summarize_node_errors,
     validate_input,
 )
@@ -62,6 +63,27 @@ def test_summarize_node_errors():
 def test_summarize_generic_error():
     summary = summarize_node_errors({"error": "Prompt syntax error"})
     assert summary == "Prompt syntax error"
+
+# Test parse_prompt_response with real ComfyUI success format including empty node_errors
+def test_parse_prompt_response_success_empty_node_errors():
+    data = {"prompt_id": "p1", "number": 0, "node_errors": {}}
+    pid, err = parse_prompt_response(200, data)
+    assert pid == "p1"
+    assert err is None
+
+# Test parse_prompt_response with 400 and non-empty node_errors
+def test_parse_prompt_response_error_with_node_errors():
+    data = {"node_errors": {"7": {"class_type": "KSampler", "errors": [{"message": "Invalid seed"}]}}}
+    pid, err = parse_prompt_response(400, data)
+    assert pid is None
+    assert "Node 7" in err
+    assert "Invalid seed" in err
+
+# Test parse_prompt_response with 200 but missing prompt_id
+def test_parse_prompt_response_missing_prompt_id():
+    pid, err = parse_prompt_response(200, {"number": 0, "node_errors": {}})
+    assert pid is None
+    assert "prompt_id" in err
 
 # Test extracting output images from valid ComfyUI history
 def test_extract_images_from_history_success():
@@ -173,7 +195,7 @@ def test_handler_mocked_success(monkeypatch):
     def mock_post(url, json=None, timeout=None):
         m = MagicMock()
         m.status_code = 200
-        m.json.return_value = {"prompt_id": "mock-prompt-1"}
+        m.json.return_value = {"prompt_id": "mock-prompt-1", "number": 0, "node_errors": {}}
         return m
 
     def mock_get(url, params=None, timeout=None):

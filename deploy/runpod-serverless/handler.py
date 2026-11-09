@@ -99,6 +99,25 @@ def summarize_node_errors(data: dict) -> str:
         return str(error)
     return "ComfyUI prompt request rejected"
 
+# Parse ComfyUI /prompt response and validate prompt_id or errors
+def parse_prompt_response(status_code: int, data: Any) -> tuple[str | None, str | None]:
+    if status_code != 200:
+        summary = summarize_node_errors(data) if isinstance(data, dict) else str(data)
+        return None, f"ComfyUI từ chối workflow: {summary}"
+    if not isinstance(data, dict):
+        return None, "ComfyUI phản hồi không hợp lệ"
+    if data.get("error"):
+        summary = summarize_node_errors(data)
+        return None, f"ComfyUI từ chối workflow: {summary}"
+    node_errors = data.get("node_errors")
+    if isinstance(node_errors, dict) and bool(node_errors):
+        summary = summarize_node_errors(data)
+        return None, f"ComfyUI từ chối workflow: {summary}"
+    prompt_id = data.get("prompt_id")
+    if not prompt_id:
+        return None, "ComfyUI không trả về prompt_id"
+    return str(prompt_id), None
+
 # Extract output images and check for errors from ComfyUI history
 def extract_images_from_history(history_data: dict, prompt_id: str) -> tuple[list[dict], str | None]:
     if not isinstance(history_data, dict):
@@ -241,12 +260,9 @@ def handler(job: dict) -> dict:
             prompt_data = prompt_resp.json()
         except Exception:
             return {"error": f"ComfyUI phản hồi không hợp lệ (HTTP {prompt_resp.status_code})"}
-        if prompt_resp.status_code != 200 or "error" in prompt_data or "node_errors" in prompt_data:
-            summary = summarize_node_errors(prompt_data)
-            return {"error": f"ComfyUI từ chối workflow: {summary}"}
-        prompt_id = prompt_data.get("prompt_id")
-        if not prompt_id:
-            return {"error": "ComfyUI không trả về prompt_id"}
+        prompt_id, prompt_err = parse_prompt_response(prompt_resp.status_code, prompt_data)
+        if prompt_err:
+            return {"error": prompt_err}
         start_time = time.time()
         completed_images = []
         while time.time() - start_time < timeout_s:

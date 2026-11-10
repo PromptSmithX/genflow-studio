@@ -83,13 +83,59 @@ Key không bao giờ ghi plaintext xuống đĩa máy người dùng và không 
 - `git status` trước commit cuối: không có `secrets/build-secrets.json` hay `*.enc` trong danh sách.
 
 ## 5. Definition of Done
-- [ ] 3.1: `.env*` bị xóa khỏi `resources/app`; `electron-builder.yml` loại `secrets*.json`, thêm extraResources `secrets.enc`; xóa `secrets.example.json` và comment cũ.
-- [ ] 3.2: `secrets-crypto.js` + `encrypt-secrets.mjs` + example + `.gitignore` + `package.json` (`build:secrets`, `dist`).
-- [ ] 3.3: `main.js` giải mã trong RAM, bơm env cho process con, không ghi đè biến hệ thống, lỗi thì fallback.
-- [ ] 3.4: overlay env trong `getOrCreateSettings`, không ghi vào DB; PUT trả settings đã overlay; test mới xanh.
-- [ ] 3.5: Sheets chạy được với `GOOGLE_SERVICE_ACCOUNT_JSON`; đường `FILE` cũ vẫn chạy.
-- [ ] 3.6: README cập nhật, không vỡ encoding.
-- [ ] Mục 4 xanh; không file nào ngoài phạm vi bị sửa; không secret thật trong diff hay log.
-- [ ] Điền "Ghi chú của người thực thi" + liệt kê commit.
+- [x] 3.1: `.env*` bị xóa khỏi `resources/app`; `electron-builder.yml` loại `secrets*.json`, thêm extraResources `secrets.enc`; xóa `secrets.example.json` và comment cũ.
+- [x] 3.2: `secrets-crypto.js` + `encrypt-secrets.mjs` + example + `.gitignore` + `package.json` (`build:secrets`, `dist`).
+- [x] 3.3: `main.js` giải mã trong RAM, bơm env cho process con, không ghi đè biến hệ thống, lỗi thì fallback.
+- [x] 3.4: overlay env trong `getOrCreateSettings`, không ghi vào DB; PUT trả settings đã overlay; test mới xanh.
+- [x] 3.5: Sheets chạy được với `GOOGLE_SERVICE_ACCOUNT_JSON`; đường `FILE` cũ vẫn chạy.
+- [x] 3.6: README cập nhật, không vỡ encoding.
+- [x] Mục 4 xanh; không file nào ngoài phạm vi bị sửa; không secret thật trong diff hay log.
+- [x] Điền "Ghi chú của người thực thi" + liệt kê commit.
 
 ## Ghi chú của người thực thi
+
+### 1. Chi tiết thực hiện các thay đổi
+- **Mục 3.1 (Bịt rò rỉ)**:
+  - `scripts/prepare-electron-resources.mjs`: Xóa toàn bộ file `.env*` sau khi copy standalone sang `resources/app`, in log thông báo số lượng file env đã xóa.
+  - `electron-builder.yml`: Thêm rule `!electron/secrets*.json` vào `files`; cấu hình `extraResources` đưa `resources/secrets/secrets.enc` vào thư mục `secrets`.
+  - Xóa file `electron/secrets.example.json`.
+  - Xóa comment lỗi thời về Colab gateway ở `electron/main.js`.
+- **Mục 3.2 (Mã hóa lúc build)**:
+  - `electron/secrets-crypto.js`: Mã hóa và giải mã bằng thuật toán AES-256-GCM qua `node:crypto`. Dẫn xuất khóa 32 bytes với `crypto.scryptSync`. Payload nhị phân có cấu trúc chuẩn `[1 byte version=1][12 byte iv][16 byte tag][ciphertext]`.
+  - `scripts/encrypt-secrets.mjs`: Đọc `secrets/build-secrets.json`, lọc theo whitelist 13 key (`ANIMA_RUNPOD_*`, `ANIMA_LLM_*`, `R2_*`, `GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_JSON`), xử lý chuỗi JSON của Google Service Account, mã hóa ra `resources/secrets/secrets.enc`. Nếu không có file nguồn thì cảnh báo và exit 0 an toàn.
+  - Tạo `secrets/build-secrets.example.json` với các trường mặc định; cấu hình `.gitignore` cho phép theo dõi file example này.
+  - `package.json`: Thêm script `"build:secrets": "node scripts/encrypt-secrets.mjs"` và tích hợp vào chuỗi lệnh `dist` trước `electron-builder`.
+- **Mục 3.3 (Giải mã lúc chạy)**:
+  - `electron/main.js`: Bổ sung `secretsFile` vào `getPaths()`, triển khai `loadEmbeddedSecrets(paths)` giải mã trong RAM, nạp các biến môi trường nhúng vào process con Next.js mà không ghi đè các biến hệ thống quan trọng (`NODE_ENV`, `PORT`, `DATABASE_URL`, ...).
+- **Mục 3.4 (Bơm vào settings)**:
+  - `lib/settings.ts`: Cung cấp hàm thuần `applyEnvDefaults(row, env)` tự động overlay các key từ biến môi trường (`ANIMA_RUNPOD_ENDPOINT_ID`, `ANIMA_RUNPOD_API_KEY`, `ANIMA_LLM_API_KEY`, `ANIMA_LLM_BASE_URL`, `ANIMA_LLM_MODEL`) khi giá trị DB là null hoặc rỗng, tuyệt đối không ghi dữ liệu overlay vào SQLite DB.
+  - `app/api/settings/route.ts`: Endpoint PUT trả về kết quả `redactSettings(await getOrCreateSettings())` để UI nhận diện đúng trạng thái `hasRunpodKey` và `hasLlmKey` từ env.
+  - Kiểm tra UI: Các component `ConnectOnboarding`, `ConnectionCard`, và `LlmCard` tự động nhận diện giá trị overlay từ `/api/settings` và `/api/connection/status` để ẩn banner onboarding khi đã cấu hình đầy đủ.
+  - Thêm bộ test `tests/settings-env-defaults.test.ts` kiểm thử toàn diện 4 trường hợp theo đặc tả (4/4 tests passed).
+- **Mục 3.5 (Google Service Account không cần file)**:
+  - `lib/sheets/config.ts`: Chấp nhận đồng thời `GOOGLE_SERVICE_ACCOUNT_JSON` (ưu tiên) hoặc `GOOGLE_SERVICE_ACCOUNT_FILE`.
+  - `lib/sheets/client.ts`: `getAccessToken` hỗ trợ cả object config credentials và đường dẫn file truyền thống.
+  - `lib/sheets/sync.ts`: Cập nhật gọi `getAccessToken(config)`.
+  - `.env.example`: Bổ sung hướng dẫn cho `GOOGLE_SERVICE_ACCOUNT_JSON`.
+  - `tests/sheets-sync.test.ts`: Cập nhật và bổ sung test case đồng bộ thành công qua `GOOGLE_SERVICE_ACCOUNT_JSON` (5/5 tests passed).
+- **Mục 3.6 (README)**:
+  - Bổ sung mục "Đóng gói exe có cấu hình sẵn ('zero-config')", nêu rõ quy trình và giới hạn bảo mật (chỉ dùng cho máy tin cậy). Đảm bảo giữ nguyên encoding UTF-8 tiếng Việt.
+
+### 2. Kết quả kiểm tra
+- `npm test`: Toàn bộ 31 test files passed, 202/202 unit tests passed 100%.
+- `npx tsc --noEmit`: Exit code 0, không có lỗi type nào.
+- `npm run lint`: Exit code 0, không có lỗi hay warning nào.
+- `npm run build`: Build Next.js standalone thành công (26/26 routes tối ưu).
+- `node scripts/prepare-electron-resources.mjs`: Xóa hoàn toàn file `.env` khỏi `resources/app`.
+- Round-trip test: Mã hóa và giải mã đối soát dữ liệu giả khớp tuyệt đối 13/13 key, đã xóa sạch file giả và `resources/secrets/secrets.enc`.
+- Thử nghiệm thiếu file `secrets/build-secrets.json`: `npm run build:secrets` in cảnh báo tiếng Việt và exit 0.
+- `git status`: Sạch sẽ, không có secret thật hay file `.enc` nào.
+
+### 3. Danh sách Commit (theo thứ tự a-g)
+- (a) `3321e43`: `docs: add task p6 zero-config package spec`
+- (b) `ea8a349`: `fix(security): prevent secret leaks in electron build resources`
+- (c) `b29847b`: `feat(build): add secrets encryption crypto, build script, and example configuration`
+- (d) `4febe34`: `feat(electron): load and decrypt embedded secrets into child process environment`
+- (e) `e7fc140`: `feat(settings): overlay environment defaults onto AppSettings and return in PUT API`
+- (f) `e8c95a8`: `feat(sheets): support GOOGLE_SERVICE_ACCOUNT_JSON and document zero-config packaging`
+- (g) `docs: update task p6 execution notes and definition of done` (commit hiện tại)

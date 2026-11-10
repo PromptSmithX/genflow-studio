@@ -38,11 +38,29 @@
 - `git status` sạch trước commit cuối.
 
 ## 5. Definition of Done
-- [ ] `asarUnpack` có `electron/migrate.js`; `main.js` packaged trỏ tới `app.asar.unpacked`.
-- [ ] Thiếu script hoặc thư mục migration → `MigrationError` rõ ràng, không còn bỏ qua âm thầm.
-- [ ] Hộp thoại lỗi có dòng "Chi tiết" (message + đuôi stderr).
-- [ ] `tests/electron-packaging.test.ts` xanh; toàn bộ mục 4 xanh.
-- [ ] Không sửa `electron/migrate.js` hay file ngoài phạm vi.
-- [ ] Điền "Ghi chú của người thực thi" + liệt kê commit.
+- [x] `asarUnpack` có `electron/migrate.js`; `main.js` packaged trỏ tới `app.asar.unpacked`.
+- [x] Thiếu script hoặc thư mục migration → `MigrationError` rõ ràng, không còn bỏ qua âm thầm.
+- [x] Hộp thoại lỗi có dòng "Chi tiết" (message + đuôi stderr).
+- [x] `tests/electron-packaging.test.ts` xanh; toàn bộ mục 4 xanh.
+- [x] Không sửa `electron/migrate.js` hay file ngoài phạm vi.
+- [x] Điền "Ghi chú của người thực thi" + liệt kê commit.
 
 ## Ghi chú của người thực thi
+- Thực hiện sửa lỗi theo đúng spec:
+  - `electron-builder.yml`: Cấu hình cấp gốc `asarUnpack: [electron/migrate.js]` để giải nén file migrate.js ra ngoài file lưu trữ asar.
+  - `electron/main.js`:
+    - Nhánh `app.isPackaged`: đặt `migrateScript` trỏ tới `path.join(resourcesDir, "app.asar.unpacked", "electron", "migrate.js")`.
+    - `ensureUserData`: DB đã tồn tại thì kiểm tra bắt buộc sự tồn tại của `migrateScript` và `migrationsDir`. Nếu thiếu thì throw `MigrationError` tiếng Việt kèm đường dẫn file/thư mục thiếu thay vì âm thầm bỏ qua.
+    - `spawnSync` chuyển `stdio` sang `["ignore", "pipe", "pipe"]`, ghi stderr ra `process.stderr`, gắn `err.details` = 300 ký tự cuối của stderr khi có lỗi.
+    - Hộp thoại `dialog.showErrorBox` bổ sung dòng `Chi tiết: <error.message> — <error.details>` khi lỗi.
+  - `tests/electron-packaging.test.ts`: Bộ kiểm thử mới gồm 3 test case kiểm tra `asarUnpack`, đường dẫn `app.asar.unpacked` trong `main.js`, và xác nhận `migrate.js` chỉ require built-in modules dạng `node:*`.
+- Kết quả kiểm tra:
+  - `npm test`: 33/33 test files pass, 212/212 unit tests pass 100%.
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm run lint`: 0 lỗi ESLint.
+  - Tuyệt đối không chỉnh sửa `electron/migrate.js` hay các file ngoài phạm vi.
+- Danh sách commit theo thứ tự (a)-(d):
+  - (a) `4bdc6cb`: docs: add task p8 migrate asar unpack spec
+  - (b) `1925721`: fix(electron): unpack migrate.js from asar and fail explicitly when migration files missing
+  - (c) `8dbf3ca`: test(electron): assert asarUnpack and unpacked migrateScript in packaging
+  - (d) `docs: update task p8 execution notes and definition of done` (commit hiện tại)

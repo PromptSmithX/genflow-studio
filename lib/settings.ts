@@ -61,8 +61,6 @@ export function applyEnvDefaults(
   };
 }
 
-export const applyManagedSettings = applyEnvDefaults;
-
 // Lấy hoặc khởi tạo cấu hình singleton với id "main"
 export async function getOrCreateSettings(): Promise<AppSettings> {
   const existing = await prisma.appSettings.findUnique({ where: { id: "main" } });

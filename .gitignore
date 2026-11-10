@@ -76,3 +76,4 @@ LUSTIFY_v10_Krea2_Turbo_INT8_Colab_Headless.ipynb
 /mockup/*
 
 /secrets/*
+!/secrets/build-secrets.example.json

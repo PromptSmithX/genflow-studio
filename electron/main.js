@@ -3,7 +3,7 @@
 // see scripts/download-node.mjs for why), waits for it to come up, then opens
 // a BrowserWindow pointed at it. No code here runs in the renderer; it only
 // manages the child process and the window.
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, dialog } = require("electron");
 const { spawn, spawnSync } = require("node:child_process");
 const net = require("node:net");
 const fs = require("node:fs");
@@ -106,18 +106,31 @@ function ensureUserData(paths) {
     }
     fs.copyFileSync(paths.templateDb, dbPath);
   } else if (fs.existsSync(paths.migrationsDir) && fs.existsSync(paths.migrateScript)) {
-    // Existing DB: run automatic migrations to apply any schema updates from the new version
+    // Chạy migration tự động khi cập nhật phiên bản ứng dụng
     console.log("Checking for database migrations...");
-    try {
-      const result = spawnSync(paths.nodeBinary, [paths.migrateScript, dbPath, paths.migrationsDir], {
-        stdio: "inherit",
-        windowsHide: true,
-      });
-      if (result.status !== 0) {
-        console.error("Auto-migration process exited with code:", result.status);
-      }
-    } catch (err) {
-      console.error("Failed to run auto-migration:", err);
+    const result = spawnSync(paths.nodeBinary, [paths.migrateScript, dbPath, paths.migrationsDir], {
+      stdio: ["ignore", "pipe", "inherit"],
+      encoding: "utf8",
+      windowsHide: true,
+    });
+
+    const stdout = result.stdout || "";
+    process.stdout.write(stdout);
+
+    let backupPath = null;
+    const backupMatch = stdout.match(/^BACKUP_PATH=(.+)$/m);
+    if (backupMatch) {
+      backupPath = backupMatch[1].trim();
+    }
+
+    if (result.error || result.status !== 0) {
+      const err = new Error(
+        `Auto-migration failed with status ${result.status}${result.error ? `: ${result.error.message}` : ""}`,
+      );
+      err.name = "MigrationError";
+      err.backupPath = backupPath;
+      err.dataRoot = dataRoot;
+      throw err;
     }
   }
 
@@ -215,6 +228,24 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     createWindow().catch((error) => {
       console.error("Failed to start Anima Studio:", error);
+      if (error && error.name === "MigrationError") {
+        const title = "Anima Studio — Lỗi cập nhật dữ liệu";
+        const contentLines = [
+          "Quá trình cập nhật cấu trúc dữ liệu không thành công.",
+          "Dữ liệu của bạn chưa bị mất.",
+        ];
+        if (error.backupPath) {
+          contentLines.push(`Bản sao lưu an toàn: ${error.backupPath}`);
+        }
+        if (error.dataRoot) {
+          contentLines.push(`Thư mục dữ liệu: ${error.dataRoot}`);
+        }
+        contentLines.push("Vui lòng gửi file log hoặc liên hệ người quản lý để được hỗ trợ.");
+        dialog.showErrorBox(title, contentLines.join("\n\n"));
+      } else {
+        const title = "Anima Studio — Không khởi động được";
+        dialog.showErrorBox(title, error?.message || String(error));
+      }
       app.quit();
     });
   });

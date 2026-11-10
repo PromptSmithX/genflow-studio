@@ -186,4 +186,39 @@ runDescribe("electron/migrate.js", () => {
       cleanup(tmpDir);
     }
   });
+
+  it("(5) Migration loi -> exit 1 va khong xoa backup cu (giu du ca 4 ban cu + 1 ban moi)", () => {
+    const { tmpDir, dbPath, migrationsDir } = setupEnv();
+    try {
+      // Tạo 4 file .bak giả
+      fs.writeFileSync(path.join(tmpDir, "anima.sqlite.bak-20260101-100001"), "bak1");
+      fs.writeFileSync(path.join(tmpDir, "anima.sqlite.bak-20260101-100002"), "bak2");
+      fs.writeFileSync(path.join(tmpDir, "anima.sqlite.bak-20260101-100003"), "bak3");
+      fs.writeFileSync(path.join(tmpDir, "anima.sqlite.bak-20260101-100004"), "bak4");
+
+      // 1 migration pending sai cú pháp
+      const badFolder = path.join(migrationsDir, "20260102000000_broken");
+      fs.mkdirSync(badFolder, { recursive: true });
+      fs.writeFileSync(path.join(badFolder, "migration.sql"), "CORRUPT SQL STATEMENT !!!;");
+
+      const result = spawnSync(process.execPath, [scriptPath, dbPath, migrationsDir], {
+        encoding: "utf-8",
+      });
+
+      expect(result.status).toBe(1);
+
+      // Vì migration thất bại nên không xoay vòng, cả 4 file cũ và 1 file mới đều được giữ
+      const allBackups = fs
+        .readdirSync(tmpDir)
+        .filter((f) => /^anima\.sqlite\.bak-\d{8}-\d{6}$/.test(f));
+
+      expect(allBackups.length).toBe(5);
+      expect(allBackups).toContain("anima.sqlite.bak-20260101-100001");
+      expect(allBackups).toContain("anima.sqlite.bak-20260101-100002");
+      expect(allBackups).toContain("anima.sqlite.bak-20260101-100003");
+      expect(allBackups).toContain("anima.sqlite.bak-20260101-100004");
+    } finally {
+      cleanup(tmpDir);
+    }
+  });
 });

@@ -107,7 +107,6 @@ try {
     const escaped = backupPath.replace(/'/g, "''");
     db.exec(`VACUUM INTO '${escaped}'`);
     console.log(`BACKUP_PATH=${backupPath}`);
-    rotateBackups(dbPath);
   } catch (backupError) {
     console.error("[migrate] Backup failed before migration:", backupError.message);
     process.exit(1);
@@ -166,6 +165,8 @@ try {
     }
   }
 
+  // Chỉ xoay vòng bản backup khi toàn bộ migration đã thành công
+  rotateBackups(dbPath);
   console.log(`[migrate] Auto-migration complete. ${appliedCount} migration(s) applied.`);
 } catch (error) {
   console.error("[migrate] Auto-migration failed:", error);

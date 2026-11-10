@@ -1,9 +1,38 @@
-# Base image with PyTorch 2.8 and CUDA 12.8 runtime
-FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime
+# Stage 1: Dedicated lightweight stage for downloading model checkpoints
+FROM python:3.11.18-slim-bookworm AS models
 
-# Suppress interactive prompts during installation
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
+# Install system download utilities and python dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir requests==2.34.2
+
+# Download HuggingFace text encoder and verify minimum size
+RUN mkdir -p /out/comfyui/models/text_encoders && \
+    wget -c --show-progress https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors -O /out/comfyui/models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors && \
+    [ $(stat -c%s /out/comfyui/models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) -ge 4700000000 ] || (echo "Text encoder download invalid" && exit 1)
+
+# Download Wan 2.1 VAE and verify minimum size
+RUN mkdir -p /out/comfyui/models/vae && \
+    wget -c --show-progress https://huggingface.co/Comfy-Org/Wan-2.1/resolve/main/split_files/vae/wan_2.1_vae.safetensors -O /out/comfyui/models/vae/wan_2.1_vae.safetensors && \
+    [ $(stat -c%s /out/comfyui/models/vae/wan_2.1_vae.safetensors) -ge 220000000 ] || (echo "VAE download invalid" && exit 1)
+
+# Download NudeNet 640m detector using standalone python script
+COPY download_nudenet.py /tmp/download_nudenet.py
+RUN python /tmp/download_nudenet.py /out/models/640m.onnx && rm /tmp/download_nudenet.py
+
+# Download LUSTIFY checkpoint using BuildKit secret mount
+COPY download_model.py /tmp/download_model.py
+RUN --mount=type=secret,id=civitai_token python /tmp/download_model.py /out/comfyui/models/diffusion_models/lustifyNSFWCheckpoint_v10Krea2_2996235.safetensors && rm /tmp/download_model.py
+
+# Stage 2: Final runtime image with PyTorch CUDA 13.0
+FROM pytorch/pytorch:2.14.1-cuda13.0-cudnn9-runtime
+
+# Base uses Ubuntu system Python (PEP 668, no conda); single-purpose container installs into it on purpose
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1
 
 # Install required system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -12,6 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libglib2.0-0 \
     libgomp1 \
+    python3.12-venv \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone ComfyUI repository and checkout pinned commit
@@ -22,23 +52,8 @@ RUN git clone https://github.com/Comfy-Org/ComfyUI.git /comfyui && \
 # Install ComfyUI dependencies
 RUN pip install --no-cache-dir -r /comfyui/requirements.txt
 
-# Download HuggingFace text encoder and verify minimum size
-RUN mkdir -p /comfyui/models/text_encoders && \
-    wget -c --show-progress https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors -O /comfyui/models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors && \
-    [ $(stat -c%s /comfyui/models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) -ge 4700000000 ] || (echo "Text encoder download invalid" && exit 1)
-
-# Download Wan 2.1 VAE and verify minimum size
-RUN mkdir -p /comfyui/models/vae && \
-    wget -c --show-progress https://huggingface.co/Comfy-Org/Wan-2.1/resolve/main/split_files/vae/wan_2.1_vae.safetensors -O /comfyui/models/vae/wan_2.1_vae.safetensors && \
-    [ $(stat -c%s /comfyui/models/vae/wan_2.1_vae.safetensors) -ge 220000000 ] || (echo "VAE download invalid" && exit 1)
-
-# Download NudeNet 640m detector using standalone python script
-COPY download_nudenet.py /tmp/download_nudenet.py
-RUN python /tmp/download_nudenet.py && rm /tmp/download_nudenet.py
-
-# Download LUSTIFY checkpoint using BuildKit secret mount
-COPY download_model.py /tmp/download_model.py
-RUN --mount=type=secret,id=civitai_token python /tmp/download_model.py && rm /tmp/download_model.py
+# Verify CUDA 13 PyTorch runtime is retained
+RUN python -c "import torch,sys; print(torch.__version__, torch.version.cuda); sys.exit(0 if (torch.version.cuda or '').startswith('13') else 1)"
 
 # Setup isolated virtual environment for censorship dependencies
 RUN python -m venv /opt/censor-venv && \
@@ -48,10 +63,12 @@ RUN python -m venv /opt/censor-venv && \
 # Install RunPod worker and storage client dependencies
 RUN pip install --no-cache-dir runpod==2.1.0 boto3==1.43.126 requests==2.34.2
 
+# Copy model checkpoints from models builder stage
+COPY --from=models /out/comfyui/models/ /comfyui/models/
+COPY --from=models /out/models/640m.onnx /models/640m.onnx
+
 # Copy handler and censorship worker scripts
-COPY censor_lib.py /censor_lib.py
-COPY censor_cli.py /censor_cli.py
-COPY handler.py /handler.py
+COPY censor_lib.py censor_cli.py handler.py /
 
 # Set working directory and default execution command
 WORKDIR /

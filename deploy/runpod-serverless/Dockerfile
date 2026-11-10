@@ -29,9 +29,10 @@ RUN --mount=type=secret,id=civitai_token python /tmp/download_model.py /out/comf
 # Stage 2: Final runtime image with PyTorch CUDA 13.0
 FROM pytorch/pytorch:2.14.1-cuda13.0-cudnn9-runtime
 
-# Suppress interactive prompts during installation
+# Base uses Ubuntu system Python (PEP 668, no conda); single-purpose container installs into it on purpose
 ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1
 
 # Install required system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -40,6 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libglib2.0-0 \
     libgomp1 \
+    python3.12-venv \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone ComfyUI repository and checkout pinned commit

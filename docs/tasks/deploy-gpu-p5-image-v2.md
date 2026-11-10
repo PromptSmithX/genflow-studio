@@ -105,3 +105,7 @@ Thứ tự layer (bước phụ thuộc base trước, model sau pip, code cuố
 - `9537f24`: `feat(deploy): convert Dockerfile to 2-stage build with PyTorch CUDA 13`
 - `a8dad56`: `docs(deploy): update README for worker image v2 with cuda 13 and rollback guide`
 - `docs: update task p5 execution notes and definition of done` (commit hiện tại)
+
+### 6. Sửa sau build thật (reviewer)
+- Build thật fail ở `pip install -r requirements.txt`: `error: externally-managed-environment`. Base 2.14.1 là Ubuntu 24.04 + Python 3.12 hệ thống (không conda, có PEP 668); torch nằm ở `/usr/local/lib/python3.12/dist-packages`. `python -m venv` cũng fail vì thiếu `ensurepip`.
+- Sửa: stage final thêm `ENV PIP_BREAK_SYSTEM_PACKAGES=1` và apt thêm `python3.12-venv`. `docker build --check` không phát hiện được loại lỗi này (chỉ kiểm cú pháp) — cần chạy thử các bước trong container base.

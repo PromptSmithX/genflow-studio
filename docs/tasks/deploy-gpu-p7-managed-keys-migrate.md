@@ -102,4 +102,17 @@
   - (d) `4046e14`: feat(electron): backup database before migration and rotate backups
   - (e) `e6e1056`: feat(electron): show informative dialog on migration failure and prevent startup
   - (f) `ffba45c`: docs: document managed settings priority and automatic backup on upgrade
-  - (g) `docs: update task p7 execution notes and definition of done` (commit hiện tại)
+  - (g) `0fc2c85`: docs: update task p7 execution notes and definition of done
+
+### Sửa sau review
+1. **Fix `electron/migrate.js`**: Di chuyển hàm `rotateBackups(dbPath)` xuống sau khi toàn bộ pending migrations đã áp dụng thành công (ngay trước log hoàn thành). Khi migration gặp lỗi, không xoay vòng/xóa bản backup nào, bảo vệ dữ liệu sạch trước nâng cấp. Bổ sung test case (5) trong `tests/electron-migrate.test.ts` kiểm thử kịch bản 4 bản backup cũ + migration lỗi -> exit 1 và giữ nguyên 5 bản backup (4 cũ + 1 mới).
+2. **Dọn dẹp `lib/settings.ts`**: Xóa alias không dùng `export const applyManagedSettings = applyEnvDefaults;`.
+3. **Kiểm tra**:
+   - `tests/electron-migrate.test.ts`: 5/5 test cases pass 100%.
+   - `npm test`: 32/32 files pass, 209/209 tests pass.
+   - `npx tsc --noEmit`: pass không lỗi.
+   - `npm run lint`: pass không lỗi.
+4. **Commits sửa sau review**:
+   - `95c863b`: `fix(electron): rotate backups only after all pending migrations succeed`
+   - `eb9e9ed`: `refactor(settings): remove unused applyManagedSettings alias`
+   - `docs: update execution notes with post-review fixes` (commit hiện tại)

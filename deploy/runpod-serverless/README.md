@@ -7,7 +7,8 @@ Tài liệu hướng dẫn đóng gói Docker image, triển khai và kiểm th�
 ## 1. Tổng quan kiến trúc
 
 Worker chạy dưới dạng container serverless trên nền tảng [RunPod Serverless](https://docs.runpod.io/serverless/overview):
-- **Base image:** `pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime` (được pin tag chính thức từ Docker Hub).
+- **Base image:** `pytorch/pytorch:2.14.1-cuda13.0-cudnn9-runtime` (được pin tag chính thức từ Docker Hub). Việc sử dụng PyTorch với CUDA 13.0 cho phép bật các kernel tối ưu hóa của ComfyUI (`comfy_kitchen`, `triton`) cho model INT8 trên các dòng GPU kiến trúc NVIDIA Blackwell (như RTX PRO 6000), loại bỏ cảnh báo yêu cầu `cu130+` và tránh việc fallback về execution path `eager` gây suy giảm hiệu năng (~4.4 s/it, ~36s/ảnh).
+- **Multi-stage build (Stage `models`):** Tách riêng công đoạn tải toàn bộ models sang stage trung gian độc lập với base image nhỏ `python:3.11.18-slim-bookworm`. Thiết kế này giúp Docker lưu giữ cache toàn bộ ~18GB model checkpoint; các lần cập nhật PyTorch, ComfyUI hoặc mã nguồn worker sau này sẽ không làm mất cache và không phải tải lại model từ đầu.
 - **ComfyUI:** Clone từ `https://github.com/Comfy-Org/ComfyUI.git` và pin commit cố định `fca60fe70e5b84c5c6b058263653d15cb3401e44` (Comfy-Org, ngày 2026-11-09) nhằm đảm bảo tính tái lập (reproducibility).
 - **Baked-in Models:** Toàn bộ models được nướng sẵn vào image để không phụ thuộc vào Network Volume (giúp mở khóa toàn bộ Data Centers, tránh tình trạng nghẽn GPU):
   - `lustifyNSFWCheckpoint_v10Krea2_2996235.safetensors` (13,148,974,712 bytes, SHA-256: `0505412ed2ac568286c4bf43f8ace93f9f5a6dd7a607f47f1912a68767e6900d`) tải từ CivitAI qua BuildKit secret.
@@ -67,22 +68,51 @@ Tài liệu RunPod Endpoint API: [docs.runpod.io/serverless/endpoints/endpoint-a
 
 Tài liệu BuildKit Secret: [docs.docker.com/build/building/secrets/](https://docs.docker.com/build/building/secrets/)
 
-1. Chuẩn bị file `token.txt` trong thư mục `deploy/runpod-serverless/` chứa CivitAI API token (file này đã được cấu hình trong `.gitignore` và `.dockerignore`, tuyệt đối không commit vào git):
+1. **Chuẩn bị file secret CivitAI token:**
+   Tạo file `token.txt` trong thư mục `deploy/runpod-serverless/` chứa CivitAI API token (file này đã được cấu hình trong `.gitignore` và `.dockerignore`, tuyệt đối không commit vào git):
    ```bash
    echo "YOUR_CIVITAI_API_TOKEN" > deploy/runpod-serverless/token.txt
    ```
 
-2. Build Docker image sử dụng BuildKit Secret (token không bị lưu vào image layer hay biến môi trường):
+2. **Dọn dẹp dung lượng đĩa trước khi build:**
+   Do image chứa model nặng (~20GB), hãy xóa image cũ trên máy và dọn cache build để tránh đầy ổ đĩa:
+   ```bash
+   docker image rm <dockerhub-username>/anima-serverless:v1 || true
+   docker builder prune -a -f
+   ```
+
+3. **Build Docker image tag `v2` sử dụng BuildKit Secret:**
+   Token chỉ được mount tạm thời trong quá trình tải model ở stage `models`, không bị ghi vào layer image hay biến môi trường:
    ```bash
    DOCKER_BUILDKIT=1 docker build \
      --secret id=civitai_token,src=deploy/runpod-serverless/token.txt \
-     -t <dockerhub-username>/anima-serverless:v1.0.0 \
+     -t <dockerhub-username>/anima-serverless:v2 \
      deploy/runpod-serverless/
    ```
 
-3. Push image lên container registry:
+4. **Smoke test cục bộ trước khi push:**
+   - **Kiểm tra PyTorch và CUDA 13.0:**
+     ```bash
+     docker run --rm --entrypoint python <dockerhub-username>/anima-serverless:v2 \
+       -c "import torch; print(torch.__version__, torch.version.cuda)"
+     ```
+     Kỳ vọng: In ra phiên bản PyTorch `2.14.1...` và CUDA runtime `13.0`.
+   - **Kiểm tra Censor virtual environment:**
+     ```bash
+     docker run --rm --entrypoint /opt/censor-venv/bin/python <dockerhub-username>/anima-serverless:v2 \
+       -c "import nudenet, onnxruntime, PIL; print('Censor venv OK')"
+     ```
+     Kỳ vọng: In ra `Censor venv OK`.
+   - **Kiểm tra danh sách model đã copy vào container:**
+     ```bash
+     docker run --rm --entrypoint ls <dockerhub-username>/anima-serverless:v2 \
+       -lh /comfyui/models/diffusion_models /comfyui/models/text_encoders /comfyui/models/vae /models
+     ```
+     Kỳ vọng: Thấy đầy đủ `lustifyNSFWCheckpoint_v10Krea2_2996235.safetensors`, `qwen3vl_4b_fp8_scaled.safetensors`, `wan_2.1_vae.safetensors` và `640m.onnx`.
+
+5. **Push image lên container registry:**
    ```bash
-   docker push <dockerhub-username>/anima-serverless:v1.0.0
+   docker push <dockerhub-username>/anima-serverless:v2
    ```
 
 ---
@@ -95,7 +125,7 @@ Vào trang **RunPod Console** -> **Serverless** -> **New Endpoint**:
 
 1. **General Settings:**
    - **Endpoint Name:** `anima-serverless-worker`
-   - **Container Image:** `<dockerhub-username>/anima-serverless:v1.0.0`
+   - **Container Image:** `<dockerhub-username>/anima-serverless:v2`
    - **Container Disk:** Tối thiểu `30 GB` (image chứa models nặng ~20GB).
 2. **GPU & Availability:**
    - **GPU Types:** Chọn nhiều dòng GPU 24GB, 32GB, 48GB, ưu tiên theo giá rẻ trước:
@@ -179,7 +209,33 @@ Theo tài liệu RunPod SDK, có 3 cách kiểm tra cục bộ:
 
 ---
 
-## 6. Ghi chú Bảo trì & Nâng cấp
+## 6. Nâng cấp & Rollback Endpoint
+
+### 6.1 Nâng cấp lên worker image v2
+1. Vào **RunPod Console** -> **Serverless** -> Chọn Endpoint hiện tại.
+2. Bấm **Manage** -> **Edit endpoint**.
+3. Cập nhật trường **Container Image** thành `<dockerhub-username>/anima-serverless:v2`.
+4. Giữ nguyên **Endpoint ID**, cấu hình GPU và toàn bộ biến môi trường hiện tại (`R2_*`, `COMFY_*`, `CENSOR_*`), sau đó bấm **Save**.
+5. Các worker mới được scale lên sẽ tự động chạy image `v2`.
+
+### 6.2 Rollback về v1 khi gặp sự cố
+- Nếu worker `v2` gặp sự cố không mong muốn trên production, lập tức vào **Manage** -> **Edit endpoint** và đổi lại trường **Container Image** thành `<dockerhub-username>/anima-serverless:v1`.
+- Bấm **Save** để RunPod scale down worker lỗi và khởi tạo worker v1 ổn định.
+
+### 6.3 Cách kiểm tra log worker sau khi deploy v2
+Vào RunPod Console -> Endpoint -> chọn tab **Workers** / **Logs** của worker đang chạy và kiểm tra:
+1. **Loại bỏ cảnh báo CUDA 13:** Không còn xuất hiện dòng cảnh báo:
+   ```
+   WARNING: You need pytorch with cu130 or higher to use optimized CUDA operations.
+   ```
+2. **Kích hoạt backend tăng tốc:** Backend `cuda` và `triton` của `comfy_kitchen` không còn bị vô hiệu hóa (`'disabled': True`).
+3. **Cải thiện tốc độ thực thi:** So sánh tốc độ bước lặp (`s/it`) và tổng thời gian hoàn thành prompt (`Prompt executed in ...s`):
+   - Worker v1 (eager mode): ~4.4 s/it, tổng ~36 giây/ảnh.
+   - Worker v2 (CUDA 13 optimized kernel): s/it và tổng thời gian sinh ảnh giảm đáng kể, giúp tăng thông lượng xử lý và giảm chi phí GPU.
+
+---
+
+## 7. Ghi chú Bảo trì & Vận hành
 
 - **ComfyUI Commit Pin:** Image hiện đang pin commit `fca60fe70e5b84c5c6b058263653d15cb3401e44`. Để nâng cấp ComfyUI:
   1. Kiểm tra commit mới nhất: `git ls-remote https://github.com/Comfy-Org/ComfyUI.git HEAD`.

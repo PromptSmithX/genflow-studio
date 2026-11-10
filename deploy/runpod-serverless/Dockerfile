@@ -46,7 +46,7 @@ RUN python -m venv /opt/censor-venv && \
     /opt/censor-venv/bin/pip install --no-cache-dir "nudenet==3.4.2" "numpy>=1.26,<3" opencv-python-headless "onnxruntime>=1.19,<2" "Pillow>=10,<12"
 
 # Install RunPod worker and storage client dependencies
-RUN pip install --no-cache-dir runpod==2.1.0 boto3==1.43.126 requests==2.32.3
+RUN pip install --no-cache-dir runpod==2.1.0 boto3==1.43.126 requests==2.34.2
 
 # Copy handler and censorship worker scripts
 COPY censor_lib.py /censor_lib.py

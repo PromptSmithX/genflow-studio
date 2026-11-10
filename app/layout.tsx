@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Anima Studio",
-  description: "Tạo ảnh anime qua ComfyUI trên Google Colab",
+  description: "Tạo ảnh lịch anime bằng GPU RunPod Serverless",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

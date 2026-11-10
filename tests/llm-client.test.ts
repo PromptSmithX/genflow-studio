@@ -44,6 +44,28 @@ describe("LlmClient", () => {
     expect(result.usage).toBeNull();
   });
 
+  it("sends standard headers and omits bypass-tunnel-reminder", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      chatResponse({
+        images: [{ positive: "a", caption: "b" }],
+        negative: "",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new LlmClient({
+      baseUrl: "https://api.x.ai/v1",
+      apiKey: "test-secret-key",
+      model: "grok-beta",
+    });
+    await client.generatePrompts({ systemPrompt: "sys", userMessage: "user", expectedCount: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, requestInit] = fetchMock.mock.calls[0];
+    expect(requestInit?.headers).toEqual({
+      "Content-Type": "application/json",
+      Authorization: "Bearer test-secret-key",
+    });
+  });
+
   it("returns token usage when the provider includes it", async () => {
     vi.stubGlobal(
       "fetch",

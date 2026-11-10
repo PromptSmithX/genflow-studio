@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getOrCreateSettings } from "@/lib/settings";
 import { resolveOutputRoot } from "@/lib/output-dir";
-import { ComfyClient } from "@/lib/comfyui/client";
+import { getRunpodClient } from "@/lib/comfyui/runpod-client";
 import { syncBatchExclusive } from "@/lib/comfyui/job-sync";
 import { slotLabel } from "@/lib/calendar/slot-label";
 import { regenerateJobFreshPrompt } from "@/lib/generations/regenerate-fresh";
@@ -9,8 +9,7 @@ import { runAutoPublishExclusive, getCalendarSkipReason } from "@/lib/pipeline/a
 import { syncBatchToSheet } from "@/lib/sheets/sync";
 
 const POLL_INTERVAL_MS = 15_000;
-// Chỉ đồng bộ batch gần đây; batch cũ hơn ngưỡng này sẽ không poll nữa để
-// tránh gọi ComfyUI vô hạn cho các batch kẹt lâu (vd Colab đã tắt từ lâu).
+// Chỉ đồng bộ batch gần đây; batch cũ hơn ngưỡng này sẽ không poll nữa để tránh gọi RunPod vô hạn.
 export const MAX_BATCH_AGE_MS = 24 * 60 * 60 * 1000;
 
 interface AutoSyncGlobal {
@@ -168,7 +167,7 @@ export async function runSyncTick(): Promise<void> {
   try {
     const settings = await getOrCreateSettings();
 
-    if (settings.comfyBaseUrl) {
+    if (settings.runpodEndpointId && settings.runpodApiKey) {
       const since = new Date(Date.now() - MAX_BATCH_AGE_MS);
       const batches = await prisma.generationBatch.findMany({
         where: { status: { in: ["queued", "running"] }, updatedAt: { gte: since } },
@@ -176,7 +175,7 @@ export async function runSyncTick(): Promise<void> {
       });
 
       if (batches.length > 0) {
-        const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });
+        const client = getRunpodClient(settings);
         const outputRoot = resolveOutputRoot(settings);
 
         for (const batch of batches) {

@@ -56,7 +56,8 @@ describe("auto-sync-publish", () => {
 
     vi.mocked(getOrCreateSettings).mockResolvedValue({
       id: "main",
-      comfyBaseUrl: null, // skip ComfyUI sync loop in tests
+      runpodEndpointId: null,
+      runpodApiKey: null, // skip RunPod sync loop in tests
       autoPublish: true,
     } as unknown as never);
 
@@ -69,7 +70,8 @@ describe("auto-sync-publish", () => {
   it("chọn đúng batch (bỏ qua khi autoPublish = false, query đúng bộ lọc)", async () => {
     vi.mocked(getOrCreateSettings).mockResolvedValue({
       id: "main",
-      comfyBaseUrl: null,
+      runpodEndpointId: null,
+      runpodApiKey: null,
       autoPublish: false, // disabled
     } as unknown as never);
 
@@ -80,7 +82,8 @@ describe("auto-sync-publish", () => {
     // When autoPublish = true, verify Prisma query filter
     vi.mocked(getOrCreateSettings).mockResolvedValue({
       id: "main",
-      comfyBaseUrl: null,
+      runpodEndpointId: null,
+      runpodApiKey: null,
       autoPublish: true,
     } as unknown as never);
 

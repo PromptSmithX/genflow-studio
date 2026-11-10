@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api/errors";
 import { settingsUpdateSchema } from "@/lib/validations/settings";
-import { parseComfyBaseUrl } from "@/lib/validations/url";
 import { getOrCreateSettings, redactSettings } from "@/lib/settings";
 
 export const runtime = "nodejs";
@@ -20,19 +19,31 @@ export async function PUT(request: NextRequest) {
   try {
     const body = settingsUpdateSchema.parse(await request.json());
 
-    let comfyBaseUrl: string | null | undefined = undefined;
-    if (body.comfyBaseUrl !== undefined) {
-      if (body.comfyBaseUrl === null || body.comfyBaseUrl === "") {
-        comfyBaseUrl = null;
-      } else {
-        const parsed = parseComfyBaseUrl(body.comfyBaseUrl);
-        if (!parsed.ok) {
-          return NextResponse.json(
-            { error: { code: "invalid_url", message: parsed.error } },
-            { status: 400 },
-          );
-        }
-        comfyBaseUrl = parsed.url;
+    let runpodEndpointId: string | null | undefined = undefined;
+    if (body.runpodEndpointId !== undefined) {
+      runpodEndpointId = body.runpodEndpointId || null;
+    }
+
+    let runpodApiKey: string | null | undefined = undefined;
+    if (body.runpodApiKey !== undefined) {
+      if (body.runpodApiKey === null) {
+        runpodApiKey = null;
+      } else if (body.runpodApiKey !== "") {
+        runpodApiKey = body.runpodApiKey;
+      }
+    }
+
+    let llmBaseUrl: string | null | undefined = undefined;
+    if (body.llmBaseUrl !== undefined) {
+      llmBaseUrl = body.llmBaseUrl || null;
+    }
+
+    let llmApiKey: string | null | undefined = undefined;
+    if (body.llmApiKey !== undefined) {
+      if (body.llmApiKey === null) {
+        llmApiKey = null;
+      } else if (body.llmApiKey !== "") {
+        llmApiKey = body.llmApiKey;
       }
     }
 
@@ -40,7 +51,8 @@ export async function PUT(request: NextRequest) {
     const updated = await prisma.appSettings.update({
       where: { id: "main" },
       data: {
-        ...(comfyBaseUrl !== undefined ? { comfyBaseUrl } : {}),
+        ...(runpodEndpointId !== undefined ? { runpodEndpointId } : {}),
+        ...(runpodApiKey !== undefined ? { runpodApiKey } : {}),
         ...(body.defaultWidth !== undefined ? { defaultWidth: body.defaultWidth } : {}),
         ...(body.defaultHeight !== undefined ? { defaultHeight: body.defaultHeight } : {}),
         ...(body.defaultSteps !== undefined ? { defaultSteps: body.defaultSteps } : {}),
@@ -54,20 +66,12 @@ export async function PUT(request: NextRequest) {
         ...(body.autoPublish !== undefined ? { autoPublish: body.autoPublish } : {}),
         ...(body.autoFormatId !== undefined ? { autoFormatId: body.autoFormatId } : {}),
         ...(body.advancedMode !== undefined ? { advancedMode: body.advancedMode } : {}),
+        ...(llmBaseUrl !== undefined ? { llmBaseUrl } : {}),
+        ...(llmApiKey !== undefined ? { llmApiKey } : {}),
         ...(body.llmModel !== undefined ? { llmModel: body.llmModel || null } : {}),
         ...(body.llmSystemPrompt !== undefined ? { llmSystemPrompt: body.llmSystemPrompt || null } : {}),
       },
     });
-
-    // Gateway token is never persisted to the DB or returned to the client;
-    // it is only ever read from the server-side env var at request time. The
-    // LLM API key no longer passes through this app at all -- it lives only
-    // on the Colab gateway process (entered via getpass, Cell 7.6).
-    if (body.gatewayToken) {
-      console.warn(
-        "A gateway token was submitted via the API but is not persisted. Set COMFY_GATEWAY_TOKEN in the server environment instead.",
-      );
-    }
 
     return NextResponse.json(redactSettings(updated));
   } catch (error) {

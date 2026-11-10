@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { ComfyApiError } from "@/lib/comfyui/client";
+import { RunpodApiError } from "@/lib/comfyui/runpod-client";
 import { LlmApiError } from "@/lib/llm/client";
 import { WorkflowMappingError } from "@/lib/comfyui/workflow-mapper";
 import { GenerationSetupError } from "@/lib/generations/create-batch";
@@ -18,17 +18,12 @@ export function apiError(code: string, message: string, status: number, details?
   return NextResponse.json(body, { status });
 }
 
-/**
- * Normalizes any thrown error from an API route into the project-wide
- * `{ error: { code, message, details } }` shape. Never forwards secrets:
- * ComfyApiError/WorkflowMappingError details are already sanitized at the
- * throw site, and unknown errors are reduced to a generic message.
- */
+// Normalizes thrown errors into project-wide { error: { code, message, details } } shape.
 export function handleApiError(error: unknown) {
   if (error instanceof ZodError) {
     return apiError("validation_error", "Dữ liệu gửi lên không hợp lệ", 400, error.flatten());
   }
-  if (error instanceof ComfyApiError) {
+  if (error instanceof RunpodApiError) {
     return apiError(error.code, error.message, 502, error.details);
   }
   if (error instanceof LlmApiError) {

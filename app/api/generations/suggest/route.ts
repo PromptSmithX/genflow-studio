@@ -21,12 +21,10 @@ export async function POST(request: NextRequest) {
   try {
     const input = suggestPromptsSchema.parse(await request.json());
     const settings = await getOrCreateSettings();
-    // LLM chạy qua gateway Colab (route "/llm" cạnh "/censor"), KHÔNG còn base
-    // URL/API key riêng -- xem lib/llm/resolve-config.ts. Key thật chỉ nằm ở
-    // Colab, app không gửi Authorization.
+    // LLM gọi trực tiếp nhà cung cấp bằng API key từ AppSettings.
     const llmConfig = resolveLlmConfig(settings);
     if (!llmConfig) {
-      throw new LlmApiError("Chưa cấu hình URL ComfyUI, vui lòng cấu hình ở trang Cài đặt", "no_config");
+      throw new LlmApiError("Chưa cấu hình Trợ lý AI (API key) — vào Cài đặt", "no_config");
     }
 
     let styleHint: string | undefined;
@@ -62,7 +60,11 @@ export async function POST(request: NextRequest) {
     const systemPrompt = SHARED_BIAS_PROMPT.trim()
       ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}`
       : baseSystemPrompt;
-    const client = new LlmClient({ baseUrl: llmConfig.baseUrl, model: llmConfig.model });
+    const client = new LlmClient({
+      baseUrl: llmConfig.baseUrl,
+      apiKey: llmConfig.apiKey,
+      model: llmConfig.model,
+    });
 
     let result;
     try {

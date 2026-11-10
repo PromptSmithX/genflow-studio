@@ -84,6 +84,8 @@ model AppSettings {
   id                String   @id @default("main")
   comfyBaseUrl      String?
   hasGatewayToken   Boolean  @default(false)
+  runpodEndpointId  String?
+  runpodApiKey      String?
   defaultWidth      Int      @default(1024)
   defaultHeight     Int      @default(1024)
   defaultSteps      Int      @default(25)
@@ -101,6 +103,7 @@ model AppSettings {
   autoFormatId      String   @default("premade_wall_11x8_5")
   advancedMode      Boolean  @default(false)
   llmBaseUrl        String?
+  llmApiKey         String?
   llmModel          String?
   llmSystemPrompt   String?
   createdAt         DateTime @default(now())

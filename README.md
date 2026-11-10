@@ -1,12 +1,12 @@
 # Anima Studio
 
-Ứng dụng local-first để tạo ảnh anime qua **ComfyUI** đang chạy trên GPU **Google Colab** (model `One obsession_Anima v4.0`), dành cho một người dùng trên một máy Windows. Giao diện và logic chạy local (Next.js); ComfyUI chỉ chạy ở Colab, kết nối qua URL tunnel.
+Ứng dụng local-first để tạo ảnh anime qua **ComfyUI** đang chạy trên GPU **RunPod Serverless** (model `One obsession_Anima v4.0`), dành cho một người dùng trên một máy Windows. Giao diện và logic chạy local (Next.js).
 
 ## 1. Yêu cầu
 
 - Windows 10/11.
 - [Node.js](https://nodejs.org/) bản LTS (≥ 20) và npm (đi kèm Node).
-- Không cần cài Python trên máy local — Python/ComfyUI chỉ chạy trên Colab.
+- Không cần cài Python trên máy local cho việc sinh ảnh — worker ComfyUI chạy trên RunPod Serverless.
 
 ## 2. Cài đặt lần đầu
 
@@ -19,7 +19,7 @@ npm run db:seed
 - `npm run db:migrate` tạo database SQLite tại `data/anima.sqlite` theo schema Prisma.
 - `npm run db:seed` tạo dữ liệu mẫu **chỉ khi bảng đang trống**: prompt mặc định, 3 style mẫu (Anime Cinematic, Soft Illustration, Manga Art). Chạy lại không ghi đè dữ liệu bạn đã sửa.
 
-Sao chép `.env.example` thành `.env` nếu bạn cần chỉnh `DATABASE_URL` hoặc thêm `COMFY_GATEWAY_TOKEN` (token cho gateway có xác thực, tùy chọn — không bắt buộc với LocalTunnel thông thường).
+Sao chép `.env.example` thành `.env` nếu bạn cần chỉnh `DATABASE_URL` hoặc cấu hình R2 / Google Sheets.
 
 ## 3. Chạy ứng dụng
 
@@ -37,14 +37,11 @@ Mở `http://127.0.0.1:3000`. Server chỉ bind vào `127.0.0.1` (loopback), kh�
 
 Muốn backup: sao chép cả thư mục `data/`. Muốn restore: dán thư mục `data/` vào bản cài mới rồi chạy `npm run dev` (không cần migrate lại).
 
-## 5. Kết nối ComfyUI trên Colab
+## 5. Kết nối GPU RunPod Serverless
 
-1. Trong notebook Colab, chạy ComfyUI và tạo tunnel (ví dụ LocalTunnel), lấy URL dạng `https://xxxx.loca.lt`.
-2. Vào **Cài đặt** trong app, dán URL vào ô "ComfyUI base URL", bấm **Lưu URL**, rồi bấm **Kiểm tra kết nối**.
-3. Trạng thái ở header chỉ hiện "Đã kết nối" khi request `/system_stats` thành công thật — không dựa vào việc đã nhập URL.
-4. Mỗi khi Colab restart, tunnel URL sẽ đổi. Quay lại **Cài đặt**, dán URL mới, kiểm tra lại kết nối.
-
-**Cảnh báo bảo mật:** URL LocalTunnel trỏ thẳng tới ComfyUI không có lớp đăng nhập. Ai biết URL đều có thể gửi job tới máy bạn. Chỉ dùng cho thử nghiệm cá nhân, không chia sẻ URL, và dừng tunnel khi không dùng.
+1. Build và triển khai worker ComfyUI Serverless theo hướng dẫn tại [deploy/runpod-serverless/README.md](deploy/runpod-serverless/README.md).
+2. Vào **Cài đặt → Kết nối GPU** trong app, nhập **Endpoint ID** và **API key**, rồi bấm **Lưu kết nối** và **Kiểm tra kết nối**.
+3. Vào **Cài đặt → Trợ lý AI**, nhập LLM API key để sử dụng tính năng gợi ý prompt tự động (mặc định xAI `https://api.x.ai/v1`, model `grok-4-fast-non-reasoning`).
 
 ## 6. Import workflow và cấu hình node mapping
 
@@ -82,12 +79,10 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 
 | Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
 |---|---|---|
-| HTTP 502 khi kiểm tra kết nối | Tunnel/Colab vừa khởi động chưa xong, hoặc session đã dừng | Đợi vài giây rồi thử lại; nếu vẫn lỗi, mở lại notebook Colab |
-| Tunnel URL đã cũ/hết hạn | Session Colab bị ngắt hoặc restart | Lấy URL tunnel mới, dán lại vào Cài đặt |
-| Nhận HTML thay vì JSON | LocalTunnel hiện trang xác nhận (interstitial) | App đã tự gửi header bypass; nếu vẫn lỗi, mở URL đó bằng browser để xác nhận thủ công một lần |
+| HTTP 502 khi kiểm tra kết nối | Endpoint chưa sẵn sàng hoặc thông tin Endpoint ID / API key chưa đúng | Kiểm tra Endpoint ID và API key trong Cài đặt hoặc kiểm tra log worker trên RunPod |
 | Lỗi parse JSON khi import workflow | File không đúng định dạng API, hoặc không phải export từ "Save (API Format)" | Export lại đúng cách từ ComfyUI |
 | Mapping không hợp lệ | Node ID/input key không còn tồn tại trong workflow mới | Vào Cài đặt, chọn lại node/input, Validate lại |
-| GPU out of memory / lỗi node khi tạo ảnh | Workflow/model vượt quá VRAM của GPU Colab | Giảm kích thước ảnh/steps, hoặc kiểm tra workflow trên ComfyUI trực tiếp |
+| GPU out of memory / lỗi node khi tạo ảnh | Workflow/model vượt quá VRAM của GPU worker | Giảm kích thước ảnh/steps, hoặc kiểm tra cấu hình worker |
 
 ## 10. Scripts
 

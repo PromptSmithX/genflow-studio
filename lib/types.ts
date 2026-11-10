@@ -6,8 +6,8 @@ export type MediumDTO = MediumPreset;
 export type GeneratedImageDTO = GeneratedImage;
 
 export interface SettingsDTO {
-  comfyBaseUrl: string | null;
-  hasGatewayToken: boolean;
+  runpodEndpointId: string | null;
+  hasRunpodKey: boolean;
   defaultWidth: number;
   defaultHeight: number;
   defaultSteps: number;
@@ -19,6 +19,7 @@ export interface SettingsDTO {
   autoPublish: boolean;
   autoFormatId: string;
   advancedMode: boolean;
+  llmBaseUrl: string | null;
   llmModel: string | null;
   llmSystemPrompt: string | null;
   hasLlmKey: boolean;
@@ -27,15 +28,13 @@ export interface SettingsDTO {
 
 export type ConnectionStatusResponse =
   | { state: "not_configured" }
-  | { state: "configured_untested"; comfyBaseUrl: string };
+  | { state: "configured_untested"; runpodEndpointId: string };
 
 export interface ConnectionTestResponse {
   state: "connected" | "disconnected" | "error" | "not_configured";
   checkedAt: string;
-  version?: string | null;
-  gpu?: string | null;
-  vramFreeMb?: number | null;
-  vramTotalMb?: number | null;
+  workers?: Record<string, number>;
+  jobs?: Record<string, number>;
   error?: { code: string; message: string };
 }
 

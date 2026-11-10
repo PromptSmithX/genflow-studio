@@ -7,6 +7,7 @@ import { POST } from "@/app/api/history/[jobId]/regenerate-fresh/route";
 import type { NextRequest } from "next/server";
 
 const mockGeneratePrompts = vi.fn();
+const mockLlmClientConstructor = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -29,16 +30,27 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/settings", () => ({
-  getOrCreateSettings: vi.fn().mockResolvedValue({ comfyBaseUrl: "http://127.0.0.1:8188" }),
+  getOrCreateSettings: vi.fn().mockResolvedValue({
+    runpodEndpointId: "ep-test",
+    runpodApiKey: "rpa-test",
+    llmApiKey: "mock-key",
+  }),
   getOrCreateGlobalPrompt: vi.fn().mockResolvedValue({ positivePrompt: "", negativePrompt: "" }),
 }));
 
 vi.mock("@/lib/llm/resolve-config", () => ({
-  resolveLlmConfig: vi.fn().mockReturnValue({ baseUrl: "http://mock-llm", model: "mock-model" }),
+  resolveLlmConfig: vi.fn().mockReturnValue({
+    baseUrl: "http://mock-llm",
+    apiKey: "mock-key",
+    model: "mock-model",
+  }),
 }));
 
 vi.mock("@/lib/llm/client", () => ({
   LlmClient: class {
+    constructor(options: unknown) {
+      mockLlmClientConstructor(options);
+    }
     generatePrompts = mockGeneratePrompts;
   },
   LlmApiError: class extends Error {
@@ -57,15 +69,18 @@ vi.mock("@/lib/comfyui/workflow-store", () => ({
   parseNodeMapping: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("@/lib/comfyui/client", () => ({
-  ComfyClient: class {
-    submitPrompt = vi.fn().mockResolvedValue({ promptId: "prompt-123" });
+vi.mock("@/lib/comfyui/runpod-client", () => ({
+  RunpodClient: class {
+    submitJob = vi.fn().mockResolvedValue({ jobId: "rp-123" });
   },
-  ComfyApiError: class extends Error {
+  RunpodApiError: class extends Error {
     constructor(message: string, public code: string) {
       super(message);
     }
   },
+  getRunpodClient: vi.fn().mockReturnValue({
+    submitJob: vi.fn().mockResolvedValue({ jobId: "rp-123" }),
+  }),
 }));
 
 describe("regenerateJobFreshPrompt", () => {
@@ -247,13 +262,31 @@ describe("regenerateJobFreshPrompt", () => {
 
     await regenerateJobFreshPrompt("job-fail");
 
-    // Verify job update resets autoRetryCount to 0
+    // Verify LlmClient was constructed with apiKey from resolved config
+    expect(mockLlmClientConstructor).toHaveBeenCalledWith({
+      baseUrl: "http://mock-llm",
+      apiKey: "mock-key",
+      model: "mock-model",
+    });
+
+    // Verify job update resets autoRetryCount to 0 and records promptId rp-123
     expect(prisma.generationJob.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "job-fail" },
         data: expect.objectContaining({
           status: "queued",
           autoRetryCount: 0,
+        }),
+      }),
+    );
+
+    expect(prisma.generationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "job-fail" },
+        data: expect.objectContaining({
+          status: "queued",
+          promptId: "rp-123",
+          submittedAt: expect.any(Date),
         }),
       }),
     );

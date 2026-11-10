@@ -3,8 +3,13 @@ import { z } from "zod";
 export const seedModeSchema = z.enum(["random", "fixed"]);
 
 export const settingsUpdateSchema = z.object({
-  comfyBaseUrl: z.string().trim().optional().nullable(),
-  gatewayToken: z.string().trim().optional().nullable(),
+  runpodEndpointId: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9-]*$/i, "Endpoint ID không hợp lệ")
+    .optional()
+    .nullable(),
+  runpodApiKey: z.string().trim().optional().nullable(),
   defaultWidth: z.number().int().min(64).max(4096).optional(),
   defaultHeight: z.number().int().min(64).max(4096).optional(),
   defaultSteps: z.number().int().min(1).max(200).optional(),
@@ -16,15 +21,15 @@ export const settingsUpdateSchema = z.object({
   autoPublish: z.boolean().optional(),
   autoFormatId: z.string().trim().min(1).optional(),
   advancedMode: z.boolean().optional(),
-  // Trợ lý AI đi qua cùng gateway Colab với ComfyUI (route "/llm") -- không
-  // còn base URL/API key riêng để nhập ở app. llmModel vẫn tuỳ chọn override
-  // nếu model mặc định phía Colab (Cell 7.6) khác. Xem lib/llm/resolve-config.ts.
+  llmBaseUrl: z.string().trim().url("URL không hợp lệ").or(z.literal("")).optional().nullable(),
+  llmApiKey: z.string().trim().optional().nullable(),
   llmModel: z.string().trim().optional().nullable(),
   llmSystemPrompt: z.string().trim().max(8000).optional().nullable(),
 });
 
 export const connectionTestSchema = z.object({
-  baseUrl: z.string().trim().min(1, "URL không được để trống"),
+  endpointId: z.string().trim().optional(),
+  apiKey: z.string().trim().optional(),
 });
 
 export type SettingsUpdateInput = z.infer<typeof settingsUpdateSchema>;

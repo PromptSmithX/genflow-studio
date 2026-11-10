@@ -20,8 +20,8 @@ export async function getOrCreateGlobalPrompt() {
 
 export function redactSettings(settings: AppSettings) {
   return {
-    comfyBaseUrl: settings.comfyBaseUrl,
-    hasGatewayToken: Boolean(process.env.COMFY_GATEWAY_TOKEN),
+    runpodEndpointId: settings.runpodEndpointId,
+    hasRunpodKey: Boolean(settings.runpodApiKey),
     defaultWidth: settings.defaultWidth,
     defaultHeight: settings.defaultHeight,
     defaultSteps: settings.defaultSteps,
@@ -33,12 +33,10 @@ export function redactSettings(settings: AppSettings) {
     autoPublish: settings.autoPublish,
     autoFormatId: settings.autoFormatId,
     advancedMode: settings.advancedMode,
+    llmBaseUrl: settings.llmBaseUrl,
     llmModel: settings.llmModel,
     llmSystemPrompt: settings.llmSystemPrompt,
-    // Trợ lý AI đi qua cùng tunnel ComfyUI (gateway Colab route "/llm", key
-    // thật giữ phía Colab) -- "sẵn sàng" chỉ còn phụ thuộc comfyBaseUrl, không
-    // còn base URL/API key riêng của app. Xem lib/llm/resolve-config.ts.
-    hasLlmKey: Boolean(settings.comfyBaseUrl),
+    hasLlmKey: Boolean(settings.llmApiKey),
     updatedAt: settings.updatedAt,
   };
 }

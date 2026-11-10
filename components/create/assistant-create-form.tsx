@@ -101,9 +101,7 @@ export function AssistantCreateForm() {
   const safeImageCount = Math.min(imageCount, maxImages);
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
   const isReady = connectionState === "connected" && workflowReady;
-  // Trợ lý AI đi qua cùng gateway Colab với ComfyUI -- "sẵn sàng" chỉ còn phụ
-  // thuộc comfyBaseUrl đã cấu hình (settings.hasLlmKey), không có base
-  // URL/API key riêng của app nữa. Xem lib/llm/resolve-config.ts.
+  // Trợ lý AI yêu cầu API key đã cấu hình trong Cài đặt (settings.hasLlmKey).
   const llmReady = Boolean(settings?.hasLlmKey);
   // Một nút "Tạo ảnh" chạy cả soạn prompt (LLM) lẫn gửi gen (ComfyUI) nên cần
   // đủ cả hai sẵn sàng ngay từ đầu.
@@ -192,6 +190,14 @@ export function AssistantCreateForm() {
           <AlertDescription>
             {!workflow?.configured || !workflow?.isValidated ? (
               <>Liên hệ người cài đặt hoặc bật Chế độ nâng cao trong Cài đặt.</>
+            ) : !llmReady ? (
+              <>
+                Trợ lý AI chưa có API key. Vào{" "}
+                <Link href="/settings" className="underline underline-offset-4">
+                  Cài đặt → Trợ lý AI
+                </Link>{" "}
+                để nhập key.
+              </>
             ) : (
               <>
                 Máy tạo ảnh chưa được kết nối hoặc chưa cài đặt xong. Nhờ người cài đặt vào{" "}
@@ -204,7 +210,7 @@ export function AssistantCreateForm() {
             <span className="mt-1 block text-xs opacity-80">
               Chi tiết:{" "}
               {!llmReady
-                ? "chưa có URL ComfyUI"
+                ? "chưa có API key Trợ lý AI (Cài đặt → Trợ lý AI)"
                 : !workflow?.configured
                   ? "chưa import workflow"
                   : !workflow.isValidated

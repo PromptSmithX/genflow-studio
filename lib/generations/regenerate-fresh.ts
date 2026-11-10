@@ -4,7 +4,7 @@ import { getWorkflowConfig, loadWorkflowJson, parseNodeMapping } from "@/lib/com
 import { applyWorkflowMapping, type ApplyMappingValues } from "@/lib/comfyui/workflow-mapper";
 import { buildPrompts } from "@/lib/prompts/build-prompts";
 import { mergeTags } from "@/lib/prompts/merge-tags";
-import { ComfyClient, ComfyApiError } from "@/lib/comfyui/client";
+import { getRunpodClient, RunpodApiError } from "@/lib/comfyui/runpod-client";
 import { LlmClient, LlmApiError } from "@/lib/llm/client";
 import {
   CALENDAR_SYSTEM_PROMPT_REAL,
@@ -41,9 +41,10 @@ async function generateFreshPromptForJob({
   isCover: boolean;
 }): Promise<FreshPrompt> {
   const settings = await getOrCreateSettings();
+  // LLM gọi trực tiếp nhà cung cấp bằng API key từ AppSettings.
   const llmConfig = resolveLlmConfig(settings);
   if (!llmConfig) {
-    throw new LlmApiError("Chưa cấu hình URL ComfyUI, vui lòng cấu hình ở trang Cài đặt", "no_config");
+    throw new LlmApiError("Chưa cấu hình Trợ lý AI (API key) — vào Cài đặt", "no_config");
   }
 
   let styleHint: string | undefined;
@@ -67,7 +68,11 @@ async function generateFreshPromptForJob({
   const baseSystemPrompt = isAnimeMedium ? CALENDAR_SYSTEM_PROMPT_ANIME : CALENDAR_SYSTEM_PROMPT_REAL;
   const systemPrompt = SHARED_BIAS_PROMPT.trim() ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}` : baseSystemPrompt;
 
-  const client = new LlmClient({ baseUrl: llmConfig.baseUrl, model: llmConfig.model });
+  const client = new LlmClient({
+    baseUrl: llmConfig.baseUrl,
+    apiKey: llmConfig.apiKey,
+    model: llmConfig.model,
+  });
   const result = await client.generatePrompts({ systemPrompt, userMessage, expectedCount: 2 });
 
   // images[0] = bìa (vai trò ảnh #1 trong system prompt), images[1] = artwork.
@@ -107,9 +112,7 @@ export async function regenerateJobFreshPrompt(jobId: string) {
   }
 
   const settings = await getOrCreateSettings();
-  if (!settings.comfyBaseUrl) {
-    throw new GenerationSetupError("Chưa cấu hình URL kết nối ComfyUI", "not_configured");
-  }
+  const client = getRunpodClient(settings);
 
   const workflowConfig = await getWorkflowConfig();
   if (!workflowConfig) {
@@ -172,7 +175,6 @@ export async function regenerateJobFreshPrompt(jobId: string) {
     },
   });
 
-  const client = new ComfyClient({ baseUrl: settings.comfyBaseUrl, token: process.env.COMFY_GATEWAY_TOKEN });
   const values: ApplyMappingValues = {
     positivePrompt: updatedJob.positiveFinal,
     negativePrompt: updatedJob.negativeFinal,
@@ -188,14 +190,14 @@ export async function regenerateJobFreshPrompt(jobId: string) {
 
   try {
     const mappedWorkflow = applyWorkflowMapping(workflow, mapping, values);
-    const result = await client.submitPrompt(mappedWorkflow, batch.id);
+    const result = await client.submitJob(mappedWorkflow);
     await prisma.generationJob.update({
       where: { id: jobId },
-      data: { promptId: result.promptId, status: "queued", submittedAt: new Date() },
+      data: { promptId: result.jobId, status: "queued", submittedAt: new Date() },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Lỗi không xác định khi gửi job";
-    const code = error instanceof ComfyApiError ? error.code : "submit_failed";
+    const code = error instanceof RunpodApiError ? error.code : "submit_failed";
     console.error(`[regenerateJobFreshPrompt] submit thất bại cho job ${jobId}:`, error);
     await prisma.generationJob.update({
       where: { id: jobId },

@@ -8,6 +8,23 @@ const { spawn, spawnSync } = require("node:child_process");
 const net = require("node:net");
 const fs = require("node:fs");
 const path = require("node:path");
+const { decrypt } = require("./secrets-crypto");
+
+const SECRETS_WHITELIST = new Set([
+  "ANIMA_RUNPOD_ENDPOINT_ID",
+  "ANIMA_RUNPOD_API_KEY",
+  "ANIMA_LLM_API_KEY",
+  "ANIMA_LLM_BASE_URL",
+  "ANIMA_LLM_MODEL",
+  "R2_ACCOUNT_ID",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET",
+  "R2_PUBLIC_BASE_URL",
+  "R2_KEY_PREFIX",
+  "GOOGLE_SHEET_ID",
+  "GOOGLE_SERVICE_ACCOUNT_JSON",
+]);
 
 let serverProcess = null;
 let mainWindow = null;
@@ -22,6 +39,7 @@ function getPaths() {
       templateWorkflowDir: path.join(resourcesDir, "template", "workflows"),
       migrationsDir: path.join(resourcesDir, "template", "migrations"),
       migrateScript: path.join(__dirname, "migrate.js"),
+      secretsFile: path.join(resourcesDir, "secrets", "secrets.enc"),
     };
   }
   // Dev convenience path: `npm run build` then `npm run electron:dev`, using
@@ -37,7 +55,32 @@ function getPaths() {
     templateWorkflowDir: path.join(root, "resources", "template", "workflows"),
     migrationsDir: path.join(root, "prisma", "migrations"),
     migrateScript: path.join(__dirname, "migrate.js"),
+    secretsFile: path.join(root, "resources", "secrets", "secrets.enc"),
   };
+}
+
+// Giải mã secrets nhúng từ file secrets.enc nếu tồn tại
+function loadEmbeddedSecrets(paths) {
+  if (!paths.secretsFile || !fs.existsSync(paths.secretsFile)) {
+    return {};
+  }
+  try {
+    const encryptedBuf = fs.readFileSync(paths.secretsFile);
+    const decrypted = decrypt(encryptedBuf);
+    if (!decrypted || typeof decrypted !== "object") {
+      return {};
+    }
+    const result = {};
+    for (const [key, val] of Object.entries(decrypted)) {
+      if (SECRETS_WHITELIST.has(key) && val !== null && val !== undefined) {
+        result[key] = String(val);
+      }
+    }
+    return result;
+  } catch (err) {
+    console.error("Không thể giải mã secrets nhúng:", err.message);
+    return {};
+  }
 }
 
 function getFreePort() {
@@ -119,11 +162,13 @@ async function startServer() {
   const paths = getPaths();
   const { dataRoot, dbPath } = ensureUserData(paths);
   const port = await getFreePort();
+  const embeddedSecrets = loadEmbeddedSecrets(paths);
 
   serverProcess = spawn(paths.nodeBinary, [path.join(paths.serverDir, "server.js")], {
     cwd: paths.serverDir,
     env: {
       ...process.env,
+      ...embeddedSecrets,
       NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
       PORT: String(port),

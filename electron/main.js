@@ -38,7 +38,7 @@ function getPaths() {
       templateDb: path.join(resourcesDir, "template", "anima.sqlite"),
       templateWorkflowDir: path.join(resourcesDir, "template", "workflows"),
       migrationsDir: path.join(resourcesDir, "template", "migrations"),
-      migrateScript: path.join(__dirname, "migrate.js"),
+      migrateScript: path.join(resourcesDir, "app.asar.unpacked", "electron", "migrate.js"),
       secretsFile: path.join(resourcesDir, "secrets", "secrets.enc"),
     };
   }
@@ -105,17 +105,38 @@ function ensureUserData(paths) {
       throw new Error(`Template DB not found at ${paths.templateDb}`);
     }
     fs.copyFileSync(paths.templateDb, dbPath);
-  } else if (fs.existsSync(paths.migrationsDir) && fs.existsSync(paths.migrateScript)) {
+  } else {
+    // DB đã tồn tại thì luôn kiểm tra; thiếu file hoặc thư mục migration thì báo lỗi
+    if (!fs.existsSync(paths.migrateScript)) {
+      const err = new Error(`Không tìm thấy script migration tại ${paths.migrateScript}`);
+      err.name = "MigrationError";
+      err.backupPath = null;
+      err.dataRoot = dataRoot;
+      throw err;
+    }
+    if (!fs.existsSync(paths.migrationsDir)) {
+      const err = new Error(`Không tìm thấy thư mục migration tại ${paths.migrationsDir}`);
+      err.name = "MigrationError";
+      err.backupPath = null;
+      err.dataRoot = dataRoot;
+      throw err;
+    }
+
     // Chạy migration tự động khi cập nhật phiên bản ứng dụng
     console.log("Checking for database migrations...");
     const result = spawnSync(paths.nodeBinary, [paths.migrateScript, dbPath, paths.migrationsDir], {
-      stdio: ["ignore", "pipe", "inherit"],
+      stdio: ["ignore", "pipe", "pipe"],
       encoding: "utf8",
       windowsHide: true,
     });
 
     const stdout = result.stdout || "";
     process.stdout.write(stdout);
+
+    const stderr = result.stderr || "";
+    if (stderr) {
+      process.stderr.write(stderr);
+    }
 
     let backupPath = null;
     const backupMatch = stdout.match(/^BACKUP_PATH=(.+)$/m);
@@ -130,6 +151,8 @@ function ensureUserData(paths) {
       err.name = "MigrationError";
       err.backupPath = backupPath;
       err.dataRoot = dataRoot;
+      const trimmedStderr = stderr.trim();
+      err.details = trimmedStderr.slice(-300);
       throw err;
     }
   }
@@ -241,6 +264,12 @@ if (!gotTheLock) {
           contentLines.push(`Thư mục dữ liệu: ${error.dataRoot}`);
         }
         contentLines.push("Vui lòng gửi file log hoặc liên hệ người quản lý để được hỗ trợ.");
+        const detailParts = [error.message, error.details].filter(
+          (part) => typeof part === "string" && part.trim().length > 0,
+        );
+        if (detailParts.length > 0) {
+          contentLines.push(`Chi tiết: ${detailParts.join(" — ")}`);
+        }
         dialog.showErrorBox(title, contentLines.join("\n\n"));
       } else {
         const title = "Anima Studio — Không khởi động được";

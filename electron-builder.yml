@@ -2,6 +2,8 @@ appId: com.animastudio.app
 productName: Anima Studio
 directories:
   output: dist-electron
+asarUnpack:
+  - electron/migrate.js
 files:
   - electron/**/*
   - "!electron/secrets*.json"

@@ -1,10 +1,32 @@
 import { GoogleAuth } from "google-auth-library";
 
-export async function getAccessToken(serviceAccountFile: string): Promise<string> {
-  const auth = new GoogleAuth({
-    keyFile: serviceAccountFile,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
+export interface AccessTokenConfig {
+  credentials?: Record<string, unknown>;
+  serviceAccountFile?: string;
+}
+
+// Lấy access token từ Google service account qua JSON credentials hoặc keyFile
+export async function getAccessToken(config: AccessTokenConfig | string): Promise<string> {
+  let auth: GoogleAuth;
+  if (typeof config === "string") {
+    auth = new GoogleAuth({
+      keyFile: config,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+  } else if (config.credentials) {
+    auth = new GoogleAuth({
+      credentials: config.credentials,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+  } else if (config.serviceAccountFile) {
+    auth = new GoogleAuth({
+      keyFile: config.serviceAccountFile,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+  } else {
+    throw new Error("Cấu hình xác thực Google Sheets không hợp lệ");
+  }
+
   const client = await auth.getClient();
   const tokenResponse = await client.getAccessToken();
   if (!tokenResponse.token) {

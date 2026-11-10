@@ -72,10 +72,36 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 2. Tạo **Service Account**, tạo và tải file JSON key về máy.
 3. Tạo một Google Spreadsheet mới, chia sẻ (Share) quyền **Editor** cho email của Service Account vừa tạo.
 4. Cấu hình biến môi trường trong file `.env`:
+   - `GOOGLE_SERVICE_ACCOUNT_JSON`: Chuỗi nội dung JSON của Service Account (ưu tiên), hoặc:
    - `GOOGLE_SERVICE_ACCOUNT_FILE`: Đường dẫn tuyệt đối hoặc tương đối tới file JSON key (vd `keys/google-service-account.json`).
    - `GOOGLE_SHEET_ID`: ID của bảng tính Google Sheets (lấy từ URL: `https://docs.google.com/spreadsheets/d/<GOOGLE_SHEET_ID>/edit`).
 
-## 9. Xử lý lỗi thường gặp
+## 9. Đóng gói exe có cấu hình sẵn ("zero-config")
+
+Để đóng gói bộ cài Windows (.exe) nhúng sẵn cấu hình (RunPod, LLM, R2, Google Sheets) giúp ứng dụng mở lên là dùng được ngay:
+
+1. Sao chép file mẫu:
+   ```bash
+   cp secrets/build-secrets.example.json secrets/build-secrets.json
+   ```
+2. Điền các giá trị secret vào `secrets/build-secrets.json`:
+   - `ANIMA_RUNPOD_ENDPOINT_ID`, `ANIMA_RUNPOD_API_KEY`: Thông tin worker RunPod Serverless.
+   - `ANIMA_LLM_API_KEY`, `ANIMA_LLM_BASE_URL`, `ANIMA_LLM_MODEL`: Cấu hình Trợ lý AI.
+   - `R2_*`: Cấu hình Cloudflare R2 bucket.
+   - `GOOGLE_SHEET_ID`: ID Google Spreadsheet.
+   - `GOOGLE_SERVICE_ACCOUNT_JSON`: Dán toàn bộ object JSON từ file Google Service Account vào đây (hoặc dán dưới dạng chuỗi JSON).
+3. Đóng gói bộ cài Electron:
+   ```bash
+   npm run dist
+   ```
+   Lệnh này tự động mã hóa secrets (`resources/secrets/secrets.enc`) qua AES-256-GCM trước khi đóng gói.
+
+> **Lưu ý & Giới hạn bảo mật:**
+> - Bản đóng gói nhúng key chỉ dành riêng để phát hành và cài đặt trên **máy tin cậy của chủ dự án**.
+> - Dù key đã được mã hóa trong bộ cài, người dùng có chuyên môn kỹ thuật sâu vẫn có thể trích xuất được từ tiến trình ứng dụng.
+> - Nếu muốn đổi key: có thể nhập đè trực tiếp trong trang **Cài đặt** (giá trị trong database luôn được ưu tiên hơn) hoặc cập nhật `secrets/build-secrets.json` rồi build lại bộ cài mới.
+
+## 10. Xử lý lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
 |---|---|---|
@@ -84,7 +110,7 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 | Mapping không hợp lệ | Node ID/input key không còn tồn tại trong workflow mới | Vào Cài đặt, chọn lại node/input, Validate lại |
 | GPU out of memory / lỗi node khi tạo ảnh | Workflow/model vượt quá VRAM của GPU worker | Giảm kích thước ảnh/steps, hoặc kiểm tra cấu hình worker |
 
-## 10. Scripts
+## 11. Scripts
 
 ```bash
 npm run dev         # chạy dev server (bind 127.0.0.1)
@@ -97,6 +123,6 @@ npm run db:seed       # seed dữ liệu mẫu (an toàn, không overwrite)
 npm run db:studio     # mở Prisma Studio để xem database
 ```
 
-## 11. Công nghệ sử dụng
+## 12. Công nghệ sử dụng
 
 Next.js (App Router) + TypeScript, Tailwind CSS + shadcn/ui, Prisma + SQLite, Zod, React Hook Form, TanStack Query, Vitest.

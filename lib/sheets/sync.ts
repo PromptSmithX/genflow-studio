@@ -54,7 +54,7 @@ export async function syncBatchToSheet(options: SyncBatchToSheetOptions): Promis
   }
 
   const config = readSheetsConfig();
-  const accessToken = await getAccessToken(config.serviceAccountFile);
+  const accessToken = await getAccessToken(config);
   const existingTitles = await getSheetTitles(accessToken, config.sheetId);
 
   const statusIndex = FULL_SHEET_HEADER.indexOf("Status");

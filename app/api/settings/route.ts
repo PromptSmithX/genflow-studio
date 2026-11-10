@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest) {
     }
 
     await getOrCreateSettings();
-    const updated = await prisma.appSettings.update({
+    await prisma.appSettings.update({
       where: { id: "main" },
       data: {
         ...(runpodEndpointId !== undefined ? { runpodEndpointId } : {}),
@@ -73,7 +73,8 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(redactSettings(updated));
+    const refreshed = await getOrCreateSettings();
+    return NextResponse.json(redactSettings(refreshed));
   } catch (error) {
     return handleApiError(error);
   }

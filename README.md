@@ -99,7 +99,8 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 > **Lưu ý & Giới hạn bảo mật:**
 > - Bản đóng gói nhúng key chỉ dành riêng để phát hành và cài đặt trên **máy tin cậy của chủ dự án**.
 > - Dù key đã được mã hóa trong bộ cài, người dùng có chuyên môn kỹ thuật sâu vẫn có thể trích xuất được từ tiến trình ứng dụng.
-> - Nếu muốn đổi key: có thể nhập đè trực tiếp trong trang **Cài đặt** (giá trị trong database luôn được ưu tiên hơn) hoặc cập nhật `secrets/build-secrets.json` rồi build lại bộ cài mới.
+> - Key nhúng luôn được ưu tiên và các ô tương ứng trong Settings bị khóa. Đổi key thì build lại rồi cài đè, không cần xóa dữ liệu.
+> - Nâng cấp tự backup DB thành `%APPDATA%\anima-studio\anima.sqlite.bak-*` (giữ 3 bản). Migrate lỗi thì app báo và không mở. Khôi phục bằng cách đổi tên file backup thành `anima.sqlite`.
 
 ## 10. Xử lý lỗi thường gặp
 

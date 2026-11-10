@@ -59,12 +59,49 @@ Thứ tự layer (bước phụ thuộc base trước, model sau pip, code cuố
 - `python -m py_compile deploy/runpod-serverless/*.py` và `python -m pytest deploy/runpod-serverless/tests -q` xanh.
 
 ## 8. Definition of Done
-- [ ] Dockerfile 2 stage đúng mục 6; base pin đúng 2 tag đã nêu; guard CUDA có mặt.
-- [ ] Token CivitAI chỉ qua secret mount, trong stage `models`; không secret nào khác.
-- [ ] ComfyUI vẫn pin `fca60fe...`; pip pins giữ nguyên.
-- [ ] README cập nhật mục 6.2, không vỡ encoding.
-- [ ] Không file nào ngoài `deploy/runpod-serverless/` và spec này bị sửa.
-- [ ] Kiểm tra mục 7 xanh; điền "Ghi chú của người thực thi"; `worker_done` liệt kê commit.
+- [x] Dockerfile 2 stage đúng mục 6; base pin đúng 2 tag đã nêu; guard CUDA có mặt.
+- [x] Token CivitAI chỉ qua secret mount, trong stage `models`; không secret nào khác.
+- [x] ComfyUI vẫn pin `fca60fe...`; pip pins giữ nguyên.
+- [x] README cập nhật mục 6.2, không vỡ encoding.
+- [x] Không file nào ngoài `deploy/runpod-serverless/` và spec này bị sửa.
+- [x] Kiểm tra mục 7 xanh; điền "Ghi chú của người thực thi"; `worker_done` liệt kê commit.
 
 ## Ghi chú của người thực thi
-(agent điền)
+
+### 1. Kiến trúc Dockerfile 2 stage
+- **Stage 1 (`models`)**: Sử dụng base `python:3.11.18-slim-bookworm` gọn nhẹ. Cài đặt `wget`, `ca-certificates` và `requests==2.34.2`. Tải toàn bộ 4 models vào `/out`:
+  - `qwen3vl_4b_fp8_scaled.safetensors` (≥ 4,700,000,000 bytes) vào `/out/comfyui/models/text_encoders/` qua `wget`.
+  - `wan_2.1_vae.safetensors` (≥ 220,000,000 bytes) vào `/out/comfyui/models/vae/` qua `wget`.
+  - `640m.onnx` vào `/out/models/` qua `download_nudenet.py /out/models/640m.onnx`.
+  - `lustifyNSFWCheckpoint_v10Krea2_2996235.safetensors` vào `/out/comfyui/models/diffusion_models/` qua `download_model.py` với secret mount BuildKit `civitai_token`.
+  - Mỗi model được tải trong 1 chỉ thị `RUN` riêng biệt để bảo toàn cache độc lập.
+- **Stage 2 (`final`)**: Sử dụng base `pytorch/pytorch:2.14.1-cuda13.0-cudnn9-runtime`.
+  - Cài đặt các gói hệ thống cần thiết (`git`, `wget`, `ca-certificates`, `libglib2.0-0`, `libgomp1`).
+  - Clone ComfyUI và pin commit `fca60fe70e5b84c5c6b058263653d15cb3401e44`, cài đặt `requirements.txt`.
+  - Đặt guard CUDA kiểm tra runtime PyTorch hỗ trợ CUDA 13.x: `RUN python -c "import torch,sys; print(torch.__version__, torch.version.cuda); sys.exit(0 if (torch.version.cuda or '').startswith('13') else 1)"`.
+  - Thiết lập virtualenv riêng `/opt/censor-venv` cho NudeNet và ONNX Runtime.
+  - Cài đặt dependencies chính (`runpod==2.1.0`, `boto3==1.43.126`, `requests==2.34.2`).
+  - Copy toàn bộ model từ stage `models` sang (`/comfyui/models/` và `/models/640m.onnx`), merge sạch sẽ mà không làm mất cấu trúc thư mục của ComfyUI.
+  - Copy `censor_lib.py`, `censor_cli.py`, `handler.py` vào `/`.
+
+### 2. Xử lý mã nguồn Python
+- Không cần sửa đổi bất kỳ file script nào (`handler.py`, `censor_*.py`, `download_*.py`) do `download_model.py` và `download_nudenet.py` đã hỗ trợ sẵn nhận đường dẫn đích qua tham số dòng lệnh `sys.argv[1]`.
+- Không có bất kỳ token/secret nào bị lưu trong image layer hay commit code. File `token.txt` tiếp tục được bảo vệ bởi `.dockerignore` và `.gitignore`.
+
+### 3. Cập nhật README
+- Bổ sung thông tin kiến trúc base PyTorch 2.14.1 CUDA 13.0, giải thích cơ chế kích hoạt backend `comfy_kitchen` và `triton` cho GPU Blackwell NVIDIA RTX PRO 6000.
+- Cập nhật lệnh build tag `v2`, hướng dẫn dọn dẹp bộ nhớ đệm đĩa (`docker builder prune -a -f`).
+- Bổ sung smoke test kiểm tra phiên bản PyTorch CUDA 13.0, censor venv và kiểm tra model.
+- Thêm mục 6 riêng hướng dẫn Nâng cấp endpoint lên `:v2`, Rollback về `:v1` và cách theo dõi log worker sau khi deploy.
+- File README giữ nguyên chuẩn mã hóa UTF-8 tiếng Việt.
+
+### 4. Kết quả kiểm tra
+- `docker build --check deploy/runpod-serverless`: Thực thi thành công, build context và cú pháp Dockerfile 2-stage hợp lệ, Docker load metadata thành công cả 2 base image mà không có cảnh báo nào (`Check complete, no warnings found.`).
+- `python -m py_compile deploy/runpod-serverless/*.py`: Tất cả các file Python biên dịch thành công 100%.
+- `python -m pytest deploy/runpod-serverless/tests -q`: Toàn bộ 23/23 tests pass.
+
+### 5. Lịch sử commit thực hiện theo spec
+- `539c8b9`: `docs: add task p5 image v2 spec`
+- `9537f24`: `feat(deploy): convert Dockerfile to 2-stage build with PyTorch CUDA 13`
+- `a8dad56`: `docs(deploy): update README for worker image v2 with cuda 13 and rollback guide`
+- `docs: update task p5 execution notes and definition of done` (commit hiện tại)

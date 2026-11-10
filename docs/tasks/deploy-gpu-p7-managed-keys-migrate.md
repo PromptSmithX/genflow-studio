@@ -72,13 +72,34 @@
 - `git status` trước commit cuối: không có file DB tạm, `secrets/build-secrets.json` hay `*.enc`.
 
 ## 5. Definition of Done
-- [ ] 3.1: env luôn thắng DB; `getManagedFields`; `redactSettings.managedFields`; `SettingsDTO` cập nhật.
-- [ ] 3.2: PUT không ghi field managed (kể cả `null`); `omitManagedFields` có test.
-- [ ] 3.3: ô managed bị khóa với nhãn tiếng Việt; "Test kết nối" vẫn dùng được; `llmSystemPrompt` vẫn sửa được.
-- [ ] 3.4: backup `VACUUM INTO` chỉ khi có pending; giữ 3 bản; không đụng backup thủ công; backup lỗi thì không migrate.
-- [ ] 3.5: migrate lỗi → hộp thoại tiếng Việt + thoát, không khởi động server; lỗi khởi động khác cũng hiện hộp thoại.
-- [ ] 3.6: README cập nhật, không vỡ encoding.
-- [ ] Mục 4 xanh; không file ngoài phạm vi bị sửa; không secret trong diff hay log.
-- [ ] Điền "Ghi chú của người thực thi" + liệt kê commit.
+- [x] 3.1: env luôn thắng DB; `getManagedFields`; `redactSettings.managedFields`; `SettingsDTO` cập nhật.
+- [x] 3.2: PUT không ghi field managed (kể cả `null`); `omitManagedFields` có test.
+- [x] 3.3: ô managed bị khóa với nhãn tiếng Việt; "Test kết nối" vẫn dùng được; `llmSystemPrompt` vẫn sửa được.
+- [x] 3.4: backup `VACUUM INTO` chỉ khi có pending; giữ 3 bản; không đụng backup thủ công; backup lỗi thì không migrate.
+- [x] 3.5: migrate lỗi → hộp thoại tiếng Việt + thoát, không khởi động server; lỗi khởi động khác cũng hiện hộp thoại.
+- [x] 3.6: README cập nhật, không vỡ encoding.
+- [x] Mục 4 xanh; không file ngoài phạm vi bị sửa; không secret trong diff hay log.
+- [x] Điền "Ghi chú của người thực thi" + liệt kê commit.
 
 ## Ghi chú của người thực thi
+- Thực hiện đầy đủ các mục kỹ thuật theo spec:
+  - 3.1: `lib/settings.ts` dùng hằng `MANAGED_FIELD_ENV_MAP` cho 5 trường nhúng; quy tắc env thắng DB khi env khác rỗng; thêm `getManagedFields()` và bổ sung `managedFields` vào `redactSettings` cùng `SettingsDTO` trong `lib/types.ts`.
+  - 3.2: `omitManagedFields()` loại bỏ các trường managed trước khi cập nhật DB trong API PUT `/api/settings`.
+  - 3.3: Khóa ô trong `components/settings/connection-card.tsx` và `components/settings/llm-card.tsx` với placeholder "Đã cấu hình sẵn trong bản cài". Nút test kết nối bật khi cấu hình managed. Nút lưu và xóa GPU ẩn khi cả 2 trường đều managed. `ConnectOnboarding` tự ẩn do `useHeaderConnectionState()` phát hiện cấu hình từ env.
+  - 3.4: `electron/migrate.js` lọc danh sách pending migrations trước khi áp; thực hiện `VACUUM INTO` sao lưu DB khi có pending migration; in `BACKUP_PATH=...`; xoay vòng lưu tối đa 3 file backup mới nhất theo regex `^<basename>\.bak-\d{8}-\d{6}$`; giữ nguyên các file backup cũ thủ công.
+  - 3.5: `electron/main.js` dùng `stdio: ["ignore", "pipe", "inherit"]`, parse dòng `BACKUP_PATH=`, throw `MigrationError` khi migrate thất bại và chặn khởi động server; hiển thị `dialog.showErrorBox()` tiếng Việt khi lỗi migrate hoặc lỗi khởi động.
+  - 3.6: Cập nhật `README.md` về cơ chế ưu tiên key nhúng và tự động backup khi nâng cấp.
+- Môi trường & kết quả kiểm tra:
+  - Node.js runtime hỗ trợ `node:sqlite` (`DatabaseSync`), 4/4 test case trong `tests/electron-migrate.test.ts` pass 100%.
+  - `npm test`: 32/32 test files pass, 208/208 tests pass.
+  - `npx tsc --noEmit`: pass không lỗi.
+  - `npm run lint`: pass không lỗi.
+  - `npm run build`: Next.js 16.4.3 production build thành công.
+- Danh sách commit theo thứ tự (a)-(g):
+  - (a) `7329414`: docs: add task p7 managed keys and migration spec
+  - (b) `b3da4c0`: feat(settings): prioritize environment settings and omit managed fields from updates
+  - (c) `86bb715`: feat(ui): disable managed fields and hide modification controls when configured
+  - (d) `4046e14`: feat(electron): backup database before migration and rotate backups
+  - (e) `e6e1056`: feat(electron): show informative dialog on migration failure and prevent startup
+  - (f) `ffba45c`: docs: document managed settings priority and automatic backup on upgrade
+  - (g) `docs: update task p7 execution notes and definition of done` (commit hiện tại)

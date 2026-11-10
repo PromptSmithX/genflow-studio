@@ -120,10 +120,6 @@ async function startServer() {
   const { dataRoot, dbPath } = ensureUserData(paths);
   const port = await getFreePort();
 
-  // The LLM API key is NEVER embedded in this installer -- it lives only on
-  // the Colab gateway process (entered there via getpass), and the app calls
-  // it through the same ComfyUI tunnel URL (route "/llm"). See
-  // lib/llm/resolve-config.ts and the notebook's Cell 7.6/Cell 8.
   serverProcess = spawn(paths.nodeBinary, [path.join(paths.serverDir, "server.js")], {
     cwd: paths.serverDir,
     env: {

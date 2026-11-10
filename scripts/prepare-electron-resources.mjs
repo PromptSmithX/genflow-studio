@@ -31,6 +31,13 @@ try {
   throw error;
 }
 fs.cpSync(standalone, appDir, { recursive: true });
+
+// Xóa file .env khỏi resources/app để tránh lộ secret trong bản build
+const envFiles = fs.readdirSync(appDir).filter((file) => file.startsWith(".env"));
+for (const file of envFiles) {
+  fs.rmSync(path.join(appDir, file), { force: true });
+}
+console.log(`Đã xóa ${envFiles.length} file env khỏi resources/app: ${envFiles.join(", ")}`);
 fs.cpSync(path.join(root, ".next", "static"), path.join(appDir, ".next", "static"), {
   recursive: true,
 });

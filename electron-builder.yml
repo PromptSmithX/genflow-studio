@@ -4,6 +4,7 @@ directories:
   output: dist-electron
 files:
   - electron/**/*
+  - "!electron/secrets*.json"
   - package.json
 extraResources:
   - from: resources/app
@@ -12,6 +13,10 @@ extraResources:
     to: node
   - from: resources/template
     to: template
+  - from: resources/secrets
+    to: secrets
+    filter:
+      - "secrets.enc"
 win:
   target: nsis
   artifactName: "AnimaStudio-Setup-${version}.${ext}"

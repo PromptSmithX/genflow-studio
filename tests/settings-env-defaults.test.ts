@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { applyEnvDefaults, redactSettings } from "@/lib/settings";
+import {
+  applyEnvDefaults,
+  getManagedFields,
+  omitManagedFields,
+  redactSettings,
+} from "@/lib/settings";
 import type { AppSettings } from "@prisma/client";
 
-describe("applyEnvDefaults", () => {
+describe("applyEnvDefaults & managed settings", () => {
   const baseSettings = {
     id: "main",
     runpodEndpointId: null,
@@ -43,7 +48,7 @@ describe("applyEnvDefaults", () => {
     expect(result.llmModel).toBe("test-model-turbo");
   });
 
-  it("(2) DB co -> DB thang", () => {
+  it("(2) DB co + env co -> env thang DB", () => {
     const dbSettings = {
       ...baseSettings,
       runpodEndpointId: "db-ep-456",
@@ -62,14 +67,23 @@ describe("applyEnvDefaults", () => {
     };
 
     const result = applyEnvDefaults(dbSettings, env);
-    expect(result.runpodEndpointId).toBe("db-ep-456");
-    expect(result.runpodApiKey).toBe("db-rpa-key");
-    expect(result.llmApiKey).toBe("db-llm-key");
-    expect(result.llmBaseUrl).toBe("https://db.provider.com/v1");
-    expect(result.llmModel).toBe("db-custom-model");
+    expect(result.runpodEndpointId).toBe("env-ep-999");
+    expect(result.runpodApiKey).toBe("env-rpa-key");
+    expect(result.llmApiKey).toBe("env-llm-key");
+    expect(result.llmBaseUrl).toBe("https://env.provider.com/v1");
+    expect(result.llmModel).toBe("env-model");
   });
 
-  it("(3) env rong hoac chi khoang trang -> giu null", () => {
+  it("(3) env rong hoac chi khoang trang -> giu DB", () => {
+    const dbSettings = {
+      ...baseSettings,
+      runpodEndpointId: "db-ep-456",
+      runpodApiKey: "db-rpa-key",
+      llmApiKey: "db-llm-key",
+      llmBaseUrl: "https://db.provider.com/v1",
+      llmModel: "db-custom-model",
+    };
+
     const env = {
       ANIMA_RUNPOD_ENDPOINT_ID: "   ",
       ANIMA_RUNPOD_API_KEY: "",
@@ -78,15 +92,27 @@ describe("applyEnvDefaults", () => {
       ANIMA_LLM_MODEL: "   ",
     };
 
-    const result = applyEnvDefaults(baseSettings, env);
-    expect(result.runpodEndpointId).toBeNull();
-    expect(result.runpodApiKey).toBeNull();
-    expect(result.llmApiKey).toBeNull();
-    expect(result.llmBaseUrl).toBeNull();
-    expect(result.llmModel).toBeNull();
+    const result = applyEnvDefaults(dbSettings, env);
+    expect(result.runpodEndpointId).toBe("db-ep-456");
+    expect(result.runpodApiKey).toBe("db-rpa-key");
+    expect(result.llmApiKey).toBe("db-llm-key");
+    expect(result.llmBaseUrl).toBe("https://db.provider.com/v1");
+    expect(result.llmModel).toBe("db-custom-model");
   });
 
-  it("(4) redactSettings(applyEnvDefaults(...)) khong chua chuoi key gia", () => {
+  it("(4) getManagedFields tra ve dung danh sach field co env khac rong", () => {
+    const env = {
+      ANIMA_RUNPOD_ENDPOINT_ID: "ep-123",
+      ANIMA_RUNPOD_API_KEY: "   ",
+      ANIMA_LLM_API_KEY: "llm-key-abc",
+      ANIMA_LLM_MODEL: "model-x",
+    };
+
+    const managed = getManagedFields(env);
+    expect(managed).toEqual(["runpodEndpointId", "llmApiKey", "llmModel"]);
+  });
+
+  it("(5) redactSettings co managedFields va JSON.stringify khong chua key gia", () => {
     const env = {
       ANIMA_RUNPOD_ENDPOINT_ID: "ep-secret-demo",
       ANIMA_RUNPOD_API_KEY: "rpa-fake-secret-value-12345",
@@ -96,14 +122,44 @@ describe("applyEnvDefaults", () => {
     };
 
     const resolved = applyEnvDefaults(baseSettings, env);
-    const redacted = redactSettings(resolved);
+    const redacted = redactSettings(resolved, env);
 
     expect(redacted.hasRunpodKey).toBe(true);
     expect(redacted.hasLlmKey).toBe(true);
     expect(redacted.runpodEndpointId).toBe("ep-secret-demo");
+    expect(redacted.managedFields).toEqual([
+      "runpodEndpointId",
+      "runpodApiKey",
+      "llmApiKey",
+      "llmBaseUrl",
+      "llmModel",
+    ]);
 
     const jsonStr = JSON.stringify(redacted);
     expect(jsonStr).not.toContain("rpa-fake-secret-value-12345");
     expect(jsonStr).not.toContain("xai-fake-secret-value-67890");
+  });
+
+  it("(6) omitManagedFields bo dung cac field managed ke ca null", () => {
+    const body = {
+      runpodEndpointId: "ep-override",
+      runpodApiKey: null,
+      llmApiKey: "new-key",
+      llmBaseUrl: "https://new.base.url",
+      llmModel: "new-model",
+      llmSystemPrompt: "custom prompt",
+      defaultWidth: 512,
+    };
+
+    const omitted = omitManagedFields(body, ["runpodEndpointId", "runpodApiKey", "llmApiKey"]);
+    expect(omitted).toEqual({
+      llmBaseUrl: "https://new.base.url",
+      llmModel: "new-model",
+      llmSystemPrompt: "custom prompt",
+      defaultWidth: 512,
+    });
+    expect("runpodEndpointId" in omitted).toBe(false);
+    expect("runpodApiKey" in omitted).toBe(false);
+    expect("llmApiKey" in omitted).toBe(false);
   });
 });

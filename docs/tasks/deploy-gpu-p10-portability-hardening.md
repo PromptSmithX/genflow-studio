@@ -69,10 +69,52 @@
 - `git status` sạch, không có file trong `resources/`.
 
 ## 5. Definition of Done
-- [ ] `resources/app` không còn thư mục lồng hay thừa (mục 3.1); kích thước giảm rõ.
-- [ ] `scripts/{censor,mockup}`, `Printify_...`, `assets/mockup_templates` được copy tường minh.
-- [ ] `verify-package` có trong `dist`, fail đúng khi thiếu runtime hoặc lọt file cấm; có test.
-- [ ] `wrap_mockup.py` không còn `D:\`.
-- [ ] Mục 4 xanh; Ghi chú (docs đã đọc, kích thước trước/sau, commit).
+- [x] `resources/app` không còn thư mục lồng hay thừa (mục 3.1); kích thước giảm rõ.
+- [x] `scripts/{censor,mockup}`, `Printify_...`, `assets/mockup_templates` được copy tường minh.
+- [x] `verify-package` có trong `dist`, fail đúng khi thiếu runtime hoặc lọt file cấm; có test.
+- [x] `wrap_mockup.py` không còn `D:\`.
+- [x] Mục 4 xanh; Ghi chú (docs đã đọc, kích thước trước/sau, commit).
 
 ## Ghi chú của người thực thi
+
+### 1. Tài liệu Next.js đã đọc trong `node_modules/next/dist/docs/`
+- `AGENTS.md`: Quy tắc kiểm tra breaking changes của Next.js trước khi viết code.
+- `01-app/03-api-reference/05-config/01-next-config-js/output.md`:
+  - Tìm hiểu cơ chế `output: "standalone"`, file tracing bằng `@vercel/nft`.
+  - Cấu hình `outputFileTracingExcludes` và `outputFileTracingIncludes` theo route globs (picomatch) và đường dẫn tương đối từ project root.
+- `01-app/03-api-reference/08-turbopack.md`:
+  - Tìm hiểu bảng Magic Comments hỗ trợ trên Turbopack (`webpackIgnore: true`, `turbopackIgnore: true`, `turbopackOptional: true`).
+- `01-app/02-guides/lazy-loading.md`:
+  - Tìm hiểu vị trí và cú pháp của magic comments: chỉ hoạt động với các biểu thức dynamic (`import()`, `require()`, `require.resolve()`, `new Worker()`), **không** áp dụng cho `process.cwd()` hay `path.join()`.
+
+### 2. Lý do bỏ qua `/* turbopackIgnore: true */` cho `process.cwd()`
+- Tài liệu Next.js 16 chính thức (`turbopack.md`, `lazy-loading.md`) chỉ định rõ magic comments chỉ có tác dụng trong dynamic import/require expressions. Turbopack và NFT không nhận diện magic comment này khi phân tích `process.cwd()`.
+- Do đó, theo đúng chỉ dẫn của spec mục 3.1 ("chỉ khi docs xác nhận cú pháp và vị trí. Nếu docs không xác nhận thì bỏ qua và ghi lý do"), ta bỏ qua việc thêm comment này vào `lib/mockup/run-mockup.ts` và `lib/censor/run-censor.ts`. Việc ngăn chặn file lọt vào bản build được đảm bảo bằng `outputFileTracingExcludes` trong `next.config.ts` cùng cơ chế dọn dẹp tường minh trong `scripts/prepare-electron-resources.mjs`.
+
+### 3. Kích thước và cấu trúc `resources/app`
+- **Trước P10**:
+  - Kích thước: ~242.25 MB (tăng dần qua mỗi lần chạy build do lồng nhau).
+  - Thư mục gốc: `.next`, `app`, `assets`, `components`, `data`, `deploy`, `dist-electron`, `docs`, `lib`, `node_modules`, `Printify_Premade_Grid_Calendar_Templates`, `prisma`, `public`, `resources`, `scripts`, `tests`, `package.json`, `server.js` (chứa `dist-electron/win-unpacked/...` và `resources/app/...` lồng nhau đệ quy, file dev sqlite, toàn bộ mã nguồn TypeScript).
+- **Sau P10**:
+  - Kích thước: 240.75 MB (giảm trừ hoàn toàn các tầng lồng nhau, thư mục dev và mã nguồn không dùng; 232MB là `node_modules` cần thiết cho standalone server).
+  - Thư mục gốc: `.next`, `assets`, `node_modules`, `Printify_Premade_Grid_Calendar_Templates`, `prisma`, `public`, `scripts`, `package.json`, `server.js`.
+  - Không còn bất kỳ thư mục nào trong số: `dist-electron`, `resources`, `secrets`, `data`, `docs`, `tests`, `deploy`, `app`, `components`, `lib`, `hooks`, `.env*`, `*.sqlite`.
+
+### 4. Kết quả kiểm tra
+- `npm test`: 35/35 test files passed (229/229 tests).
+- `npx tsc --noEmit`: Exit code 0 (không lỗi).
+- `npm run lint`: Exit code 0 (sạch).
+- `npm run build`: Exit code 0 (Turbopack standalone build thành công).
+- `node scripts/prepare-electron-resources.mjs && npm run build:template-db && npm run build:secrets && node scripts/verify-package.mjs`: Exit code 0.
+- `resources/python/python.exe resources/app/scripts/mockup/wrap_mockup.py --help`: Exit code 0 (hiển thị CLI help chuẩn xác).
+- `git status`: Sạch, `resources/` không bị track vào git.
+
+### 5. Danh sách commits
+- `edc5df5`: `docs: add task p10 portability hardening spec` (a)
+- `030fc65`: `build(next): configure outputFileTracingExcludes for clean standalone package` (b)
+- `c5f7f46`: `build(electron): explicitly copy runtime scripts and templates in prepare script` (c)
+- `2df6130`: `feat(build): add verify-package gatekeeper script and hook into dist command` (d)
+- `13cbf1e`: `fix(mockup): resolve DEFAULT_TEMPLATE_DIR relative to script location` (e)
+- `6273f15`: `test(electron): add verify-package tests and packaging assertions` (f)
+- `59b0fd5`: `docs: document packaging prerequisites and verify-package fail-fast mechanism` (g)
+- (Commit h tiếp theo ghi nhận ghi chú hoàn thành task)

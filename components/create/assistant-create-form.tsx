@@ -153,12 +153,14 @@ export function AssistantCreateForm() {
               tags: suggestions.etsy.tags.length ? suggestions.etsy.tags : undefined,
             }
           : undefined,
-        concept: suggestions.concept
-          ? {
-              theme: suggestions.concept.campaignTheme || undefined,
-              anchorTags: suggestions.concept.anchorTags || undefined,
-            }
-          : undefined,
+        concept:
+          suggestions.concept || suggestions.conceptSeedKey
+            ? {
+                theme: suggestions.concept?.campaignTheme || undefined,
+                anchorTags: suggestions.concept?.anchorTags || undefined,
+                seedKey: suggestions.conceptSeedKey || undefined,
+              }
+            : undefined,
         // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.
         width: params.width ? Number(params.width) : undefined,
         height: params.height ? Number(params.height) : undefined,

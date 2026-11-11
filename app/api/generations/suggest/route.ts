@@ -49,14 +49,14 @@ export async function POST(request: NextRequest) {
 
     // Đa dạng concept giữa các bộ bằng code: né concept vài bộ gần nhất + bốc
     // ngẫu nhiên 1 concept gợi ý (chỉ áp dụng khi người dùng không nêu bối cảnh).
-    const avoidConcepts = await loadRecentConcepts();
-    const conceptSeed = pickConceptSeed(avoidConcepts);
+    const recentConcepts = await loadRecentConcepts();
+    const conceptSeed = pickConceptSeed(recentConcepts);
     const userMessage = composeUserMessage({
       request: input.request,
       count: input.count,
       styleHint,
-      conceptSeed,
-      avoidConcepts,
+      conceptSeed: conceptSeed.text,
+      avoidConcepts: recentConcepts.themes,
     });
     // Trợ lý AI luôn tạo bộ ảnh lịch (ảnh #1 = bìa có chữ, còn lại = artwork sạch).
     // Chọn system prompt tách riêng theo loại: anime vs người thực.
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         result.images.map((image, index) => `--- positive #${index + 1} ---\n${image.positive}`).join("\n"),
     );
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, conceptSeedKey: conceptSeed.key });
   } catch (error) {
     return handleApiError(error);
   }

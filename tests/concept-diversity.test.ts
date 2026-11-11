@@ -1,47 +1,65 @@
 import { describe, expect, it } from "vitest";
 import {
-  CONCEPT_SEEDS,
+  LOCATION_FAMILIES,
+  STYLE_ERA,
+  TIME_WEATHER,
+  familyConflicts,
   normalizeRecentConcepts,
   pickConceptSeed,
-  seedConflicts,
-  type ConceptSeed,
+  type LocationFamily,
 } from "@/lib/llm/concept-diversity";
 import { composeUserMessage, SHARED_BIAS_PROMPT } from "@/lib/llm/default-system-prompt";
 import { finalizeSuggestedImage, missingAnchorTags } from "@/lib/llm/finalize-suggestion";
 
-const CAR: ConceptSeed = { theme: "red roadster on a cliff road", keywords: ["car", "roadster", "supercar"] };
-const LIBRARY: ConceptSeed = { theme: "old library", keywords: ["library", "books"] };
+const CAR: LocationFamily = { key: "car", direction: "one vintage car", keywords: ["car", "roadster", "supercar"] };
+const LIBRARY: LocationFamily = { key: "library", direction: "a historic library", keywords: ["library", "books"] };
 
-describe("seedConflicts", () => {
+describe("familyConflicts", () => {
   it("matches keywords on word boundaries only", () => {
-    expect(seedConflicts(CAR, ["Luxury supercar garage campaign"])).toBe(true);
-    expect(seedConflicts(CAR, ["Cozy cardigan autumn walk"])).toBe(false);
-    expect(seedConflicts(LIBRARY, [])).toBe(false);
+    expect(familyConflicts(CAR, ["Luxury supercar garage campaign"])).toBe(true);
+    expect(familyConflicts(CAR, ["Cozy cardigan autumn walk"])).toBe(false);
+    expect(familyConflicts(LIBRARY, [])).toBe(false);
   });
 });
 
 describe("pickConceptSeed", () => {
-  it("never picks a seed that overlaps recent concepts when an alternative exists", () => {
+  it("never picks a family whose key was used recently", () => {
     for (let i = 0; i < 20; i++) {
-      const theme = pickConceptSeed(["supercar showroom"], () => i / 20, [CAR, LIBRARY]);
-      expect(theme).toBe(LIBRARY.theme);
+      const seed = pickConceptSeed({ keys: ["car"], themes: [] }, () => i / 20, [CAR, LIBRARY]);
+      expect(seed.key).toBe("library");
     }
   });
 
-  it("falls back to the full list when every seed conflicts", () => {
-    expect(pickConceptSeed(["supercar", "library"], () => 0, [CAR, LIBRARY])).toBe(CAR.theme);
-  });
-
-  it("avoids all vehicle seeds after a vehicle batch", () => {
-    const recent = ["Supercar and motorcycle luxury garage", "private jet and yacht lifestyle"];
-    for (let i = 0; i < 50; i++) {
-      const theme = pickConceptSeed(recent, () => i / 50);
-      expect(theme).not.toMatch(/roadster|motorcycle|yacht|jet/);
+  it("avoids by keyword when only a theme is known (user-specified batches)", () => {
+    for (let i = 0; i < 20; i++) {
+      const seed = pickConceptSeed({ keys: [], themes: ["Red supercar showroom"] }, () => i / 20, [CAR, LIBRARY]);
+      expect(seed.key).toBe("library");
     }
   });
 
-  it("every built-in seed has keywords", () => {
-    for (const seed of CONCEPT_SEEDS) expect(seed.keywords.length).toBeGreaterThan(0);
+  it("falls back to all families when every family is excluded", () => {
+    const seed = pickConceptSeed({ keys: ["car", "library"], themes: [] }, () => 0, [CAR, LIBRARY]);
+    expect(seed.key).toBe("car");
+  });
+
+  it("combines location direction, time/weather and style axes", () => {
+    const seed = pickConceptSeed({ keys: [], themes: [] }, () => 0, [LIBRARY]);
+    expect(seed.text).toBe(`a historic library, ${TIME_WEATHER[0]}, ${STYLE_ERA[0]}`);
+  });
+
+  it("never repeats any of the last 10 families", () => {
+    const recentKeys = LOCATION_FAMILIES.slice(0, 10).map((family) => family.key);
+    for (let i = 0; i < 100; i++) {
+      const seed = pickConceptSeed({ keys: recentKeys, themes: [] }, () => i / 100);
+      expect(recentKeys).not.toContain(seed.key);
+    }
+  });
+
+  it("built-in families have unique keys and keywords", () => {
+    const keys = LOCATION_FAMILIES.map((family) => family.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(LOCATION_FAMILIES.length).toBeGreaterThanOrEqual(45);
+    for (const family of LOCATION_FAMILIES) expect(family.keywords.length).toBeGreaterThan(0);
   });
 });
 

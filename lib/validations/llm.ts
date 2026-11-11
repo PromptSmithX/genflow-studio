@@ -62,4 +62,8 @@ export interface TokenUsage {
   totalTokens: number | null;
 }
 
-export type SuggestPromptsResponse = LlmSuggestionResult & { usage: TokenUsage | null };
+export type SuggestPromptsResponse = LlmSuggestionResult & {
+  usage: TokenUsage | null;
+  /** key nhóm địa điểm /suggest đã bốc làm hướng concept -- client gửi lại khi create. */
+  conceptSeedKey?: string;
+};

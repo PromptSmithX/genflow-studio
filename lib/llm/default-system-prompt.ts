@@ -401,7 +401,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
      LUÔN TUÂN THỦ 100% Ý TƯỞNG NGƯỜI DÙNG (Nguyên tắc số 1). KHÔNG tự ý chèn ép thêm concept khác làm loãng ý đồ của họ.
    - NẾU NGƯỜI DÙNG CHỈ MÔ TẢ NHÂN VẬT HOẶC QUỐC TỊCH TỐI GIẢN (ví dụ: "cô gái", "cô gái Việt Nam", "người mẫu Nhật Bản", "cô gái tóc vàng"... mà không có bối cảnh cụ thể):
      Bạn PHẢI TỰ CHỌN một "Campaign Theme" cụ thể, có tính thương mại cao, sang trọng và thu hút người xem lịch. Cả 12 tháng xoay quanh concept chiến dịch này.
-   - CHỌN CONCEPT ĐA DẠNG: hệ thống có thể gửi kèm trong tin nhắn người dùng một "Concept gợi ý" (bốc ngẫu nhiên) và danh sách "Concept các bộ gần đây". Khi người dùng KHÔNG nêu bối cảnh: dùng Concept gợi ý (được tinh chỉnh cho hợp nhân vật/văn hoá), và TUYỆT ĐỐI KHÔNG chọn lại địa điểm/đạo cụ trùng với các bộ gần đây. Khi người dùng ĐÃ nêu bối cảnh: bỏ qua cả hai, theo đúng người dùng.
+   - CHỌN CONCEPT ĐA DẠNG: hệ thống có thể gửi kèm trong tin nhắn người dùng một "Hướng concept" (bốc ngẫu nhiên: nhóm địa điểm + thời điểm + phong cách) và danh sách "Concept các bộ gần đây". Khi người dùng KHÔNG nêu bối cảnh: phát triển Hướng concept thành MỘT địa điểm cụ thể, độc đáo, hợp nhân vật/văn hoá, và TUYỆT ĐỐI KHÔNG chọn lại địa điểm/đạo cụ trùng với các bộ gần đây. Khi người dùng ĐÃ nêu bối cảnh: bỏ qua cả hai, theo đúng người dùng.
    - ĐỒNG NHẤT CONCEPT TRONG BỘ (CONCEPT COHESION — BẮT BUỘC):
      Concept = MỘT địa điểm/bối cảnh chính + tối đa MỘT loại đạo cụ chính. Nếu có đạo cụ chính thì giữ NGUYÊN đúng món đó (cùng mẫu, cùng màu) ở mọi tháng có xuất hiện nó. TUYỆT ĐỐI KHÔNG đổi loại đạo cụ/phương tiện giữa các tháng (không tháng này xe hơi, tháng kia mô tô, máy bay, thuyền) và KHÔNG nhảy sang địa điểm khác loại. 12 tháng CHỈ thay đổi: góc máy, tư thế, giờ trong ngày/ánh sáng, và các góc nhỏ khác nhau BÊN TRONG cùng địa điểm đó (ví dụ concept thư viện cổ: tháng bên kệ sách cao, tháng ngồi trên thang trượt, tháng bên cửa sổ vòm, tháng ở bàn đọc dưới đèn...).
      BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "campaignTheme" viết TIẾNG ANH ngắn gọn (≤ ~10 từ, nêu địa điểm + đạo cụ chính). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, bảng màu, địa điểm/đạo cụ chính, mood) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
@@ -420,7 +420,7 @@ export interface ComposeUserMessageInput {
    * KHÔNG tự chọn/lặp lại phong cách khác, và tập trung viết mô tả chủ thể.
    */
   styleHint?: string;
-  /** Concept gợi ý bốc ngẫu nhiên bằng code (lib/llm/concept-diversity.ts). */
+  /** Hướng concept bốc ngẫu nhiên bằng code (lib/llm/concept-diversity.ts). */
   conceptSeed?: string;
   /** campaignTheme của vài bộ gần nhất -- LLM phải né khi tự chọn concept. */
   avoidConcepts?: string[];
@@ -455,7 +455,7 @@ export function composeUserMessage({
 
   if (conceptSeed?.trim()) {
     lines.push(
-      `Concept gợi ý cho bộ này (CHỈ dùng khi người dùng KHÔNG nêu bối cảnh; được tinh chỉnh cho hợp nhân vật): ${conceptSeed.trim()}`,
+      `Hướng concept cho bộ này (CHỈ dùng khi người dùng KHÔNG nêu bối cảnh): ${conceptSeed.trim()}. Hãy TỰ nghĩ MỘT địa điểm cụ thể và tối đa MỘT đạo cụ chính phù hợp hướng này và hợp nhân vật.`,
     );
   }
   if (avoidConcepts && avoidConcepts.length > 0) {

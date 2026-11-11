@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 /**
  * Đa dạng concept giữa các bộ lịch BẰNG CODE (không trông vào LLM tự nhớ):
  * - Mỗi lần /suggest, code bốc ngẫu nhiên một HƯỚNG concept ghép từ 3 trục độc
- *   lập (nhóm địa điểm × thời điểm/thời tiết × phong cách/thời đại, ~50×10×8
+ *   lập (nhóm địa điểm × thời điểm/thời tiết × chất ảnh chụp thật, ~50×10×8
  *   tổ hợp). LLM chỉ nhận MỘT dòng hướng (~20 token) và TỰ nghĩ địa điểm cụ
  *   thể + đạo cụ -- vừa kéo LLM khỏi các concept "món ruột", vừa giữ sáng tạo.
  * - Né chính xác theo `key` nhóm địa điểm lưu ở GenerationBatch.conceptSeedKey
@@ -85,15 +85,18 @@ export const TIME_WEATHER = [
   "spring blossoms",
 ];
 
-export const STYLE_ERA = [
-  "1920s art deco glamour",
-  "1950s retro",
-  "1970s vintage film look",
-  "modern minimalist",
-  "dark moody film noir",
-  "romantic soft pastel",
-  "bold high-fashion editorial",
-  "futuristic sleek",
+// Chất ảnh CHỤP THẬT (không stylized): các phong cách kiểu pastel/noir/art deco/
+// futuristic/high-fashion từng làm ảnh bóng bẩy, giả -- chỉ giữ các "look" của
+// ảnh chụp ngoài đời.
+export const PHOTO_LOOK = [
+  "candid natural photo",
+  "warm analog film photo",
+  "clean bright daylight photo",
+  "soft overcast natural light photo",
+  "low-light available-light photo",
+  "documentary lifestyle photo",
+  "sunlit travel photo",
+  "intimate window-lit photo",
 ];
 
 /** Số bộ gần nhất đưa vào danh sách tránh (cân bằng đa dạng vs token). */
@@ -145,7 +148,7 @@ export function pickConceptSeed(
   const family = pick(fresh.length > 0 ? fresh : families, random);
   return {
     key: family.key,
-    text: `${family.direction}, ${pick(TIME_WEATHER, random)}, ${pick(STYLE_ERA, random)}`,
+    text: `${family.direction}, ${pick(TIME_WEATHER, random)}, ${pick(PHOTO_LOOK, random)}`,
   };
 }
 

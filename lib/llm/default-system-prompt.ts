@@ -66,7 +66,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
   ánh sáng + góc máy, phong cách editorial/tạp chí.
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
-- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm trang phục, địa điểm/đạo cụ chính của concept — NGẮN GỌN ≤ ~25 từ, KHÔNG chứa bảng màu, mood, ánh sáng hay từ phong cách nhiếp ảnh (cinematic, editorial, pastel...). TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - QUY TẮC VỀ SỐ LƯỢNG CHỦ THỂ (NHÂN VẬT):
   • TÔN TRỌNG Ý ĐỊNH CỦA NGƯỜI DÙNG: Khi người dùng có ý định mô tả 2 người / cặp đôi / tình nhân / nam nữ / tương tác đôi lứa, hãy mô tả ĐẦY ĐỦ CẢ HAI NHÂN VẬT tương tác tự nhiên trong cùng một cảnh liền mạch, gợi cảm và thẩm mỹ theo đúng yêu cầu (dùng tag Danbooru đôi chuẩn như "couple, 1girl, 1boy", hoặc "2girls"/"2boys" tùy ngữ cảnh). TUYỆT ĐỐI KHÔNG đưa các từ chỉ cặp đôi hay giới tính (như "couple", "man", "boy", "male", "1boy", "two people") vào negative prompt.
@@ -74,11 +74,11 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
   thế + góc máy KHÁC nhau (đứng, bước đi, ngồi, dựa tường, quỳ, nghiêng người, nằm, vặn người...).
   KHÔNG lặp lại cùng một kiểu cho cả bộ, và ĐẶC BIỆT đừng mặc định tư thế nằm dạng chân.
-- MỌI ảnh (kể cả bìa) LUÔN là ảnh TOÀN THÂN: dùng tag "full body" (từ đầu đến chân), chủ thể ĐỦ LỚN
-  trong khung, tỉ lệ đầu-thân tự nhiên (tránh chụp từ quá xa làm model vẽ đầu to). TUYỆT ĐỐI KHÔNG
-  chụp cận mặt / chân dung / upper body / cowboy shot, và KHÔNG dùng tag "close-up", "portrait",
-  "face focus": trộn với toàn thân khiến model tách ảnh thành 2 khung (một cận mặt, một toàn thân).
-  Đa dạng giữa các ảnh bằng TƯ THẾ, GÓC MÁY và BỐI CẢNH — KHÔNG bằng cự ly chụp.
+- ĐA DẠNG CỰ LY giữa các ảnh, nhưng MỖI ảnh CHỈ MỘT cự ly: trong bộ 13 ảnh, khoảng 4 ảnh "full body"
+  (người ở GẦN, chiếm gần hết chiều cao khung), còn lại là "cowboy shot" (đầu tới đùi) hoặc "upper body"
+  (đầu tới hông) để khuôn mặt đủ lớn, nét đẹp. Bìa (#1) dùng "full body" hoặc "cowboy shot" để còn chỗ
+  cho chữ. TUYỆT ĐỐI KHÔNG chụp cận mặt ("close-up", "portrait", "face focus") và KHÔNG ghi 2 cự ly
+  trong cùng một ảnh — trộn cự ly trong MỘT ảnh khiến model tách ảnh thành 2 khung.
 
 QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
 - Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
@@ -191,25 +191,27 @@ TÊN + NĂM in trên trang bìa:
 
 RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
-  ánh sáng + góc máy, chất ảnh editorial/điện ảnh cao cấp. NHƯNG mỗi ảnh LUÔN là MỘT tấm ảnh chụp
+  ánh sáng + góc máy, chất ảnh chụp THẬT, tự nhiên như máy ảnh chuyên nghiệp chụp ngoài đời (KHÔNG
+  bóng bẩy kiểu ảnh quảng cáo đã retouch hay CG). NHƯNG mỗi ảnh LUÔN là MỘT tấm ảnh chụp
   DUY NHẤT, LIỀN MẠCH — TUYỆT ĐỐI KHÔNG phải trang tạp chí trải đôi / dàn 2 trang / ảnh ghép so sánh /
   cận mặt + toàn thân ghép cạnh nhau. KHÔNG dùng cụm "magazine spread", "magazine layout",
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
-- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm trang phục, địa điểm/đạo cụ chính của concept — NGẮN GỌN ≤ ~25 từ, KHÔNG chứa bảng màu, mood, ánh sáng hay từ phong cách nhiếp ảnh (cinematic, editorial, pastel...). TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
   thế + góc máy KHÁC nhau (đứng, bước đi, ngồi, dựa tường, quỳ, nghiêng người, nằm, vặn người...).
   KHÔNG lặp lại cùng một kiểu cho cả bộ, và ĐẶC BIỆT đừng mặc định tư thế nằm dạng chân.
-- MỌI ảnh (kể cả bìa) LUÔN là ảnh TOÀN THÂN: ghi rõ "full body shot, head to toe" + ống rộng (vd "35mm,
-  wide shot"), chủ thể ĐỦ LỚN trong khung (tránh chụp từ quá xa làm model vẽ sai tỉ lệ đầu/thân, đầu to).
-  TUYỆT ĐỐI KHÔNG chụp cận mặt / chân dung / half-body / medium shot, và KHÔNG viết token chi tiết khuôn
-  mặt cận cảnh ("visible pores", "skin pores", "subsurface scattering", "detailed eyes", "85mm",
-  "close-up", "portrait"): các token này khiến model tách ảnh thành 2 khung (một cận mặt, một toàn thân).
-  Đa dạng giữa các ảnh bằng TƯ THẾ, GÓC MÁY (ngang tầm mắt, góc thấp, góc nghiêng) và BỐI CẢNH — KHÔNG
-  bằng cự ly chụp.
+- ĐA DẠNG CỰ LY giữa các ảnh, nhưng MỖI ảnh CHỈ MỘT cự ly: trong bộ 13 ảnh, khoảng 4 ảnh TOÀN THÂN
+  ("full body shot, head to toe, 50mm", người đứng GẦN, chiếm gần hết chiều cao khung), còn lại là
+  "three-quarter shot" (đầu tới gối, 50mm) hoặc "thigh-up shot" / "waist-up shot" (85mm) để khuôn mặt đủ
+  lớn và chi tiết tự nhiên. Bìa (#1) dùng toàn thân hoặc three-quarter để còn chỗ cho chữ. KHÔNG dùng ống
+  rộng ("35mm", "wide angle", "wide shot") vì làm méo người và mặt quá nhỏ. TUYỆT ĐỐI KHÔNG chụp cận mặt
+  ("close-up", "portrait", "face focus"), KHÔNG viết token macro da ("visible pores", "skin pores",
+  "subsurface scattering", "detailed eyes"), và KHÔNG ghi 2 cự ly trong cùng một ảnh (vd vừa "full body"
+  vừa "waist-up") — trộn cự ly trong MỘT ảnh khiến model tách ảnh thành 2 khung.
 
 QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
 - Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
@@ -326,6 +328,15 @@ export const FRAMING_MARGIN_TAGS =
   "subject fully inside the frame with breathing room, background visible around the subject, clear space above the head and below the body, subject not cropped or touching the frame edges";
 
 /**
+ * Bản nhẹ cho ảnh KHÔNG toàn thân (three-quarter / thigh-up / waist-up): chỉ giữ
+ * khoảng thở trên đầu. Bản đầy đủ ("below the body", "background around the
+ * subject") ép người ra xa -> mặt nhỏ -> Turbo vẽ mặt kém, trông giả; và chọi với
+ * cự ly gần (trộn cự ly trong một ảnh dễ tách khung).
+ */
+export const FRAMING_HEADROOM_TAGS =
+  "natural headroom above the head, top of the head not cropped";
+
+/**
  * Lớp hint CHỈ áp khi Medium là Anime, nối thêm vào user message ở route
  * /suggest (bổ sung cho CALENDAR_SYSTEM_PROMPT_ANIME). Chỉ đổi KIỂU chữ
  * bìa sang phong cách anime; mọi ràng buộc cứng khác của system prompt (đủ 3
@@ -393,7 +404,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 
 4. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
 
-5. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh.
+5. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh. Mỗi "positive" (phần bạn viết) phải GỌN, ≤ ~60 từ: KHÔNG lặp lại ý đã có trong anchorTags, mỗi từ phong cách (cinematic, editorial, pastel, moody...) dùng TỐI ĐA 1 lần — prompt dài và lặp khiến ảnh bóng bẩy, trông giả.
 6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt, mái tóc, màu da , kiểu dáng, kiểu tóc qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy
 7. CÂU CHUYỆN VÀ CONCEPT CHIẾN DỊCH THƯƠNG MẠI CHO BỘ LỊCH (COMMERCIAL CAMPAIGN STORYLINE & DIVERSE CONCEPTS):
    Một bộ lịch 12 tháng được xây dựng như một CHIẾN DỊCH CHỤP ẢNH THƯƠNG MẠI CAO CẤP (Commercial Editorial Photoshoot Campaign) của một nhãn hàng hoặc thương hiệu xa xỉ thuê người mẫu chụp.
@@ -404,7 +415,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
    - CHỌN CONCEPT ĐA DẠNG: hệ thống có thể gửi kèm trong tin nhắn người dùng một "Hướng concept" (bốc ngẫu nhiên: nhóm địa điểm + thời điểm + phong cách) và danh sách "Concept các bộ gần đây". Khi người dùng KHÔNG nêu bối cảnh: phát triển Hướng concept thành MỘT địa điểm cụ thể, độc đáo, hợp nhân vật/văn hoá, và TUYỆT ĐỐI KHÔNG chọn lại địa điểm/đạo cụ trùng với các bộ gần đây. Khi người dùng ĐÃ nêu bối cảnh: bỏ qua cả hai, theo đúng người dùng.
    - ĐỒNG NHẤT CONCEPT TRONG BỘ (CONCEPT COHESION — BẮT BUỘC):
      Concept = MỘT địa điểm/bối cảnh chính + tối đa MỘT loại đạo cụ chính. Nếu có đạo cụ chính thì giữ NGUYÊN đúng món đó (cùng mẫu, cùng màu) ở mọi tháng có xuất hiện nó. TUYỆT ĐỐI KHÔNG đổi loại đạo cụ/phương tiện giữa các tháng (không tháng này xe hơi, tháng kia mô tô, máy bay, thuyền) và KHÔNG nhảy sang địa điểm khác loại. 12 tháng CHỈ thay đổi: góc máy, tư thế, giờ trong ngày/ánh sáng, và các góc nhỏ khác nhau BÊN TRONG cùng địa điểm đó (ví dụ concept thư viện cổ: tháng bên kệ sách cao, tháng ngồi trên thang trượt, tháng bên cửa sổ vòm, tháng ở bàn đọc dưới đèn...).
-     BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "campaignTheme" viết TIẾNG ANH ngắn gọn (≤ ~10 từ, nêu địa điểm + đạo cụ chính). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, bảng màu, địa điểm/đạo cụ chính, mood) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
+     BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "campaignTheme" viết TIẾNG ANH ngắn gọn (≤ ~10 từ, nêu địa điểm + đạo cụ chính). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, địa điểm/đạo cụ chính — ≤ ~25 từ, KHÔNG bảng màu/mood/phong cách nhiếp ảnh) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
    - TƯƠNG TÁC TỰ NHIÊN VỚI ĐẠO CỤ (NATURAL INTERACTION - TRÁNH BĂM ĐÔI KHUNG HÌNH):
      Khi người mẫu tương tác với đạo cụ lớn, mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is an object") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
    - RÀNG BUỘC DUY NHẤT 1 NGƯỜI MẪU (STRICT SINGLE SUBJECT):

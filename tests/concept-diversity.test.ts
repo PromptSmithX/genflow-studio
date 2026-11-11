@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LOCATION_FAMILIES,
-  STYLE_ERA,
+  PHOTO_LOOK,
   TIME_WEATHER,
   familyConflicts,
   normalizeRecentConcepts,
@@ -44,7 +44,7 @@ describe("pickConceptSeed", () => {
 
   it("combines location direction, time/weather and style axes", () => {
     const seed = pickConceptSeed({ keys: [], themes: [] }, () => 0, [LIBRARY]);
-    expect(seed.text).toBe(`a historic library, ${TIME_WEATHER[0]}, ${STYLE_ERA[0]}`);
+    expect(seed.text).toBe(`a historic library, ${TIME_WEATHER[0]}, ${PHOTO_LOOK[0]}`);
   });
 
   it("never repeats any of the last 10 families", () => {

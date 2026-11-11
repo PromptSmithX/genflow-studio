@@ -3,6 +3,7 @@ import type { EtsySuggestion, LlmImageSuggestion } from "@/lib/validations/llm";
 import {
   SINGLE_SUBJECT_QUALITY_TAGS,
   FRAMING_MARGIN_TAGS,
+  FRAMING_HEADROOM_TAGS,
   ANIME_SINGLE_SUBJECT_TAGS,
   ANIME_COUPLE_QUALITY_TAGS,
 } from "@/lib/llm/default-system-prompt";
@@ -80,6 +81,28 @@ const CALENDAR_LABEL = "CALENDAR";
 const ANIME_COUPLE_REGEX = /^\s*(couple|1boy\s*,\s*1girl|1girl\s*,\s*1boy|2girls|2boys)\b/i;
 function resolveAnimeSubjectTags(positive: string): string {
   return ANIME_COUPLE_REGEX.test(positive) ? ANIME_COUPLE_QUALITY_TAGS : ANIME_SINGLE_SUBJECT_TAGS;
+}
+
+// Ảnh toàn thân -> cần đủ khoảng trống quanh người (FRAMING_MARGIN_TAGS).
+const FULL_BODY_REGEX = /\b(full[\s-]?body|head[\s-]+to[\s-]+toe|full[\s-]?length)\b/i;
+
+/**
+ * Bỏ các cụm (ngăn bởi dấu phẩy) trùng lặp NGUYÊN VĂN, giữ lần xuất hiện đầu.
+ * Prompt dài + lặp làm token phong cách bị "nặng ký" -> ảnh bóng bẩy, trông giả;
+ * lặp thường đến từ anchorTags tiêm vào + LLM tự viết lại cùng ý.
+ */
+export function dedupePhrases(positive: string): string {
+  const seen = new Set<string>();
+  return positive
+    .split(",")
+    .map((phrase) => phrase.trim())
+    .filter((phrase) => {
+      const key = phrase.toLowerCase().replace(/\s+/g, " ");
+      if (!phrase || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
 }
 
 /**
@@ -167,15 +190,22 @@ export function finalizeSuggestedImage(
     .filter(Boolean)
     .join(", ");
 
+  // Tag khung theo cự ly: chỉ ảnh toàn thân mới cần đủ khoảng trống quanh người;
+  // ảnh gần hơn chỉ giữ khoảng thở trên đầu (bản đầy đủ đẩy người ra xa -> mặt
+  // nhỏ, trông giả, và chọi với cự ly gần).
+  const framing = FULL_BODY_REGEX.test(image.positive) ? FRAMING_MARGIN_TAGS : FRAMING_HEADROOM_TAGS;
+
   if (!isCover) {
     image.title = undefined;
     image.year = undefined;
     // Cả anime lẫn người đều ép single-subject lên ĐẦU positive (model đánh
     // trọng số token đầu mạnh) để giảm lỗi nhân đôi chủ thể ở Turbo (negative
     // bị ZeroOut nên không có lớp chặn duplicate).
-    image.positive = isAnimeMedium
-      ? mergeTags(resolveAnimeSubjectTags(image.positive), FRAMING_MARGIN_TAGS, anchor, image.positive)
-      : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, FRAMING_MARGIN_TAGS, anchor, image.positive);
+    image.positive = dedupePhrases(
+      isAnimeMedium
+        ? mergeTags(resolveAnimeSubjectTags(image.positive), framing, anchor, image.positive)
+        : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, framing, anchor, image.positive),
+    );
     return image;
   }
 
@@ -206,23 +236,25 @@ export function finalizeSuggestedImage(
     missingTags.push(`large bold year text "${year}", clearly legible`);
   }
 
-  image.positive = isAnimeMedium
-    ? mergeTags(
-        resolveAnimeSubjectTags(image.positive),
-        FRAMING_MARGIN_TAGS,
-        anchor,
-        image.positive,
-        ...missingTags,
-        "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-      )
-    : mergeTags(
-        SINGLE_SUBJECT_QUALITY_TAGS,
-        FRAMING_MARGIN_TAGS,
-        anchor,
-        image.positive,
-        ...missingTags,
-        "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-      );
+  image.positive = dedupePhrases(
+    isAnimeMedium
+      ? mergeTags(
+          resolveAnimeSubjectTags(image.positive),
+          framing,
+          anchor,
+          image.positive,
+          ...missingTags,
+          "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
+        )
+      : mergeTags(
+          SINGLE_SUBJECT_QUALITY_TAGS,
+          framing,
+          anchor,
+          image.positive,
+          ...missingTags,
+          "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
+        ),
+  );
   return image;
 }
 

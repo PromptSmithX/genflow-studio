@@ -80,28 +80,33 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 
 Để đóng gói bộ cài Windows (.exe) nhúng sẵn cấu hình (RunPod, LLM, R2, Google Sheets) giúp ứng dụng mở lên là dùng được ngay:
 
-1. Chuẩn bị runtime (chạy 1 lần trên máy build, cần kết nối mạng):
-   ```bash
-   npm run build:node     # Tải Node.js portable win-x64 vào resources/node/
-   npm run build:python   # Tải Python embed 3.11 + cài Pillow/numpy vào resources/python/ (cần Python hệ thống có pip)
-   ```
-   Template mockup sản phẩm nằm tại `assets/mockup_templates/` trong repo và tự động được copy vào bản đóng gói.
+1. **Chuẩn bị 1 lần trên máy build** (cần kết nối mạng):
+   - **Tải Node.js runtime**:
+     ```bash
+     npm run build:node     # Tải Node.js portable win-x64 vào resources/node/node.exe
+     ```
+   - **Cài đặt Python runtime nhúng**:
+     ```bash
+     npm run build:python   # Tải Python embed 3.11 + cài Pillow/numpy vào resources/python/ (yêu cầu Python hệ thống có pip)
+     ```
+   - **Cấu hình secrets (tùy chọn nhưng khuyến nghị)**:
+     ```bash
+     cp secrets/build-secrets.example.json secrets/build-secrets.json
+     ```
+     Điền các giá trị secret vào `secrets/build-secrets.json` (RunPod, LLM, R2, Google Sheets). Nếu bỏ qua, ứng dụng sẽ yêu cầu người dùng nhập key thủ công trong Settings.
 
-2. Sao chép file mẫu:
-   ```bash
-   cp secrets/build-secrets.example.json secrets/build-secrets.json
-   ```
-3. Điền các giá trị secret vào `secrets/build-secrets.json`:
-   - `ANIMA_RUNPOD_ENDPOINT_ID`, `ANIMA_RUNPOD_API_KEY`: Thông tin worker RunPod Serverless.
-   - `ANIMA_LLM_API_KEY`, `ANIMA_LLM_BASE_URL`, `ANIMA_LLM_MODEL`: Cấu hình Trợ lý AI.
-   - `R2_*`: Cấu hình Cloudflare R2 bucket.
-   - `GOOGLE_SHEET_ID`: ID Google Spreadsheet.
-   - `GOOGLE_SERVICE_ACCOUNT_JSON`: Dán toàn bộ object JSON từ file Google Service Account vào đây (hoặc dán dưới dạng chuỗi JSON).
-4. Đóng gói bộ cài Electron:
+2. **Đóng gói bộ cài Electron**:
    ```bash
    npm run dist
    ```
-   Lệnh này tự động mã hóa secrets (`resources/secrets/secrets.enc`) qua AES-256-GCM trước khi đóng gói.
+   Quy trình `dist` tự động thực hiện tuần tự:
+   `next build` → chuẩn bị `resources/app` sạch (lọc bỏ mã nguồn thừa, file nhạy cảm và lồng nhau) → dựng DB template → mã hóa secret (`resources/secrets/secrets.enc`) → **`verify-package`** kiểm tra toàn diện → `electron-builder`.
+
+   > **Cơ chế chặn lỗi tự động (`verify-package`):**
+   > `npm run dist` sẽ tự động dừng với thông báo lỗi tiếng Việt rõ ràng nếu:
+   > - Thiếu runtime `resources/node/node.exe` hoặc `resources/python/python.exe` (kèm thư viện PIL, numpy).
+   > - Thiếu DB template SQLite / migrations, template mockup (`assets/mockup_templates/`), hoặc Printify format templates.
+   > - Phát hiện file cấm hoặc lọt thư mục nhạy cảm trong `resources/app` (`dist-electron`, `resources`, `secrets`, `.env*`, `*.sqlite`).
 
 > **Lưu ý & Giới hạn bảo mật:**
 > - Bản đóng gói nhúng key chỉ dành riêng để phát hành và cài đặt trên **máy tin cậy của chủ dự án**.

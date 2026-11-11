@@ -70,6 +70,12 @@ const SAME_BEFORE_SUBJECT_REGEX =
 // LLM hay tự chèn các tag này dù không ai yêu cầu.
 const HEAVY_BODY_TAGS_REGEX =
   /\b(chubby|plump|overweight|obese|fat|chunky|bbw|soft\s+belly|belly\s+rolls|full[\s-]+figured?|fuller\s+cheeks|plus[\s-]+size)\b/gi;
+// Biểu cảm/cảm xúc thuộc về TỪNG ảnh (LLM tự suy theo hành động của khoảnh khắc
+// đó). anchorTags lặp y hệt ở mọi ảnh -> nếu chứa biểu cảm sẽ "đóng băng" cả bộ
+// vào một kiểu (vd cười tươi cả khi đang quan hệ). Chỉ lọc khỏi anchor, KHÔNG
+// đụng phần LLM viết cho từng ảnh.
+const ANCHOR_EXPRESSION_REGEX =
+  /\b(smil(e|es|ed|ing)|grin(s|ning)?|smirk\w*|laugh\w*|dimples?|gap[\s-]?tooth\w*|pout\w*|cheerful|joyful|happy|serene|expressions?|gaze|lustful|aroused|ecstatic|moan\w*)\b/i;
 const CALENDAR_LABEL = "CALENDAR";
 
 /**
@@ -187,7 +193,7 @@ export function finalizeSuggestedImage(
   anchor = anchor
     .split(",")
     .map((tag) => tag.trim())
-    .filter(Boolean)
+    .filter((tag) => tag && !ANCHOR_EXPRESSION_REGEX.test(tag))
     .join(", ");
 
   // Tag khung theo cự ly: chỉ ảnh toàn thân mới cần đủ khoảng trống quanh người;

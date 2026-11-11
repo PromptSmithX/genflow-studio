@@ -84,21 +84,24 @@ export const EYES = [
   "blue-green eyes",
 ];
 
+// CHỈ nét nhận dạng TĨNH. Không đưa biểu cảm (cười, lúm đồng tiền khi cười...)
+// vào đây: gợi ý này thành đặc điểm cố định của nhân vật, bị lặp ở mọi ảnh và
+// đè lên biểu cảm hợp với hành động của từng ảnh.
 export const FACE_FEATURES = [
   "light freckles across the nose",
   "high cheekbones",
   "full lips",
   "monolid eyes",
-  "dimples when smiling",
+  "a subtle cleft chin",
   "a straight defined nose",
   "a small beauty mark near the lips",
   "strong elegant jawline",
   "soft round face",
   "heart-shaped face",
   "thick natural eyebrows",
-  "a gap-tooth smile",
+  "a small mole on the cheek",
   "upturned button nose",
-  "a sharp feline gaze",
+  "almond-shaped eyes",
 ];
 
 export const AGES = ["early 20s", "mid 20s", "late 20s", "early 30s"];

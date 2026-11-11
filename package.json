@@ -20,7 +20,8 @@
     "build:python": "node scripts/download-python.mjs",
     "build:secrets": "node scripts/encrypt-secrets.mjs",
     "build:electron-resources": "node scripts/prepare-electron-resources.mjs",
-    "dist": "npm run build && npm run build:electron-resources && npm run build:template-db && npm run build:secrets && electron-builder --win"
+    "verify-package": "node scripts/verify-package.mjs",
+    "dist": "npm run build && npm run build:electron-resources && npm run build:template-db && npm run build:secrets && npm run verify-package && electron-builder --win"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1163.0",

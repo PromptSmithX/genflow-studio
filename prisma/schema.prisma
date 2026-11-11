@@ -198,6 +198,17 @@ model GenerationBatch {
   autoStatus     String?
   // Bước đang chạy trong pipeline khi autoStatus == "processing": "export" | "r2" | "sheet" | null.
   autoStage      String?
+  // Concept chiến dịch LLM chốt cho cả bộ (Trợ lý AI). conceptTheme (tiếng Anh
+  // ngắn) dùng làm danh sách tránh cho các batch sau; conceptAnchorTags giữ
+  // "Sửa lại" 1 ảnh đúng concept của bộ. null = batch cũ / không qua Trợ lý AI.
+  conceptTheme      String?
+  conceptAnchorTags String?
+  // key nhóm địa điểm code đã bốc làm hướng concept (lib/llm/concept-diversity.ts)
+  // -- né CHÍNH XÁC theo key thay vì dò từ khoá câu chữ LLM viết.
+  conceptSeedKey    String?
+  // Ngoại hình code đã bốc cho nhân vật, dạng "quốc tịch|tóc|dáng"
+  // (lib/llm/appearance-diversity.ts) -- để các batch sau né, đa dạng nhân vật.
+  appearanceKey     String?
   // Chi tiết lỗi khi chạy pipeline tự động thất bại.
   autoError      String?
   // Thời điểm kết thúc chạy pipeline tự động gần nhất.

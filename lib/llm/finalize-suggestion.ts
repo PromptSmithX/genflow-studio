@@ -3,6 +3,7 @@ import type { EtsySuggestion, LlmImageSuggestion } from "@/lib/validations/llm";
 import {
   SINGLE_SUBJECT_QUALITY_TAGS,
   FRAMING_MARGIN_TAGS,
+  FRAMING_HEADROOM_TAGS,
   ANIME_SINGLE_SUBJECT_TAGS,
   ANIME_COUPLE_QUALITY_TAGS,
 } from "@/lib/llm/default-system-prompt";
@@ -65,6 +66,16 @@ const DUP_SUBJECT_REGEX =
 // DUP_SUBJECT_REGEX -> chỉ bỏ chữ "(the) same", giữ lại các tính từ mô tả.
 const SAME_BEFORE_SUBJECT_REGEX =
   /\b(the\s+)?same\s+(?=(?:[\w-]+\s+){1,4}?(?:faces?|bodies|body|woman|women|girl|girls|person|people|model|models|character|characters|subject|subjects)\b)/gi;
+// Dáng béo chỉ được phép khi người dùng tự yêu cầu (requestWantsHeavyBody) --
+// LLM hay tự chèn các tag này dù không ai yêu cầu.
+const HEAVY_BODY_TAGS_REGEX =
+  /\b(chubby|plump|overweight|obese|fat|chunky|bbw|soft\s+belly|belly\s+rolls|full[\s-]+figured?|fuller\s+cheeks|plus[\s-]+size)\b/gi;
+// Biểu cảm/cảm xúc thuộc về TỪNG ảnh (LLM tự suy theo hành động của khoảnh khắc
+// đó). anchorTags lặp y hệt ở mọi ảnh -> nếu chứa biểu cảm sẽ "đóng băng" cả bộ
+// vào một kiểu (vd cười tươi cả khi đang quan hệ). Chỉ lọc khỏi anchor, KHÔNG
+// đụng phần LLM viết cho từng ảnh.
+const ANCHOR_EXPRESSION_REGEX =
+  /\b(smil(e|es|ed|ing)|grin(s|ning)?|smirk\w*|laugh\w*|dimples?|gap[\s-]?tooth\w*|pout\w*|cheerful|joyful|happy|serene|expressions?|gaze|lustful|aroused|ecstatic|moan\w*)\b/i;
 const CALENDAR_LABEL = "CALENDAR";
 
 /**
@@ -78,6 +89,49 @@ function resolveAnimeSubjectTags(positive: string): string {
   return ANIME_COUPLE_REGEX.test(positive) ? ANIME_COUPLE_QUALITY_TAGS : ANIME_SINGLE_SUBJECT_TAGS;
 }
 
+// Ảnh toàn thân -> cần đủ khoảng trống quanh người (FRAMING_MARGIN_TAGS).
+const FULL_BODY_REGEX = /\b(full[\s-]?body|head[\s-]+to[\s-]+toe|full[\s-]?length)\b/i;
+
+/**
+ * Bỏ các cụm (ngăn bởi dấu phẩy) trùng lặp NGUYÊN VĂN, giữ lần xuất hiện đầu.
+ * Prompt dài + lặp làm token phong cách bị "nặng ký" -> ảnh bóng bẩy, trông giả;
+ * lặp thường đến từ anchorTags tiêm vào + LLM tự viết lại cùng ý.
+ */
+export function dedupePhrases(positive: string): string {
+  const seen = new Set<string>();
+  return positive
+    .split(",")
+    .map((phrase) => phrase.trim())
+    .filter((phrase) => {
+      const key = phrase.toLowerCase().replace(/\s+/g, " ");
+      if (!phrase || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
+}
+
+/**
+ * Tag BẤT BIẾN của concept cả bộ (concept.anchorTags) mà positive CHƯA có --
+ * tiêm vào mọi ảnh để cả bộ chắc chắn cùng địa điểm/đạo cụ/nhân vật, không phụ
+ * thuộc LLM tự lặp lại. Bỏ tag đã có sẵn (không phân biệt hoa thường) để không
+ * nhân đôi token.
+ */
+export function missingAnchorTags(anchorTags: string | null | undefined, positive: string): string {
+  const lowerPositive = positive.toLowerCase();
+  const seen = new Set<string>();
+  return (anchorTags ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+      if (!tag || seen.has(key) || lowerPositive.includes(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
+}
+
 /**
  * Chuẩn hoá một ảnh do LLM gợi ý về đúng ràng buộc gen ảnh của app, SỬA TẠI CHỖ
  * `image` và trả lại chính nó. Dùng chung bởi route /suggest (tạo cả bộ) và
@@ -86,10 +140,17 @@ function resolveAnimeSubjectTags(positive: string): string {
  * - `isCover`: ảnh bìa trước (ảnh #0) -- ép đủ 3 khối chữ (title / "CALENDAR" /
  *   year) + tag typography; `false` = artwork, xoá title/year + ép single-subject.
  * - `isAnimeMedium`: nhánh anime ép tag Danbooru single-subject lên ĐẦU positive.
+ * - `anchorTags`: tag bất biến của concept cả bộ, tiêm phần còn thiếu vào positive.
+ * - `allowHeavyBody`: người dùng tự yêu cầu dáng béo; mặc định false -> xoá tag béo.
  */
 export function finalizeSuggestedImage(
   image: LlmImageSuggestion,
-  { isCover, isAnimeMedium }: { isCover: boolean; isAnimeMedium: boolean },
+  {
+    isCover,
+    isAnimeMedium,
+    anchorTags,
+    allowHeavyBody = false,
+  }: { isCover: boolean; isAnimeMedium: boolean; anchorTags?: string | null; allowHeavyBody?: boolean },
 ): LlmImageSuggestion {
   // Làm sạch bất kỳ từ khoá copy space / split nào LLM có thể đã sinh ra.
   image.positive = image.positive
@@ -111,15 +172,46 @@ export function finalizeSuggestedImage(
       .trim();
   }
 
+  if (!allowHeavyBody) {
+    image.positive = image.positive
+      .replace(HEAVY_BODY_TAGS_REGEX, "")
+      .replace(/,(\s*,)+/g, ",")
+      .replace(/\s{2,}/g, " ")
+      .replace(/^\s*,\s*/g, "")
+      .replace(/,\s*$/g, "")
+      .trim();
+  }
+  let anchor = missingAnchorTags(anchorTags, image.positive);
+  if (!allowHeavyBody) {
+    anchor = anchor.replace(HEAVY_BODY_TAGS_REGEX, "");
+  }
+  // anchorTags cũng do LLM viết -> làm sạch y như positive (split/nhân đôi chủ thể).
+  anchor = anchor.replace(SPLIT_TAGS_REGEX, "").replace(BANNER_TAGS_REGEX, "");
+  if (!isAnimeMedium) {
+    anchor = anchor.replace(SAME_BEFORE_SUBJECT_REGEX, "").replace(DUP_SUBJECT_REGEX, "");
+  }
+  anchor = anchor
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag && !ANCHOR_EXPRESSION_REGEX.test(tag))
+    .join(", ");
+
+  // Tag khung theo cự ly: chỉ ảnh toàn thân mới cần đủ khoảng trống quanh người;
+  // ảnh gần hơn chỉ giữ khoảng thở trên đầu (bản đầy đủ đẩy người ra xa -> mặt
+  // nhỏ, trông giả, và chọi với cự ly gần).
+  const framing = FULL_BODY_REGEX.test(image.positive) ? FRAMING_MARGIN_TAGS : FRAMING_HEADROOM_TAGS;
+
   if (!isCover) {
     image.title = undefined;
     image.year = undefined;
     // Cả anime lẫn người đều ép single-subject lên ĐẦU positive (model đánh
     // trọng số token đầu mạnh) để giảm lỗi nhân đôi chủ thể ở Turbo (negative
     // bị ZeroOut nên không có lớp chặn duplicate).
-    image.positive = isAnimeMedium
-      ? mergeTags(resolveAnimeSubjectTags(image.positive), FRAMING_MARGIN_TAGS, image.positive)
-      : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, FRAMING_MARGIN_TAGS, image.positive);
+    image.positive = dedupePhrases(
+      isAnimeMedium
+        ? mergeTags(resolveAnimeSubjectTags(image.positive), framing, anchor, image.positive)
+        : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, framing, anchor, image.positive),
+    );
     return image;
   }
 
@@ -150,21 +242,25 @@ export function finalizeSuggestedImage(
     missingTags.push(`large bold year text "${year}", clearly legible`);
   }
 
-  image.positive = isAnimeMedium
-    ? mergeTags(
-        resolveAnimeSubjectTags(image.positive),
-        FRAMING_MARGIN_TAGS,
-        image.positive,
-        ...missingTags,
-        "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-      )
-    : mergeTags(
-        SINGLE_SUBJECT_QUALITY_TAGS,
-        FRAMING_MARGIN_TAGS,
-        image.positive,
-        ...missingTags,
-        "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-      );
+  image.positive = dedupePhrases(
+    isAnimeMedium
+      ? mergeTags(
+          resolveAnimeSubjectTags(image.positive),
+          framing,
+          anchor,
+          image.positive,
+          ...missingTags,
+          "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
+        )
+      : mergeTags(
+          SINGLE_SUBJECT_QUALITY_TAGS,
+          framing,
+          anchor,
+          image.positive,
+          ...missingTags,
+          "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
+        ),
+  );
   return image;
 }
 

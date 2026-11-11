@@ -96,6 +96,8 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
       etsyTitle: input.etsy?.title ?? null,
       etsyDescription: input.etsy?.description ?? null,
       etsyTagsJson: input.etsy?.tags ? JSON.stringify(input.etsy.tags) : null,
+      conceptTheme: input.concept?.theme || null,
+      conceptAnchorTags: input.concept?.anchorTags || null,
     },
   });
 

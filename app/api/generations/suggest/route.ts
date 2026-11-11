@@ -14,6 +14,7 @@ import {
 } from "@/lib/llm/default-system-prompt";
 import { finalizeSuggestedImage, finalizeEtsy } from "@/lib/llm/finalize-suggestion";
 import { resolveLlmConfig } from "@/lib/llm/resolve-config";
+import { loadRecentConcepts, pickConceptSeed } from "@/lib/llm/concept-diversity";
 
 export const runtime = "nodejs";
 
@@ -46,10 +47,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Đa dạng concept giữa các bộ bằng code: né concept vài bộ gần nhất + bốc
+    // ngẫu nhiên 1 concept gợi ý (chỉ áp dụng khi người dùng không nêu bối cảnh).
+    const avoidConcepts = await loadRecentConcepts();
+    const conceptSeed = pickConceptSeed(avoidConcepts);
     const userMessage = composeUserMessage({
       request: input.request,
       count: input.count,
       styleHint,
+      conceptSeed,
+      avoidConcepts,
     });
     // Trợ lý AI luôn tạo bộ ảnh lịch (ảnh #1 = bìa có chữ, còn lại = artwork sạch).
     // Chọn system prompt tách riêng theo loại: anime vs người thực.
@@ -88,7 +95,11 @@ export async function POST(request: NextRequest) {
     // finalizeSuggestedImage dùng chung với luồng "Sửa lại" (regenerate-fresh)
     // nên 2 nơi luôn áp đúng cùng một ràng buộc.
     result.images.forEach((image, index) => {
-      finalizeSuggestedImage(image, { isCover: index === 0, isAnimeMedium });
+      finalizeSuggestedImage(image, {
+        isCover: index === 0,
+        isAnimeMedium,
+        anchorTags: result.concept?.anchorTags,
+      });
     });
     if (result.etsy) {
       finalizeEtsy(result.etsy);

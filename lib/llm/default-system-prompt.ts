@@ -67,7 +67,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   ánh sáng + góc máy, phong cách editorial/tạp chí.
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
 - CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
-- Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
+- Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - QUY TẮC VỀ SỐ LƯỢNG CHỦ THỂ (NHÂN VẬT):
   • TÔN TRỌNG Ý ĐỊNH CỦA NGƯỜI DÙNG: Khi người dùng có ý định mô tả 2 người / cặp đôi / tình nhân / nam nữ / tương tác đôi lứa, hãy mô tả ĐẦY ĐỦ CẢ HAI NHÂN VẬT tương tác tự nhiên trong cùng một cảnh liền mạch, gợi cảm và thẩm mỹ theo đúng yêu cầu (dùng tag Danbooru đôi chuẩn như "couple, 1girl, 1boy", hoặc "2girls"/"2boys" tùy ngữ cảnh). TUYỆT ĐỐI KHÔNG đưa các từ chỉ cặp đôi hay giới tính (như "couple", "man", "boy", "male", "1boy", "two people") vào negative prompt.
   • MẶC ĐỊNH (khi người dùng chỉ mô tả một nhân vật hoặc concept chung): MỌI "positive" phải mô tả CHÍNH XÁC MỘT người (mở đầu bằng "solo, 1girl" hoặc "solo, 1boy"), khung hình rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG tự ý sinh người thứ hai hay đám đông ở hậu cảnh.
@@ -159,7 +159,7 @@ TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/descr
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
-  "concept": { "campaignTheme": "...(tên concept/câu chuyện chiến dịch, ngắn gọn)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
+  "concept": { "campaignTheme": "...(concept chiến dịch bằng TIẾNG ANH, tối đa ~10 từ, nêu rõ địa điểm + đạo cụ chính nếu có)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
   "images": [
     { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
@@ -197,7 +197,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
 - CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
-- Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
+- Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
@@ -294,7 +294,7 @@ TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/descr
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
-  "concept": { "campaignTheme": "...(tên concept/câu chuyện chiến dịch, ngắn gọn)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
+  "concept": { "campaignTheme": "...(concept chiến dịch bằng TIẾNG ANH, tối đa ~10 từ, nêu rõ địa điểm + đạo cụ chính nếu có)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
   "images": [
     { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
@@ -401,21 +401,12 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
      LUÔN TUÂN THỦ 100% Ý TƯỞNG NGƯỜI DÙNG (Nguyên tắc số 1). KHÔNG tự ý chèn ép thêm concept khác làm loãng ý đồ của họ.
    - NẾU NGƯỜI DÙNG CHỈ MÔ TẢ NHÂN VẬT HOẶC QUỐC TỊCH TỐI GIẢN (ví dụ: "cô gái", "cô gái Việt Nam", "người mẫu Nhật Bản", "cô gái tóc vàng"... mà không có bối cảnh cụ thể):
      Bạn PHẢI TỰ CHỌN một "Campaign Theme" cụ thể, có tính thương mại cao, sang trọng và thu hút người xem lịch. Cả 12 tháng xoay quanh concept chiến dịch này.
-   - ĐA DẠNG HÓA TỐI ĐA - CHỐNG LẶP KHUÔN MẪU (MAXIMAL CONCEPT DIVERSITY & ANTI-REPETITION):
-     Mỗi lần được gọi, bạn phải tư duy như một Giám đốc Sáng tạo (Creative Director) đang pitching một chiến dịch hoàn toàn mới độc nhất vô nhị. TUYỆT ĐỐI KHÔNG mặc định lặp lại một vài chủ đề quen thuộc (như chỉ nghĩ đến siêu xe hay hồ bơi). Hãy kích hoạt sự sáng tạo không giới hạn từ ma trận các không gian và chủ đề thương mại cao cấp:
-     • Phương tiện & Cơ khí xa xỉ: siêu xe thể thao (hypercar/supercar), xe roadster mui trần cổ điển (vintage classic car), mô tô phân khối lớn/cafe racer, du thuyền cá nhân, phi cơ tư nhân, garage bảo tàng xe hơi nghệ thuật...
-     • Thời trang Haute Couture & Studio nghệ thuật: sàn diễn runway, studio kiến trúc tối giản với tác phẩm điêu khắc trừu tượng, phối đồ thời trang cao cấp với vải voan/lụa bay, ánh sáng kịch tính (dramatic editorial lighting)...
-     • Lối sống thượng lưu & Thể thao quý tộc: bến cảng du thuyền xa hoa, sân tennis phong cách retro sang trọng, trang trại ngựa quý tộc (equestrian/polo), khu nghỉ dưỡng trượt tuyết tuyết trắng, sân golf hoàng hôn...
-     • Không gian Kiến trúc & Nội thất Xa xỉ: penthouse kính nhìn ra toàn cảnh thành phố đêm, thư viện cổ điển với nội thất gỗ mun và sách bìa da, phòng tổng thống hoàng gia, hầm rượu vang nghệ thuật...
-     • Nghệ thuật & Âm nhạc Đỉnh cao: bên cây đại dương cầm (Grand Piano), phòng hòa nhạc cổ điển, xưởng điêu khắc đá cẩm thạch, xưởng họa sĩ sơn dầu...
-     • Thiên nhiên & Dã ngoại Thượng lưu: ốc đảo sa mạc sang trọng, nhà kính thực vật nhiệt đới quý hiếm, suối nước nóng onsen cao cấp giữa mùa tuyết rơi...
-     • Công nghệ & Tương lai (Futuristic & Cyber-Chic): phòng thí nghiệm công nghệ cao tối giản, phong cách cyberpunk neon cao cấp, không gian phi thuyền viễn tưởng...
-     Kết hợp linh hoạt với nét văn hóa hoặc phong cách của nhân vật để concept thêm sống động và ăn nhập.
-   - TÍNH NHẤT QUÁN CỦA CÂU CHUYỆN (STORYLINE COHESION):
-     Cả 12 tháng xoay quanh CÙNG một Concept chiến dịch đã chọn (không đổi đột ngột giữa các tháng sang chủ đề xa lạ). Thay vào đó, người mẫu tương tác với các set chụp nhỏ, góc máy, ánh sáng và góc độ tương tác đạo cụ khác nhau của cùng concept đó (ví dụ với concept xe: tháng chụp tựa nắp capo, tháng chụp ngồi buồng lái mở cửa, tháng chụp bên sườn xe, tháng tạo dáng bên đuôi xe...).
-     BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, bảng màu, loại không gian/mood) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
+   - CHỌN CONCEPT ĐA DẠNG: hệ thống có thể gửi kèm trong tin nhắn người dùng một "Concept gợi ý" (bốc ngẫu nhiên) và danh sách "Concept các bộ gần đây". Khi người dùng KHÔNG nêu bối cảnh: dùng Concept gợi ý (được tinh chỉnh cho hợp nhân vật/văn hoá), và TUYỆT ĐỐI KHÔNG chọn lại địa điểm/đạo cụ trùng với các bộ gần đây. Khi người dùng ĐÃ nêu bối cảnh: bỏ qua cả hai, theo đúng người dùng.
+   - ĐỒNG NHẤT CONCEPT TRONG BỘ (CONCEPT COHESION — BẮT BUỘC):
+     Concept = MỘT địa điểm/bối cảnh chính + tối đa MỘT loại đạo cụ chính. Nếu có đạo cụ chính thì giữ NGUYÊN đúng món đó (cùng mẫu, cùng màu) ở mọi tháng có xuất hiện nó. TUYỆT ĐỐI KHÔNG đổi loại đạo cụ/phương tiện giữa các tháng (không tháng này xe hơi, tháng kia mô tô, máy bay, thuyền) và KHÔNG nhảy sang địa điểm khác loại. 12 tháng CHỈ thay đổi: góc máy, tư thế, giờ trong ngày/ánh sáng, và các góc nhỏ khác nhau BÊN TRONG cùng địa điểm đó (ví dụ concept thư viện cổ: tháng bên kệ sách cao, tháng ngồi trên thang trượt, tháng bên cửa sổ vòm, tháng ở bàn đọc dưới đèn...).
+     BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "campaignTheme" viết TIẾNG ANH ngắn gọn (≤ ~10 từ, nêu địa điểm + đạo cụ chính). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, bảng màu, địa điểm/đạo cụ chính, mood) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
    - TƯƠNG TÁC TỰ NHIÊN VỚI ĐẠO CỤ (NATURAL INTERACTION - TRÁNH BĂM ĐÔI KHUNG HÌNH):
-     Khi người mẫu tương tác với phương tiện hoặc đạo cụ lớn (xe, đàn piano, máy móc, tác phẩm điêu khắc...), mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against the sleek hood of...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is a car") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
+     Khi người mẫu tương tác với đạo cụ lớn, mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is an object") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
    - RÀNG BUỘC DUY NHẤT 1 NGƯỜI MẪU (STRICT SINGLE SUBJECT):
      Dù có phương tiện hay đạo cụ lớn, TUYỆT ĐỐI CHỈ CÓ DUY NHẤT 1 NGƯỜI MẪU tương tác với đồ vật. Không vẽ thêm tài xế, trợ lý, phụ tá, thợ máy hay bất kỳ người nào khác trong khung hình.`;
 
@@ -429,10 +420,48 @@ export interface ComposeUserMessageInput {
    * KHÔNG tự chọn/lặp lại phong cách khác, và tập trung viết mô tả chủ thể.
    */
   styleHint?: string;
+  /** Concept gợi ý bốc ngẫu nhiên bằng code (lib/llm/concept-diversity.ts). */
+  conceptSeed?: string;
+  /** campaignTheme của vài bộ gần nhất -- LLM phải né khi tự chọn concept. */
+  avoidConcepts?: string[];
+  /**
+   * Concept ĐÃ chốt của bộ (luồng "Sửa lại" 1 ảnh). Khi có, bỏ qua
+   * conceptSeed/avoidConcepts -- ảnh mới phải khớp đúng concept của bộ.
+   */
+  lockedConcept?: { theme?: string | null; anchorTags?: string | null };
 }
 
-export function composeUserMessage({ request, count, styleHint }: ComposeUserMessageInput): string {
+export function composeUserMessage({
+  request,
+  count,
+  styleHint,
+  conceptSeed,
+  avoidConcepts,
+  lockedConcept,
+}: ComposeUserMessageInput): string {
   const lines = [`Số ảnh cần tạo: ${count}`, `Yêu cầu của người dùng: ${request}`];
   if (styleHint) lines.push(styleHint);
+
+  const lockedTheme = lockedConcept?.theme?.trim();
+  const lockedAnchor = lockedConcept?.anchorTags?.trim();
+  if (lockedTheme || lockedAnchor) {
+    lines.push(
+      `Bộ ảnh này ĐÃ chốt concept, BẮT BUỘC giữ ĐÚNG (cùng địa điểm, cùng đạo cụ chính, cùng nhân vật):` +
+        (lockedTheme ? ` concept "${lockedTheme}".` : "") +
+        (lockedAnchor ? ` anchorTags: ${lockedAnchor}` : ""),
+    );
+    return lines.join("\n");
+  }
+
+  if (conceptSeed?.trim()) {
+    lines.push(
+      `Concept gợi ý cho bộ này (CHỈ dùng khi người dùng KHÔNG nêu bối cảnh; được tinh chỉnh cho hợp nhân vật): ${conceptSeed.trim()}`,
+    );
+  }
+  if (avoidConcepts && avoidConcepts.length > 0) {
+    lines.push(
+      `Concept các bộ gần đây (khi tự chọn concept, PHẢI chọn địa điểm/đạo cụ KHÁC HẲN): ${avoidConcepts.join("; ")}`,
+    );
+  }
   return lines.join("\n");
 }

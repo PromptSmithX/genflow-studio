@@ -198,6 +198,11 @@ model GenerationBatch {
   autoStatus     String?
   // Bước đang chạy trong pipeline khi autoStatus == "processing": "export" | "r2" | "sheet" | null.
   autoStage      String?
+  // Concept chiến dịch LLM chốt cho cả bộ (Trợ lý AI). conceptTheme (tiếng Anh
+  // ngắn) dùng làm danh sách tránh cho các batch sau; conceptAnchorTags giữ
+  // "Sửa lại" 1 ảnh đúng concept của bộ. null = batch cũ / không qua Trợ lý AI.
+  conceptTheme      String?
+  conceptAnchorTags String?
   // Chi tiết lỗi khi chạy pipeline tự động thất bại.
   autoError      String?
   // Thời điểm kết thúc chạy pipeline tự động gần nhất.

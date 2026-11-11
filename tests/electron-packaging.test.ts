@@ -49,4 +49,20 @@ describe("Electron packaging configuration", () => {
       expect(moduleName.startsWith("node:")).toBe(true);
     }
   });
+
+  it("electron-builder.yml có extraResources chứa resources/python", () => {
+    const content = fs.readFileSync(builderYmlPath, "utf-8");
+    expect(content).toMatch(/-\s*from:\s*resources\/python/);
+  });
+
+  it("scripts/prepare-electron-resources.mjs copy mockup_templates", () => {
+    const prepareScriptPath = path.join(rootDir, "scripts", "prepare-electron-resources.mjs");
+    const content = fs.readFileSync(prepareScriptPath, "utf-8");
+    expect(content).toContain("mockup_templates");
+  });
+
+  it("assets/mockup_templates/Context Covers.png tồn tại trong repo", () => {
+    const coverPath = path.join(rootDir, "assets", "mockup_templates", "Context Covers.png");
+    expect(fs.existsSync(coverPath)).toBe(true);
+  });
 });

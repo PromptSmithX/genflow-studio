@@ -13,6 +13,8 @@ extraResources:
     to: app
   - from: resources/node
     to: node
+  - from: resources/python
+    to: python
   - from: resources/template
     to: template
   - from: resources/secrets

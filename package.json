@@ -17,6 +17,7 @@
     "electron:dev": "electron .",
     "build:template-db": "node scripts/build-template-db.mjs",
     "build:node": "node scripts/download-node.mjs",
+    "build:python": "node scripts/download-python.mjs",
     "build:secrets": "node scripts/encrypt-secrets.mjs",
     "build:electron-resources": "node scripts/prepare-electron-resources.mjs",
     "dist": "npm run build && npm run build:electron-resources && npm run build:template-db && npm run build:secrets && electron-builder --win"

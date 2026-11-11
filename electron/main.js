@@ -34,6 +34,7 @@ function getPaths() {
     const resourcesDir = process.resourcesPath;
     return {
       nodeBinary: path.join(resourcesDir, "node", "node.exe"),
+      pythonBinary: path.join(resourcesDir, "python", "python.exe"),
       serverDir: path.join(resourcesDir, "app"),
       templateDb: path.join(resourcesDir, "template", "anima.sqlite"),
       templateWorkflowDir: path.join(resourcesDir, "template", "workflows"),
@@ -50,6 +51,7 @@ function getPaths() {
   const root = path.join(__dirname, "..");
   return {
     nodeBinary: "node",
+    pythonBinary: null,
     serverDir: path.join(root, ".next", "standalone"),
     templateDb: path.join(root, "resources", "template", "anima.sqlite"),
     templateWorkflowDir: path.join(root, "resources", "template", "workflows"),
@@ -205,6 +207,7 @@ async function startServer() {
     env: {
       ...process.env,
       ...embeddedSecrets,
+      ...(paths.pythonBinary && fs.existsSync(paths.pythonBinary) ? { MOCKUP_PYTHON: paths.pythonBinary } : {}),
       NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
       PORT: String(port),

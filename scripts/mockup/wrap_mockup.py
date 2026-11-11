@@ -17,12 +17,13 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import List, Tuple, Dict, Any
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 # Default template folder
-DEFAULT_TEMPLATE_DIR = r"D:\model_gen_anh_local_18\MVP_workflow\mockup"
+DEFAULT_TEMPLATE_DIR = str(Path(__file__).resolve().parents[2] / "assets" / "mockup_templates")
 
 # Quad coordinates: [(Top-Left), (Top-Right), (Bottom-Right), (Bottom-Left)] in the
 # orientation of the print file. Each quad is the WHOLE physical sheet the full-bleed

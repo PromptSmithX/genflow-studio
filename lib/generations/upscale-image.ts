@@ -306,6 +306,7 @@ export interface UpscaleBatchResult {
   backCover: "done" | "failed" | "skipped";
   finalExport: "done" | "failed" | "skipped";
   mockup: "done" | "failed" | "skipped";
+  mockupError?: string;
 }
 
 /**
@@ -340,15 +341,18 @@ export async function upscaleBatch(batchId: string, formatId: string): Promise<U
   const finalExport = await exportBatchFolders(batchId, roots);
 
   let mockup: "done" | "failed" | "skipped" = "skipped";
+  let mockupError: string | undefined;
   if (finalExport === "done") {
     try {
       const mockupRes = await wrapBatchMockup(batchId);
       mockup = mockupRes.status;
+      mockupError = mockupRes.error;
     } catch (err) {
       console.error(`[upscaleBatch] lỗi khi tạo mockup cho batch ${batchId}:`, err);
       mockup = "failed";
+      mockupError = err instanceof Error ? err.message : String(err);
     }
   }
 
-  return { total: images.length, done, failed, backCover, finalExport, mockup };
+  return { total: images.length, done, failed, backCover, finalExport, mockup, mockupError };
 }

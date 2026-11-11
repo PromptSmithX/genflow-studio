@@ -25,6 +25,25 @@ const nextConfig: NextConfig = {
       "./node_modules/@img/**",
     ],
   },
+  outputFileTracingExcludes: {
+    "*": [
+      "dist-electron/**",
+      "resources/**",
+      "data/**",
+      "secrets/**",
+      ".env*",
+      "docs/**",
+      "tests/**",
+      "deploy/**",
+      "mockup/**",
+      "templates/**",
+      "**/__pycache__/**",
+      "app/**/*.{ts,tsx}",
+      "components/**",
+      "lib/**/*.ts",
+      "hooks/**",
+    ],
+  },
   turbopack: {
     rules: {
       "*.css": {

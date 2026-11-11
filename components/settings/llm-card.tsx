@@ -16,7 +16,7 @@ interface LlmCardProps {
   advanced?: boolean;
 }
 
-// Thẻ cấu hình Trợ lý AI gọi trực tiếp nhà cung cấp OpenAI-compatible (mặc định xAI).
+// Thẻ cấu hình Trợ lý AI gọi trực tiếp nhà cung cấp OpenAI-compatible
 export function LlmCard({ advanced = false }: LlmCardProps) {
   const { data, isLoading } = useSettings();
   const updateMutation = useUpdateSettings();
@@ -25,6 +25,10 @@ export function LlmCard({ advanced = false }: LlmCardProps) {
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
+
+  const isApiKeyManaged = Boolean(data?.managedFields?.includes("llmApiKey"));
+  const isBaseUrlManaged = Boolean(data?.managedFields?.includes("llmBaseUrl"));
+  const isModelManaged = Boolean(data?.managedFields?.includes("llmModel"));
 
   const [syncedData, setSyncedData] = useState<typeof data>(undefined);
   if (data !== syncedData) {
@@ -39,19 +43,32 @@ export function LlmCard({ advanced = false }: LlmCardProps) {
 
   const hasUnsavedChanges =
     Boolean(data) &&
-    (baseUrl !== (data!.llmBaseUrl ?? "") ||
-      Boolean(apiKey) ||
-      model !== (data!.llmModel ?? "") ||
+    ((!isBaseUrlManaged && baseUrl !== (data!.llmBaseUrl ?? "")) ||
+      (!isApiKeyManaged && Boolean(apiKey)) ||
+      (!isModelManaged && model !== (data!.llmModel ?? "")) ||
       systemPrompt !== (data!.llmSystemPrompt ?? ""));
 
   function handleSave() {
+    const payload: {
+      llmBaseUrl?: string | null;
+      llmApiKey?: string;
+      llmModel?: string | null;
+      llmSystemPrompt?: string | null;
+    } = {};
+
+    if (!isBaseUrlManaged) {
+      payload.llmBaseUrl = baseUrl || null;
+    }
+    if (!isApiKeyManaged && apiKey) {
+      payload.llmApiKey = apiKey;
+    }
+    if (!isModelManaged) {
+      payload.llmModel = model || null;
+    }
+    payload.llmSystemPrompt = systemPrompt || null;
+
     updateMutation.mutate(
-      {
-        llmBaseUrl: baseUrl || null,
-        llmApiKey: apiKey || undefined,
-        llmModel: model || null,
-        llmSystemPrompt: systemPrompt || null,
-      },
+      payload,
       {
         onSuccess: () => {
           setApiKey("");
@@ -114,7 +131,14 @@ export function LlmCard({ advanced = false }: LlmCardProps) {
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder={data?.hasLlmKey ? "Đã lưu — để trống nếu không đổi" : "xai-..."}
+            disabled={isApiKeyManaged}
+            placeholder={
+              isApiKeyManaged
+                ? "Đã cấu hình sẵn trong bản cài"
+                : data?.hasLlmKey
+                  ? "Đã lưu — để trống nếu không đổi"
+                  : "xai-..."
+            }
           />
         </div>
 
@@ -124,7 +148,8 @@ export function LlmCard({ advanced = false }: LlmCardProps) {
             id="llm-base-url"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder="https://api.x.ai/v1"
+            disabled={isBaseUrlManaged}
+            placeholder={isBaseUrlManaged ? "Đã cấu hình sẵn trong bản cài" : "https://api.x.ai/v1"}
           />
           <p className="text-xs text-muted-foreground">
             Để trống = xAI mặc định. Dùng được mọi API tương thích OpenAI.
@@ -139,7 +164,10 @@ export function LlmCard({ advanced = false }: LlmCardProps) {
                 id="llm-model"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                placeholder="grok-4-fast-non-reasoning"
+                disabled={isModelManaged}
+                placeholder={
+                  isModelManaged ? "Đã cấu hình sẵn trong bản cài" : "grok-4-fast-non-reasoning"
+                }
               />
               <p className="text-xs text-muted-foreground">
                 Để trống để dùng model mặc định (grok-4-fast-non-reasoning).
@@ -161,13 +189,15 @@ export function LlmCard({ advanced = false }: LlmCardProps) {
 
         <div className="flex flex-wrap items-center justify-end gap-2">
           {hasUnsavedChanges && <Badge variant="destructive">Có thay đổi chưa lưu</Badge>}
-          <Button
-            variant="ghost"
-            onClick={handleClearKey}
-            disabled={updateMutation.isPending || !data?.hasLlmKey}
-          >
-            Xóa API key
-          </Button>
+          {!isApiKeyManaged && (
+            <Button
+              variant="ghost"
+              onClick={handleClearKey}
+              disabled={updateMutation.isPending || !data?.hasLlmKey}
+            >
+              Xóa API key
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={updateMutation.isPending || !hasUnsavedChanges}>
             {updateMutation.isPending ? "Đang lưu..." : "Lưu cấu hình"}
           </Button>

@@ -83,7 +83,7 @@ export async function runAutoPublish(batchId: string): Promise<AutoPublishResult
       throw new Error("Xuất thư mục in thất bại");
     }
     if (upscaleResult.mockup !== "done") {
-      throw new Error("Tạo mockup sản phẩm thất bại");
+      throw new Error(`Tạo mockup sản phẩm thất bại: ${upscaleResult.mockupError ?? "không rõ lý do"}`);
     }
 
     // 4. pushBatches

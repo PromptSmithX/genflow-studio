@@ -1,9 +1,12 @@
 import type { StylePreset, MediumPreset, GeneratedImage } from "@prisma/client";
 import type { NodeSummary, NodeMapping } from "@/lib/comfyui/workflow-mapper";
+import type { ManagedField } from "@/lib/settings";
 
 export type StyleDTO = StylePreset;
 export type MediumDTO = MediumPreset;
 export type GeneratedImageDTO = GeneratedImage;
+
+export type { ManagedField } from "@/lib/settings";
 
 export interface SettingsDTO {
   runpodEndpointId: string | null;
@@ -23,6 +26,7 @@ export interface SettingsDTO {
   llmModel: string | null;
   llmSystemPrompt: string | null;
   hasLlmKey: boolean;
+  managedFields: ManagedField[];
   updatedAt: string;
 }
 

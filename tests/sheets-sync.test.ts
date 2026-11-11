@@ -31,6 +31,7 @@ describe("sheets-sync", () => {
     vi.clearAllMocks();
     process.env = { ...origEnv };
     delete process.env.GOOGLE_SERVICE_ACCOUNT_FILE;
+    delete process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
     delete process.env.GOOGLE_SHEET_ID;
   });
 
@@ -48,7 +49,7 @@ describe("sheets-sync", () => {
 
     expect(result).toBe("skipped");
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Chưa cấu hình Google Sheets: GOOGLE_SERVICE_ACCOUNT_FILE, GOOGLE_SHEET_ID"),
+      expect.stringContaining("Chưa cấu hình Google Sheets:"),
     );
     expect(prisma.generationBatch.findUnique).not.toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -307,6 +308,57 @@ describe("sheets-sync", () => {
     expect(updateCall?.body?.values?.[0]).toHaveLength(2);
     expect(updateCall?.body?.values?.[0]?.[0]).toBe("Lỗi: Colab GPU OOM");
 
+    vi.unstubAllGlobals();
+  });
+
+  it("đồng bộ thành công khi cấu hình qua GOOGLE_SERVICE_ACCOUNT_JSON", async () => {
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({
+      type: "service_account",
+      client_email: "test@project.iam.gserviceaccount.com",
+      private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD\n-----END PRIVATE KEY-----\n",
+    });
+    process.env.GOOGLE_SHEET_ID = "mock-sheet-id";
+
+    vi.mocked(prisma.generationBatch.findUnique).mockResolvedValue({
+      id: "batch-json-test",
+      r2SkuBase: "CAL-ANI-2611-TEST",
+      etsyTitle: "Test Title",
+    } as unknown as never);
+
+    const mockFetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url.includes("fields=sheets.properties")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            sheets: [
+              { properties: { title: SHEET_TAB_DA_CHE } },
+              { properties: { title: SHEET_TAB_KHONG_CHE } },
+            ],
+          }),
+        });
+      }
+      if (url.includes("/values/") && (!init || init.method === "GET" || !init.method)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            values: [["CAL-ANI-2611-TEST-11-CEN"]],
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      });
+    });
+
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await syncBatchToSheet({
+      batchId: "batch-json-test",
+      rows: [["CAL-ANI-2611-TEST-11-CEN"]],
+    });
+
+    expect(result).toBe("done");
     vi.unstubAllGlobals();
   });
 });

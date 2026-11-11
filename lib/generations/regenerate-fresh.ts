@@ -16,6 +16,7 @@ import {
 } from "@/lib/llm/default-system-prompt";
 import { finalizeSuggestedImage } from "@/lib/llm/finalize-suggestion";
 import { resolveLlmConfig } from "@/lib/llm/resolve-config";
+import { requestWantsHeavyBody } from "@/lib/llm/appearance-diversity";
 import { GenerationSetupError } from "@/lib/generations/create-batch";
 
 interface FreshPrompt {
@@ -35,10 +36,12 @@ async function generateFreshPromptForJob({
   request,
   mediumId,
   isCover,
+  concept,
 }: {
   request: string;
   mediumId: string | null;
   isCover: boolean;
+  concept: { theme: string | null; anchorTags: string | null };
 }): Promise<FreshPrompt> {
   const settings = await getOrCreateSettings();
   // LLM gọi trực tiếp nhà cung cấp bằng API key từ AppSettings.
@@ -64,7 +67,9 @@ async function generateFreshPromptForJob({
     }
   }
 
-  const userMessage = composeUserMessage({ request, count: 2, styleHint });
+  // Batch có concept đã chốt -> khoá LLM vào đúng concept đó (không gợi ý concept
+  // mới) để ảnh sửa lại không lệch khỏi phần còn lại của bộ.
+  const userMessage = composeUserMessage({ request, count: 2, styleHint, lockedConcept: concept });
   const baseSystemPrompt = isAnimeMedium ? CALENDAR_SYSTEM_PROMPT_ANIME : CALENDAR_SYSTEM_PROMPT_REAL;
   const systemPrompt = SHARED_BIAS_PROMPT.trim() ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}` : baseSystemPrompt;
 
@@ -77,7 +82,12 @@ async function generateFreshPromptForJob({
 
   // images[0] = bìa (vai trò ảnh #1 trong system prompt), images[1] = artwork.
   const slotIndex = isCover ? 0 : 1;
-  const image = finalizeSuggestedImage(result.images[slotIndex], { isCover, isAnimeMedium });
+  const image = finalizeSuggestedImage(result.images[slotIndex], {
+    isCover,
+    isAnimeMedium,
+    anchorTags: concept.anchorTags ?? result.concept?.anchorTags,
+    allowHeavyBody: requestWantsHeavyBody(request),
+  });
 
   return { positive: image.positive, negative: result.negative };
 }
@@ -122,7 +132,12 @@ export async function regenerateJobFreshPrompt(jobId: string) {
   const mapping = parseNodeMapping(workflowConfig.nodeMappingJson);
 
   const isCover = job.indexInBatch === 0;
-  const fresh = await generateFreshPromptForJob({ request: batch.ideaPrompt, mediumId: batch.mediumId, isCover });
+  const fresh = await generateFreshPromptForJob({
+    request: batch.ideaPrompt,
+    mediumId: batch.mediumId,
+    isCover,
+    concept: { theme: batch.conceptTheme, anchorTags: batch.conceptAnchorTags },
+  });
 
   const medium = batch.mediumId ? await prisma.mediumPreset.findUnique({ where: { id: batch.mediumId } }) : null;
   const positiveOverride = mergeTags(medium?.positivePrompt, fresh.positive);

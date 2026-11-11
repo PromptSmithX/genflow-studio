@@ -221,6 +221,39 @@ describe("auto-publish", () => {
     );
   });
 
+  it("fails with specific reason when mockup fails with mockupError", async () => {
+    vi.mocked(prisma.generationBatch.findUnique).mockResolvedValue({
+      id: "batch-mockup-err",
+      requestedCount: 13,
+      etsyTitle: "Valid Title",
+      r2SkuBase: null,
+    } as unknown as never);
+
+    vi.mocked(upscaleBatch).mockResolvedValue({
+      total: 13,
+      done: 13,
+      failed: 0,
+      backCover: "done",
+      finalExport: "done",
+      mockup: "failed",
+      mockupError: "Không tìm thấy Python để tạo mockup (MOCKUP_PYTHON=python.exe)",
+    });
+
+    const result = await runAutoPublish("batch-mockup-err");
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toContain("Không tìm thấy Python để tạo mockup (MOCKUP_PYTHON=python.exe)");
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "batch-mockup-err" },
+        data: expect.objectContaining({
+          autoStatus: "failed",
+          autoError: expect.stringContaining("Không tìm thấy Python để tạo mockup (MOCKUP_PYTHON=python.exe)"),
+        }),
+      }),
+    );
+  });
+
   it("fails when push fails, still syncs error to Sheet if batch has r2SkuBase", async () => {
     vi.mocked(prisma.generationBatch.findUnique).mockResolvedValue({
       id: "batch-5",

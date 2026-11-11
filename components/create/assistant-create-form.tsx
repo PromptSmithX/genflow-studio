@@ -158,11 +158,12 @@ export function AssistantCreateForm() {
             }
           : undefined,
         concept:
-          suggestions.concept || suggestions.conceptSeedKey
+          suggestions.concept || suggestions.conceptSeedKey || suggestions.appearanceKey
             ? {
                 theme: suggestions.concept?.campaignTheme || undefined,
                 anchorTags: suggestions.concept?.anchorTags || undefined,
                 seedKey: suggestions.conceptSeedKey || undefined,
+                appearanceKey: suggestions.appearanceKey || undefined,
               }
             : undefined,
         // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.

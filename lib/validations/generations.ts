@@ -21,6 +21,7 @@ export const batchConceptSchema = z.object({
   theme: z.string().trim().max(300).optional(),
   anchorTags: z.string().trim().max(2000).optional(),
   seedKey: z.string().trim().max(100).optional(),
+  appearanceKey: z.string().trim().max(200).optional(),
 });
 
 export const createGenerationSchema = z.object({

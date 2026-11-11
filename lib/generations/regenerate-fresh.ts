@@ -16,6 +16,7 @@ import {
 } from "@/lib/llm/default-system-prompt";
 import { finalizeSuggestedImage } from "@/lib/llm/finalize-suggestion";
 import { resolveLlmConfig } from "@/lib/llm/resolve-config";
+import { requestWantsHeavyBody } from "@/lib/llm/appearance-diversity";
 import { GenerationSetupError } from "@/lib/generations/create-batch";
 
 interface FreshPrompt {
@@ -85,6 +86,7 @@ async function generateFreshPromptForJob({
     isCover,
     isAnimeMedium,
     anchorTags: concept.anchorTags ?? result.concept?.anchorTags,
+    allowHeavyBody: requestWantsHeavyBody(request),
   });
 
   return { positive: image.positive, negative: result.negative };

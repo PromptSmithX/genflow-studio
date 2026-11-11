@@ -99,6 +99,7 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
       conceptTheme: input.concept?.theme || null,
       conceptAnchorTags: input.concept?.anchorTags || null,
       conceptSeedKey: input.concept?.seedKey || null,
+      appearanceKey: input.concept?.appearanceKey || null,
     },
   });
 

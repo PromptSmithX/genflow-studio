@@ -15,6 +15,7 @@ import {
 import { finalizeSuggestedImage, finalizeEtsy } from "@/lib/llm/finalize-suggestion";
 import { resolveLlmConfig } from "@/lib/llm/resolve-config";
 import { loadRecentConcepts, pickConceptSeed } from "@/lib/llm/concept-diversity";
+import { loadRecentAppearances, pickAppearanceSeed, requestWantsHeavyBody } from "@/lib/llm/appearance-diversity";
 
 export const runtime = "nodejs";
 
@@ -51,12 +52,16 @@ export async function POST(request: NextRequest) {
     // ngẫu nhiên 1 concept gợi ý (chỉ áp dụng khi người dùng không nêu bối cảnh).
     const recentConcepts = await loadRecentConcepts();
     const conceptSeed = pickConceptSeed(recentConcepts);
+    // Đa dạng ngoại hình nhân vật giữa các bộ (chỉ cho đặc điểm người dùng không nêu).
+    const appearanceSeed = pickAppearanceSeed(input.request, await loadRecentAppearances());
+    const allowHeavyBody = requestWantsHeavyBody(input.request);
     const userMessage = composeUserMessage({
       request: input.request,
       count: input.count,
       styleHint,
       conceptSeed: conceptSeed.text,
       avoidConcepts: recentConcepts.themes,
+      appearanceSeed: appearanceSeed.text,
     });
     // Trợ lý AI luôn tạo bộ ảnh lịch (ảnh #1 = bìa có chữ, còn lại = artwork sạch).
     // Chọn system prompt tách riêng theo loại: anime vs người thực.
@@ -99,6 +104,7 @@ export async function POST(request: NextRequest) {
         isCover: index === 0,
         isAnimeMedium,
         anchorTags: result.concept?.anchorTags,
+        allowHeavyBody,
       });
     });
     if (result.etsy) {
@@ -113,7 +119,7 @@ export async function POST(request: NextRequest) {
         result.images.map((image, index) => `--- positive #${index + 1} ---\n${image.positive}`).join("\n"),
     );
 
-    return NextResponse.json({ ...result, conceptSeedKey: conceptSeed.key });
+    return NextResponse.json({ ...result, conceptSeedKey: conceptSeed.key, appearanceKey: appearanceSeed.key });
   } catch (error) {
     return handleApiError(error);
   }

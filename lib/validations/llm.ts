@@ -66,4 +66,6 @@ export type SuggestPromptsResponse = LlmSuggestionResult & {
   usage: TokenUsage | null;
   /** key nhóm địa điểm /suggest đã bốc làm hướng concept -- client gửi lại khi create. */
   conceptSeedKey?: string;
+  /** Ngoại hình /suggest đã bốc ("quốc tịch|tóc|dáng") -- client gửi lại khi create. */
+  appearanceKey?: string;
 };

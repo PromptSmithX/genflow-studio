@@ -206,6 +206,9 @@ model GenerationBatch {
   // key nhóm địa điểm code đã bốc làm hướng concept (lib/llm/concept-diversity.ts)
   // -- né CHÍNH XÁC theo key thay vì dò từ khoá câu chữ LLM viết.
   conceptSeedKey    String?
+  // Ngoại hình code đã bốc cho nhân vật, dạng "quốc tịch|tóc|dáng"
+  // (lib/llm/appearance-diversity.ts) -- để các batch sau né, đa dạng nhân vật.
+  appearanceKey     String?
   // Chi tiết lỗi khi chạy pipeline tự động thất bại.
   autoError      String?
   // Thời điểm kết thúc chạy pipeline tự động gần nhất.

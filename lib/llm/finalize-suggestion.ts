@@ -65,6 +65,10 @@ const DUP_SUBJECT_REGEX =
 // DUP_SUBJECT_REGEX -> chỉ bỏ chữ "(the) same", giữ lại các tính từ mô tả.
 const SAME_BEFORE_SUBJECT_REGEX =
   /\b(the\s+)?same\s+(?=(?:[\w-]+\s+){1,4}?(?:faces?|bodies|body|woman|women|girl|girls|person|people|model|models|character|characters|subject|subjects)\b)/gi;
+// Dáng béo chỉ được phép khi người dùng tự yêu cầu (requestWantsHeavyBody) --
+// LLM hay tự chèn các tag này dù không ai yêu cầu.
+const HEAVY_BODY_TAGS_REGEX =
+  /\b(chubby|plump|overweight|obese|fat|chunky|bbw|soft\s+belly|belly\s+rolls|full[\s-]+figured?|fuller\s+cheeks|plus[\s-]+size)\b/gi;
 const CALENDAR_LABEL = "CALENDAR";
 
 /**
@@ -108,6 +112,7 @@ export function missingAnchorTags(anchorTags: string | null | undefined, positiv
  *   year) + tag typography; `false` = artwork, xoá title/year + ép single-subject.
  * - `isAnimeMedium`: nhánh anime ép tag Danbooru single-subject lên ĐẦU positive.
  * - `anchorTags`: tag bất biến của concept cả bộ, tiêm phần còn thiếu vào positive.
+ * - `allowHeavyBody`: người dùng tự yêu cầu dáng béo; mặc định false -> xoá tag béo.
  */
 export function finalizeSuggestedImage(
   image: LlmImageSuggestion,
@@ -115,7 +120,8 @@ export function finalizeSuggestedImage(
     isCover,
     isAnimeMedium,
     anchorTags,
-  }: { isCover: boolean; isAnimeMedium: boolean; anchorTags?: string | null },
+    allowHeavyBody = false,
+  }: { isCover: boolean; isAnimeMedium: boolean; anchorTags?: string | null; allowHeavyBody?: boolean },
 ): LlmImageSuggestion {
   // Làm sạch bất kỳ từ khoá copy space / split nào LLM có thể đã sinh ra.
   image.positive = image.positive
@@ -137,7 +143,19 @@ export function finalizeSuggestedImage(
       .trim();
   }
 
+  if (!allowHeavyBody) {
+    image.positive = image.positive
+      .replace(HEAVY_BODY_TAGS_REGEX, "")
+      .replace(/,(\s*,)+/g, ",")
+      .replace(/\s{2,}/g, " ")
+      .replace(/^\s*,\s*/g, "")
+      .replace(/,\s*$/g, "")
+      .trim();
+  }
   let anchor = missingAnchorTags(anchorTags, image.positive);
+  if (!allowHeavyBody) {
+    anchor = anchor.replace(HEAVY_BODY_TAGS_REGEX, "");
+  }
   // anchorTags cũng do LLM viết -> làm sạch y như positive (split/nhân đôi chủ thể).
   anchor = anchor.replace(SPLIT_TAGS_REGEX, "").replace(BANNER_TAGS_REGEX, "");
   if (!isAnimeMedium) {

@@ -80,17 +80,24 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 
 Để đóng gói bộ cài Windows (.exe) nhúng sẵn cấu hình (RunPod, LLM, R2, Google Sheets) giúp ứng dụng mở lên là dùng được ngay:
 
-1. Sao chép file mẫu:
+1. Chuẩn bị runtime (chạy 1 lần trên máy build, cần kết nối mạng):
+   ```bash
+   npm run build:node     # Tải Node.js portable win-x64 vào resources/node/
+   npm run build:python   # Tải Python embed 3.11 + cài Pillow/numpy vào resources/python/ (cần Python hệ thống có pip)
+   ```
+   Template mockup sản phẩm nằm tại `assets/mockup_templates/` trong repo và tự động được copy vào bản đóng gói.
+
+2. Sao chép file mẫu:
    ```bash
    cp secrets/build-secrets.example.json secrets/build-secrets.json
    ```
-2. Điền các giá trị secret vào `secrets/build-secrets.json`:
+3. Điền các giá trị secret vào `secrets/build-secrets.json`:
    - `ANIMA_RUNPOD_ENDPOINT_ID`, `ANIMA_RUNPOD_API_KEY`: Thông tin worker RunPod Serverless.
    - `ANIMA_LLM_API_KEY`, `ANIMA_LLM_BASE_URL`, `ANIMA_LLM_MODEL`: Cấu hình Trợ lý AI.
    - `R2_*`: Cấu hình Cloudflare R2 bucket.
    - `GOOGLE_SHEET_ID`: ID Google Spreadsheet.
    - `GOOGLE_SERVICE_ACCOUNT_JSON`: Dán toàn bộ object JSON từ file Google Service Account vào đây (hoặc dán dưới dạng chuỗi JSON).
-3. Đóng gói bộ cài Electron:
+4. Đóng gói bộ cài Electron:
    ```bash
    npm run dist
    ```

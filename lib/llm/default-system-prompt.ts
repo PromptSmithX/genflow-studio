@@ -66,7 +66,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - "positive" bằng tiếng Anh dạng tag/cụm từ ngắn ngăn cách bởi dấu phẩy, mô tả nhân vật + bối cảnh +
   ánh sáng + góc máy, phong cách editorial/tạp chí.
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
-- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, khuôn mặt, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - QUY TẮC VỀ SỐ LƯỢNG CHỦ THỂ (NHÂN VẬT):
   • TÔN TRỌNG Ý ĐỊNH CỦA NGƯỜI DÙNG: Khi người dùng có ý định mô tả 2 người / cặp đôi / tình nhân / nam nữ / tương tác đôi lứa, hãy mô tả ĐẦY ĐỦ CẢ HAI NHÂN VẬT tương tác tự nhiên trong cùng một cảnh liền mạch, gợi cảm và thẩm mỹ theo đúng yêu cầu (dùng tag Danbooru đôi chuẩn như "couple, 1girl, 1boy", hoặc "2girls"/"2boys" tùy ngữ cảnh). TUYỆT ĐỐI KHÔNG đưa các từ chỉ cặp đôi hay giới tính (như "couple", "man", "boy", "male", "1boy", "two people") vào negative prompt.
@@ -74,9 +74,11 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
   thế + góc máy KHÁC nhau (đứng, bước đi, ngồi, dựa tường, quỳ, nghiêng người, nằm, vặn người...).
   KHÔNG lặp lại cùng một kiểu cho cả bộ, và ĐẶC BIỆT đừng mặc định tư thế nằm dạng chân.
-- Vì khung ngang, ưu tiên khung hình lấp đầy tự nhiên (medium shot / half-body / cận cảnh / toàn cảnh
-  môi trường); nếu chụp toàn thân thì giữ chủ thể ĐỦ LỚN trong khung (tránh toàn thân từ quá xa làm
-  model vẽ sai tỉ lệ đầu/thân, đầu to) — nhưng không ép riêng một tư thế nào.
+- MỌI ảnh (kể cả bìa) LUÔN là ảnh TOÀN THÂN: dùng tag "full body" (từ đầu đến chân), chủ thể ĐỦ LỚN
+  trong khung, tỉ lệ đầu-thân tự nhiên (tránh chụp từ quá xa làm model vẽ đầu to). TUYỆT ĐỐI KHÔNG
+  chụp cận mặt / chân dung / upper body / cowboy shot, và KHÔNG dùng tag "close-up", "portrait",
+  "face focus": trộn với toàn thân khiến model tách ảnh thành 2 khung (một cận mặt, một toàn thân).
+  Đa dạng giữa các ảnh bằng TƯ THẾ, GÓC MÁY và BỐI CẢNH — KHÔNG bằng cự ly chụp.
 
 QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
 - Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
@@ -194,21 +196,20 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   cận mặt + toàn thân ghép cạnh nhau. KHÔNG dùng cụm "magazine spread", "magazine layout",
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
-- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, khuôn mặt, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
+- CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm phong cách trang phục, bảng màu chủ đạo, loại không gian/mood của chiến dịch. TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với phương tiện hoặc đạo cụ (xe hơi, mô tô, nhạc cụ, nội thất...), dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
 - Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
   rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
   thế + góc máy KHÁC nhau (đứng, bước đi, ngồi, dựa tường, quỳ, nghiêng người, nằm, vặn người...).
   KHÔNG lặp lại cùng một kiểu cho cả bộ, và ĐẶC BIỆT đừng mặc định tư thế nằm dạng chân.
-- Vì khung ngang, ưu tiên khung hình lấp đầy tự nhiên (medium shot / half-body / cận cảnh / toàn cảnh
-  môi trường); nếu chụp toàn thân thì giữ chủ thể ĐỦ LỚN trong khung (tránh toàn thân từ quá xa làm
-  model vẽ sai tỉ lệ đầu/thân, đầu to) — nhưng không ép riêng một tư thế nào.
-- KHÔNG TRỘN 2 CỰ LY CHỤP trong CÙNG một ảnh: mô tả độ chi tiết + ống kính phải KHỚP với một cự ly duy
-  nhất. Nếu chụp TOÀN THÂN (full-body, head-to-toe) → dùng ống rộng (vd "35mm"), tả dáng người + bối
-  cảnh, và BỎ các token macro khuôn mặt ("visible pores", "subsurface scattering", "detailed eyes",
-  "85mm"). Chỉ khi chụp CẬN MẶT mới dùng macro da/"85mm". Trộn cả hai khiến model tách ảnh thành 2 khung
-  (một cận mặt, một toàn thân).
+- MỌI ảnh (kể cả bìa) LUÔN là ảnh TOÀN THÂN: ghi rõ "full body shot, head to toe" + ống rộng (vd "35mm,
+  wide shot"), chủ thể ĐỦ LỚN trong khung (tránh chụp từ quá xa làm model vẽ sai tỉ lệ đầu/thân, đầu to).
+  TUYỆT ĐỐI KHÔNG chụp cận mặt / chân dung / half-body / medium shot, và KHÔNG viết token chi tiết khuôn
+  mặt cận cảnh ("visible pores", "skin pores", "subsurface scattering", "detailed eyes", "85mm",
+  "close-up", "portrait"): các token này khiến model tách ảnh thành 2 khung (một cận mặt, một toàn thân).
+  Đa dạng giữa các ảnh bằng TƯ THẾ, GÓC MÁY (ngang tầm mắt, góc thấp, góc nghiêng) và BỐI CẢNH — KHÔNG
+  bằng cự ly chụp.
 
 QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
 - Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
@@ -318,9 +319,8 @@ export const SINGLE_SUBJECT_QUALITY_TAGS =
  * Tag khung ép qua mergeTags ở route /suggest (KHÔNG nằm trong system prompt →
  * không tốn token context LLM). Giữ chủ thể nằm GỌN trong khung, chừa khoảng
  * trống quanh mép để phần bị lò xo/lỗ treo/bleed/cover-crop (upscale lên khổ
- * lịch) ăn vào rơi vào NỀN thay vì cắt ngang qua người (lỗi "chôn chân"). Diễn
- * đạt không khoá kiểu khung (không ép "full body") để vẫn giữ đa dạng góc
- * máy/tư thế.
+ * lịch) ăn vào rơi vào NỀN thay vì cắt ngang qua người (lỗi "chôn chân"). Cự
+ * ly toàn thân do system prompt quy định; tag này chỉ lo khoảng thở quanh mép.
  */
 export const FRAMING_MARGIN_TAGS =
   "subject fully inside the frame with breathing room, background visible around the subject, clear space above the head and below the body, subject not cropped or touching the frame edges";

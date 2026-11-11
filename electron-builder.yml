@@ -2,16 +2,25 @@ appId: com.animastudio.app
 productName: Anima Studio
 directories:
   output: dist-electron
+asarUnpack:
+  - electron/migrate.js
 files:
   - electron/**/*
+  - "!electron/secrets*.json"
   - package.json
 extraResources:
   - from: resources/app
     to: app
   - from: resources/node
     to: node
+  - from: resources/python
+    to: python
   - from: resources/template
     to: template
+  - from: resources/secrets
+    to: secrets
+    filter:
+      - "secrets.enc"
 win:
   target: nsis
   artifactName: "AnimaStudio-Setup-${version}.${ext}"

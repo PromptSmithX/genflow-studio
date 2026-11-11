@@ -10,7 +10,6 @@ import { BACK_COVER_FILENAME, slotFilename, slotLabel } from "@/lib/calendar/slo
 
 const execFileAsync = promisify(execFile);
 
-const DEFAULT_TEMPLATES_DIR = "D:\\model_gen_anh_local_18\\MVP_workflow\\mockup";
 const WRAP_SCRIPT = path.join(process.cwd(), "scripts", "mockup", "wrap_mockup.py");
 const TIMEOUT_MS = 120_000;
 
@@ -22,13 +21,15 @@ export interface MockupResult {
 
 /**
  * Resolves the directory containing the 5 template files. Checks env,
- * user configured path, standard D: drive location, or app asset fallback.
+ * or app asset fallback. Valid when Context Covers.png exists inside.
  */
-async function resolveTemplatesDir(): Promise<string | null> {
+export async function resolveTemplatesDir(
+  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+  cwd: string = process.cwd(),
+): Promise<string | null> {
   const candidates = [
-    process.env.MOCKUP_TEMPLATES_DIR,
-    DEFAULT_TEMPLATES_DIR,
-    path.join(process.cwd(), "assets", "mockup_templates"),
+    env.MOCKUP_TEMPLATES_DIR,
+    path.join(cwd, "assets", "mockup_templates"),
   ].filter(Boolean) as string[];
 
   for (const dir of candidates) {
@@ -40,7 +41,7 @@ async function resolveTemplatesDir(): Promise<string | null> {
         return dir;
       }
     } catch {
-      // Not found, check next candidate
+      // Bỏ qua nếu thư mục không tồn tại hoặc thiếu file
     }
   }
 
@@ -79,7 +80,12 @@ export async function wrapBatchMockup(batchId: string): Promise<MockupResult> {
 
   const templatesDir = await resolveTemplatesDir();
   if (!templatesDir) {
-    console.warn("[wrapBatchMockup] Không tìm thấy thư mục mockup template tại:", DEFAULT_TEMPLATES_DIR);
+    const tried = [
+      process.env.MOCKUP_TEMPLATES_DIR,
+      path.join(process.cwd(), "assets", "mockup_templates"),
+    ].filter(Boolean) as string[];
+    const errorMsg = `Không tìm thấy thư mục mockup template (đã thử: ${tried.join(", ")})`;
+    console.warn(`[wrapBatchMockup] ${errorMsg}`);
     await prisma.generationBatch.update({
       where: { id: batchId },
       data: { mockupStatus: "failed" },
@@ -87,7 +93,7 @@ export async function wrapBatchMockup(batchId: string): Promise<MockupResult> {
     return {
       status: "failed",
       files: [],
-      error: `Không tìm thấy thư mục mockup template tại ${DEFAULT_TEMPLATES_DIR}`,
+      error: errorMsg,
     };
   }
 
@@ -152,7 +158,16 @@ export async function wrapBatchMockup(batchId: string): Promise<MockupResult> {
       files: parsed.files || [],
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Lỗi khi chạy script mockup";
+    const err = error as Error & { code?: string | number; stderr?: string | Buffer };
+    let message: string;
+    if (err.code === "ENOENT") {
+      message = `Không tìm thấy Python để tạo mockup (MOCKUP_PYTHON=${pythonBin})`;
+    } else {
+      const baseMsg = err.message || "Lỗi khi chạy script mockup";
+      const stderrStr = typeof err.stderr === "string" ? err.stderr : err.stderr ? err.stderr.toString("utf-8") : "";
+      const trimmedStderr = stderrStr.trim();
+      message = trimmedStderr ? `${baseMsg}: ${trimmedStderr.slice(-300)}` : baseMsg;
+    }
     console.error(`[wrapBatchMockup] lỗi ở batch ${batchId}:`, error);
 
     await prisma.generationBatch.update({

@@ -61,8 +61,11 @@ next-env.d.ts
 # Electron packaging: built/downloaded, never committed
 /resources/app/
 /resources/node/
+/resources/python/
+/resources/secrets/
 /resources/template/
 /resources/node-download.zip
+/resources/python-download.zip
 /dist-electron/
 /electron/secrets.json
 
@@ -76,3 +79,4 @@ LUSTIFY_v10_Krea2_Turbo_INT8_Colab_Headless.ipynb
 /mockup/*
 
 /secrets/*
+!/secrets/build-secrets.example.json

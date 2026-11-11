@@ -35,7 +35,7 @@ uv venv --python 3.11 .censor-env
 Sau đó đặt trong `.env` của app:
 
 ```
-CENSOR_PYTHON=D:\model_gen_anh_local_18\MVP_workflow\.censor-env\Scripts\python.exe
+CENSOR_PYTHON=.\.censor-env\Scripts\python.exe
 ```
 
 Lần chạy đầu tiên NudeNet sẽ tự tải model ONNX (cần internet).

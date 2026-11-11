@@ -72,10 +72,49 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 2. Tạo **Service Account**, tạo và tải file JSON key về máy.
 3. Tạo một Google Spreadsheet mới, chia sẻ (Share) quyền **Editor** cho email của Service Account vừa tạo.
 4. Cấu hình biến môi trường trong file `.env`:
+   - `GOOGLE_SERVICE_ACCOUNT_JSON`: Chuỗi nội dung JSON của Service Account (ưu tiên), hoặc:
    - `GOOGLE_SERVICE_ACCOUNT_FILE`: Đường dẫn tuyệt đối hoặc tương đối tới file JSON key (vd `keys/google-service-account.json`).
    - `GOOGLE_SHEET_ID`: ID của bảng tính Google Sheets (lấy từ URL: `https://docs.google.com/spreadsheets/d/<GOOGLE_SHEET_ID>/edit`).
 
-## 9. Xử lý lỗi thường gặp
+## 9. Đóng gói exe có cấu hình sẵn ("zero-config")
+
+Để đóng gói bộ cài Windows (.exe) nhúng sẵn cấu hình (RunPod, LLM, R2, Google Sheets) giúp ứng dụng mở lên là dùng được ngay:
+
+1. **Chuẩn bị 1 lần trên máy build** (cần kết nối mạng):
+   - **Tải Node.js runtime**:
+     ```bash
+     npm run build:node     # Tải Node.js portable win-x64 vào resources/node/node.exe
+     ```
+   - **Cài đặt Python runtime nhúng**:
+     ```bash
+     npm run build:python   # Tải Python embed 3.11 + cài Pillow/numpy vào resources/python/ (yêu cầu Python hệ thống có pip)
+     ```
+   - **Cấu hình secrets (tùy chọn nhưng khuyến nghị)**:
+     ```bash
+     cp secrets/build-secrets.example.json secrets/build-secrets.json
+     ```
+     Điền các giá trị secret vào `secrets/build-secrets.json` (RunPod, LLM, R2, Google Sheets). Nếu bỏ qua, ứng dụng sẽ yêu cầu người dùng nhập key thủ công trong Settings.
+
+2. **Đóng gói bộ cài Electron**:
+   ```bash
+   npm run dist
+   ```
+   Quy trình `dist` tự động thực hiện tuần tự:
+   `next build` → chuẩn bị `resources/app` sạch (lọc bỏ mã nguồn thừa, file nhạy cảm và lồng nhau) → dựng DB template → mã hóa secret (`resources/secrets/secrets.enc`) → **`verify-package`** kiểm tra toàn diện → `electron-builder`.
+
+   > **Cơ chế chặn lỗi tự động (`verify-package`):**
+   > `npm run dist` sẽ tự động dừng với thông báo lỗi tiếng Việt rõ ràng nếu:
+   > - Thiếu runtime `resources/node/node.exe` hoặc `resources/python/python.exe` (kèm thư viện PIL, numpy).
+   > - Thiếu DB template SQLite / migrations, template mockup (`assets/mockup_templates/`), hoặc Printify format templates.
+   > - Phát hiện file cấm hoặc lọt thư mục nhạy cảm trong `resources/app` (`dist-electron`, `resources`, `secrets`, `.env*`, `*.sqlite`).
+
+> **Lưu ý & Giới hạn bảo mật:**
+> - Bản đóng gói nhúng key chỉ dành riêng để phát hành và cài đặt trên **máy tin cậy của chủ dự án**.
+> - Dù key đã được mã hóa trong bộ cài, người dùng có chuyên môn kỹ thuật sâu vẫn có thể trích xuất được từ tiến trình ứng dụng.
+> - Key nhúng luôn được ưu tiên và các ô tương ứng trong Settings bị khóa. Đổi key thì build lại rồi cài đè, không cần xóa dữ liệu.
+> - Nâng cấp tự backup DB thành `%APPDATA%\anima-studio\anima.sqlite.bak-*` (giữ 3 bản). Migrate lỗi thì app báo và không mở. Khôi phục bằng cách đổi tên file backup thành `anima.sqlite`.
+
+## 10. Xử lý lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
 |---|---|---|
@@ -84,7 +123,7 @@ Không có node ID nào bị hard-code trong code — bạn phải tự map theo
 | Mapping không hợp lệ | Node ID/input key không còn tồn tại trong workflow mới | Vào Cài đặt, chọn lại node/input, Validate lại |
 | GPU out of memory / lỗi node khi tạo ảnh | Workflow/model vượt quá VRAM của GPU worker | Giảm kích thước ảnh/steps, hoặc kiểm tra cấu hình worker |
 
-## 10. Scripts
+## 11. Scripts
 
 ```bash
 npm run dev         # chạy dev server (bind 127.0.0.1)
@@ -97,6 +136,6 @@ npm run db:seed       # seed dữ liệu mẫu (an toàn, không overwrite)
 npm run db:studio     # mở Prisma Studio để xem database
 ```
 
-## 11. Công nghệ sử dụng
+## 12. Công nghệ sử dụng
 
 Next.js (App Router) + TypeScript, Tailwind CSS + shadcn/ui, Prisma + SQLite, Zod, React Hook Form, TanStack Query, Vitest.

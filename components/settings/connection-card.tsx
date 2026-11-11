@@ -23,8 +23,13 @@ export function ConnectionCard() {
   const [lastResult, setLastResult] = useState<ConnectionTestResponse | null>(null);
   const [syncedSettings, setSyncedSettings] = useState<typeof settings>(undefined);
 
+  const isEndpointManaged = Boolean(settings?.managedFields?.includes("runpodEndpointId"));
+  const isApiKeyManaged = Boolean(settings?.managedFields?.includes("runpodApiKey"));
+  const isAllManaged = isEndpointManaged && isApiKeyManaged;
+
   const hasUnsavedChanges =
-    endpointId !== (settings?.runpodEndpointId ?? "") || Boolean(apiKey);
+    (!isEndpointManaged && endpointId !== (settings?.runpodEndpointId ?? "")) ||
+    (!isApiKeyManaged && Boolean(apiKey));
 
   if (settings !== syncedSettings) {
     setSyncedSettings(settings);
@@ -55,11 +60,15 @@ export function ConnectionCard() {
   }
 
   function handleSave() {
+    const payload: { runpodEndpointId?: string; runpodApiKey?: string } = {};
+    if (!isEndpointManaged) {
+      payload.runpodEndpointId = endpointId;
+    }
+    if (!isApiKeyManaged && apiKey) {
+      payload.runpodApiKey = apiKey;
+    }
     updateSettings.mutate(
-      {
-        runpodEndpointId: endpointId,
-        runpodApiKey: apiKey || undefined,
-      },
+      payload,
       {
         onSuccess: () => {
           setApiKey("");
@@ -93,7 +102,10 @@ export function ConnectionCard() {
     );
   }
 
-  const isConfiguredOrHasInput = Boolean(endpointId || settings?.runpodEndpointId);
+  const isConfiguredOrHasInput = Boolean(
+    (endpointId || settings?.runpodEndpointId) &&
+      (apiKey || settings?.hasRunpodKey || isApiKeyManaged),
+  );
 
   return (
     <Card>
@@ -110,7 +122,10 @@ export function ConnectionCard() {
             id="endpoint-id"
             value={endpointId}
             onChange={(e) => setEndpointId(e.target.value)}
-            placeholder="vd: vllm-xxxxxx hoặc xxxxxxxxxx"
+            disabled={isEndpointManaged}
+            placeholder={
+              isEndpointManaged ? "Đã cấu hình sẵn trong bản cài" : "vd: vllm-xxxxxx hoặc xxxxxxxxxx"
+            }
           />
         </div>
 
@@ -121,8 +136,13 @@ export function ConnectionCard() {
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
+            disabled={isApiKeyManaged}
             placeholder={
-              settings?.hasRunpodKey ? "Đã lưu — để trống nếu không đổi" : "rpa_xxxx..."
+              isApiKeyManaged
+                ? "Đã cấu hình sẵn trong bản cài"
+                : settings?.hasRunpodKey
+                  ? "Đã lưu — để trống nếu không đổi"
+                  : "rpa_xxxx..."
             }
           />
         </div>
@@ -131,26 +151,36 @@ export function ConnectionCard() {
           <Button onClick={handleTest} disabled={testMutation.isPending || !isConfiguredOrHasInput}>
             {testMutation.isPending ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleSave}
-            disabled={updateSettings.isPending || !hasUnsavedChanges}
-          >
-            Lưu
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={handleClear}
-            disabled={!settings?.runpodEndpointId && !settings?.hasRunpodKey}
-          >
-            Xóa cấu hình
-          </Button>
-          {hasUnsavedChanges && (
-            <Badge variant="destructive" className="ml-1">
-              Có thay đổi chưa lưu — bấm &quot;Lưu&quot; trước khi rời trang
-            </Badge>
+          {!isAllManaged && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleSave}
+                disabled={updateSettings.isPending || !hasUnsavedChanges}
+              >
+                Lưu
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleClear}
+                disabled={!settings?.runpodEndpointId && !settings?.hasRunpodKey}
+              >
+                Xóa cấu hình
+              </Button>
+              {hasUnsavedChanges && (
+                <Badge variant="destructive" className="ml-1">
+                  Có thay đổi chưa lưu — bấm &quot;Lưu&quot; trước khi rời trang
+                </Badge>
+              )}
+            </>
           )}
         </div>
+
+        {isAllManaged && (
+          <p className="text-xs text-muted-foreground">
+            Kết nối GPU đã được cấu hình sẵn trong bản cài.
+          </p>
+        )}
 
         {lastResult && (
           <div

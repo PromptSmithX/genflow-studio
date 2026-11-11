@@ -3,11 +3,28 @@
 // see scripts/download-node.mjs for why), waits for it to come up, then opens
 // a BrowserWindow pointed at it. No code here runs in the renderer; it only
 // manages the child process and the window.
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, dialog } = require("electron");
 const { spawn, spawnSync } = require("node:child_process");
 const net = require("node:net");
 const fs = require("node:fs");
 const path = require("node:path");
+const { decrypt } = require("./secrets-crypto");
+
+const SECRETS_WHITELIST = new Set([
+  "ANIMA_RUNPOD_ENDPOINT_ID",
+  "ANIMA_RUNPOD_API_KEY",
+  "ANIMA_LLM_API_KEY",
+  "ANIMA_LLM_BASE_URL",
+  "ANIMA_LLM_MODEL",
+  "R2_ACCOUNT_ID",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET",
+  "R2_PUBLIC_BASE_URL",
+  "R2_KEY_PREFIX",
+  "GOOGLE_SHEET_ID",
+  "GOOGLE_SERVICE_ACCOUNT_JSON",
+]);
 
 let serverProcess = null;
 let mainWindow = null;
@@ -17,11 +34,13 @@ function getPaths() {
     const resourcesDir = process.resourcesPath;
     return {
       nodeBinary: path.join(resourcesDir, "node", "node.exe"),
+      pythonBinary: path.join(resourcesDir, "python", "python.exe"),
       serverDir: path.join(resourcesDir, "app"),
       templateDb: path.join(resourcesDir, "template", "anima.sqlite"),
       templateWorkflowDir: path.join(resourcesDir, "template", "workflows"),
       migrationsDir: path.join(resourcesDir, "template", "migrations"),
-      migrateScript: path.join(__dirname, "migrate.js"),
+      migrateScript: path.join(resourcesDir, "app.asar.unpacked", "electron", "migrate.js"),
+      secretsFile: path.join(resourcesDir, "secrets", "secrets.enc"),
     };
   }
   // Dev convenience path: `npm run build` then `npm run electron:dev`, using
@@ -32,12 +51,38 @@ function getPaths() {
   const root = path.join(__dirname, "..");
   return {
     nodeBinary: "node",
+    pythonBinary: null,
     serverDir: path.join(root, ".next", "standalone"),
     templateDb: path.join(root, "resources", "template", "anima.sqlite"),
     templateWorkflowDir: path.join(root, "resources", "template", "workflows"),
     migrationsDir: path.join(root, "prisma", "migrations"),
     migrateScript: path.join(__dirname, "migrate.js"),
+    secretsFile: path.join(root, "resources", "secrets", "secrets.enc"),
   };
+}
+
+// Giải mã secrets nhúng từ file secrets.enc nếu tồn tại
+function loadEmbeddedSecrets(paths) {
+  if (!paths.secretsFile || !fs.existsSync(paths.secretsFile)) {
+    return {};
+  }
+  try {
+    const encryptedBuf = fs.readFileSync(paths.secretsFile);
+    const decrypted = decrypt(encryptedBuf);
+    if (!decrypted || typeof decrypted !== "object") {
+      return {};
+    }
+    const result = {};
+    for (const [key, val] of Object.entries(decrypted)) {
+      if (SECRETS_WHITELIST.has(key) && val !== null && val !== undefined) {
+        result[key] = String(val);
+      }
+    }
+    return result;
+  } catch (err) {
+    console.error("Không thể giải mã secrets nhúng:", err.message);
+    return {};
+  }
 }
 
 function getFreePort() {
@@ -62,19 +107,55 @@ function ensureUserData(paths) {
       throw new Error(`Template DB not found at ${paths.templateDb}`);
     }
     fs.copyFileSync(paths.templateDb, dbPath);
-  } else if (fs.existsSync(paths.migrationsDir) && fs.existsSync(paths.migrateScript)) {
-    // Existing DB: run automatic migrations to apply any schema updates from the new version
+  } else {
+    // DB đã tồn tại thì luôn kiểm tra; thiếu file hoặc thư mục migration thì báo lỗi
+    if (!fs.existsSync(paths.migrateScript)) {
+      const err = new Error(`Không tìm thấy script migration tại ${paths.migrateScript}`);
+      err.name = "MigrationError";
+      err.backupPath = null;
+      err.dataRoot = dataRoot;
+      throw err;
+    }
+    if (!fs.existsSync(paths.migrationsDir)) {
+      const err = new Error(`Không tìm thấy thư mục migration tại ${paths.migrationsDir}`);
+      err.name = "MigrationError";
+      err.backupPath = null;
+      err.dataRoot = dataRoot;
+      throw err;
+    }
+
+    // Chạy migration tự động khi cập nhật phiên bản ứng dụng
     console.log("Checking for database migrations...");
-    try {
-      const result = spawnSync(paths.nodeBinary, [paths.migrateScript, dbPath, paths.migrationsDir], {
-        stdio: "inherit",
-        windowsHide: true,
-      });
-      if (result.status !== 0) {
-        console.error("Auto-migration process exited with code:", result.status);
-      }
-    } catch (err) {
-      console.error("Failed to run auto-migration:", err);
+    const result = spawnSync(paths.nodeBinary, [paths.migrateScript, dbPath, paths.migrationsDir], {
+      stdio: ["ignore", "pipe", "pipe"],
+      encoding: "utf8",
+      windowsHide: true,
+    });
+
+    const stdout = result.stdout || "";
+    process.stdout.write(stdout);
+
+    const stderr = result.stderr || "";
+    if (stderr) {
+      process.stderr.write(stderr);
+    }
+
+    let backupPath = null;
+    const backupMatch = stdout.match(/^BACKUP_PATH=(.+)$/m);
+    if (backupMatch) {
+      backupPath = backupMatch[1].trim();
+    }
+
+    if (result.error || result.status !== 0) {
+      const err = new Error(
+        `Auto-migration failed with status ${result.status}${result.error ? `: ${result.error.message}` : ""}`,
+      );
+      err.name = "MigrationError";
+      err.backupPath = backupPath;
+      err.dataRoot = dataRoot;
+      const trimmedStderr = stderr.trim();
+      err.details = trimmedStderr.slice(-300);
+      throw err;
     }
   }
 
@@ -119,15 +200,14 @@ async function startServer() {
   const paths = getPaths();
   const { dataRoot, dbPath } = ensureUserData(paths);
   const port = await getFreePort();
+  const embeddedSecrets = loadEmbeddedSecrets(paths);
 
-  // The LLM API key is NEVER embedded in this installer -- it lives only on
-  // the Colab gateway process (entered there via getpass), and the app calls
-  // it through the same ComfyUI tunnel URL (route "/llm"). See
-  // lib/llm/resolve-config.ts and the notebook's Cell 7.6/Cell 8.
   serverProcess = spawn(paths.nodeBinary, [path.join(paths.serverDir, "server.js")], {
     cwd: paths.serverDir,
     env: {
       ...process.env,
+      ...embeddedSecrets,
+      ...(paths.pythonBinary && fs.existsSync(paths.pythonBinary) ? { MOCKUP_PYTHON: paths.pythonBinary } : {}),
       NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
       PORT: String(port),
@@ -174,6 +254,30 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     createWindow().catch((error) => {
       console.error("Failed to start Anima Studio:", error);
+      if (error && error.name === "MigrationError") {
+        const title = "Anima Studio — Lỗi cập nhật dữ liệu";
+        const contentLines = [
+          "Quá trình cập nhật cấu trúc dữ liệu không thành công.",
+          "Dữ liệu của bạn chưa bị mất.",
+        ];
+        if (error.backupPath) {
+          contentLines.push(`Bản sao lưu an toàn: ${error.backupPath}`);
+        }
+        if (error.dataRoot) {
+          contentLines.push(`Thư mục dữ liệu: ${error.dataRoot}`);
+        }
+        contentLines.push("Vui lòng gửi file log hoặc liên hệ người quản lý để được hỗ trợ.");
+        const detailParts = [error.message, error.details].filter(
+          (part) => typeof part === "string" && part.trim().length > 0,
+        );
+        if (detailParts.length > 0) {
+          contentLines.push(`Chi tiết: ${detailParts.join(" — ")}`);
+        }
+        dialog.showErrorBox(title, contentLines.join("\n\n"));
+      } else {
+        const title = "Anima Studio — Không khởi động được";
+        dialog.showErrorBox(title, error?.message || String(error));
+      }
       app.quit();
     });
   });

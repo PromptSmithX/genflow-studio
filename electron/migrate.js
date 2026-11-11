@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// Auto-migration runner for SQLite in packaged Electron and dev environments.
-// Runs using Node.js built-in `node:sqlite` (DatabaseSync), requiring no external
-// Prisma CLI at runtime on the user's machine.
+// Bộ chạy migration tự động cho SQLite trong môi trường Electron và dev
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -25,11 +23,47 @@ if (!fs.existsSync(migrationsDir)) {
   process.exit(0);
 }
 
+// Lấy chuỗi timestamp định dạng YYYYMMDD-HHmmss theo giờ local
+function getLocalTimestamp(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  return `${yyyy}${mm}${dd}-${hh}${min}${ss}`;
+}
+
+// Giữ tối đa 3 file backup mới nhất khớp mẫu định dạng
+function rotateBackups(targetDbPath) {
+  const dir = path.dirname(targetDbPath);
+  const base = path.basename(targetDbPath);
+  const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`^${escapedBase}\\.bak-\\d{8}-\\d{6}$`);
+
+  const matching = fs
+    .readdirSync(dir)
+    .filter((f) => regex.test(f))
+    .sort();
+
+  if (matching.length > 3) {
+    const toDelete = matching.slice(0, matching.length - 3);
+    for (const file of toDelete) {
+      try {
+        fs.unlinkSync(path.join(dir, file));
+      } catch (err) {
+        console.warn(`[migrate] Failed to delete old backup ${file}:`, err.message);
+      }
+    }
+  }
+}
+
 try {
   console.log(`[migrate] Checking migrations for ${dbPath}...`);
   const db = new DatabaseSync(dbPath);
 
-  // Ensure _prisma_migrations table exists
+  // Khởi tạo bảng _prisma_migrations nếu chưa tồn tại
   db.exec(`
     CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
       "id" TEXT NOT NULL PRIMARY KEY,
@@ -43,37 +77,53 @@ try {
     );
   `);
 
-  // Query already applied migrations
+  // Lấy danh sách migration đã áp dụng
   const rows = db.prepare("SELECT migration_name FROM _prisma_migrations").all();
   const applied = new Set(rows.map((r) => r.migration_name));
 
-  // Read migration folders sorted by timestamp name (YYYYMMDDHHMMSS_name)
+  // Đọc danh sách thư mục migration được sắp xếp theo thời gian
   const entries = fs
     .readdirSync(migrationsDir, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)
     .sort();
 
+  // Xác định các migration đang chờ áp dụng
+  const pending = entries.filter((name) => {
+    if (applied.has(name)) return false;
+    const sqlFile = path.join(migrationsDir, name, "migration.sql");
+    return fs.existsSync(sqlFile);
+  });
+
+  // Không có migration pending thì không tạo backup và kết thúc
+  if (pending.length === 0) {
+    console.log("[migrate] Auto-migration complete. 0 migration(s) applied.");
+    process.exit(0);
+  }
+
+  // Tạo backup trước khi thực hiện migration
+  const backupPath = `${dbPath}.bak-${getLocalTimestamp()}`;
+  try {
+    const escaped = backupPath.replace(/'/g, "''");
+    db.exec(`VACUUM INTO '${escaped}'`);
+    console.log(`BACKUP_PATH=${backupPath}`);
+  } catch (backupError) {
+    console.error("[migrate] Backup failed before migration:", backupError.message);
+    process.exit(1);
+  }
+
   let appliedCount = 0;
 
-  for (const migrationName of entries) {
-    if (applied.has(migrationName)) {
-      continue;
-    }
-
+  for (const migrationName of pending) {
     const sqlFile = path.join(migrationsDir, migrationName, "migration.sql");
-    if (!fs.existsSync(sqlFile)) {
-      continue;
-    }
-
     const sql = fs.readFileSync(sqlFile, "utf-8");
     console.log(`[migrate] Applying pending migration: ${migrationName}...`);
 
     try {
-      // Execute the migration statements
+      // Thực thi các câu lệnh SQL của migration
       db.exec(sql);
 
-      // Record successful application in _prisma_migrations
+      // Ghi nhận migration đã hoàn thành vào bảng _prisma_migrations
       const id = crypto.randomUUID();
       const checksum = crypto.createHash("sha256").update(sql).digest("hex");
       db.prepare(`
@@ -89,8 +139,7 @@ try {
     } catch (err) {
       console.error(`[migrate] Error applying ${migrationName}:`, err.message);
 
-      // If column/table already exists (e.g. from previous manual fix or partial apply),
-      // record it so subsequent migrations are not permanently blocked.
+      // Xử lý trường hợp cột hoặc bảng đã tồn tại từ trước
       const isDuplicateError =
         err.message &&
         (err.message.includes("duplicate column") ||
@@ -116,6 +165,8 @@ try {
     }
   }
 
+  // Chỉ xoay vòng bản backup khi toàn bộ migration đã thành công
+  rotateBackups(dbPath);
   console.log(`[migrate] Auto-migration complete. ${appliedCount} migration(s) applied.`);
 } catch (error) {
   console.error("[migrate] Auto-migration failed:", error);

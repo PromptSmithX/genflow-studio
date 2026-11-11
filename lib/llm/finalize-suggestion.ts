@@ -61,6 +61,10 @@ const SPLIT_TAGS_REGEX =
 // bản người y hệt cạnh nhau. Negative bị ZeroOut (Turbo) nên phải xoá ở positive.
 const DUP_SUBJECT_REGEX =
   /\b((the\s+)?same\s+(consistent\s+)?(faces?(\s+and\s+body)?|bodies|body|woman|women|girl|girls|person|people|model|models|character|characters|subject|subjects)|consistent\s+faces?(\s+and\s+body)?|identical|twins?|side\s+by\s+side|duplicated?|mirror(ed)?(\s+image)?|cloned?)\b/gi;
+// "same" cách danh từ chủ thể bởi tính từ ("same seductive Vietnamese woman") lọt
+// DUP_SUBJECT_REGEX -> chỉ bỏ chữ "(the) same", giữ lại các tính từ mô tả.
+const SAME_BEFORE_SUBJECT_REGEX =
+  /\b(the\s+)?same\s+(?=(?:[\w-]+\s+){1,4}?(?:faces?|bodies|body|woman|women|girl|girls|person|people|model|models|character|characters|subject|subjects)\b)/gi;
 const CALENDAR_LABEL = "CALENDAR";
 
 /**
@@ -98,6 +102,7 @@ export function finalizeSuggestedImage(
   // Real-only: xoá cụm nhân đôi chủ thể (anime giữ nguyên hành vi cũ).
   if (!isAnimeMedium) {
     image.positive = image.positive
+      .replace(SAME_BEFORE_SUBJECT_REGEX, "")
       .replace(DUP_SUBJECT_REGEX, "")
       .replace(/,(\s*,)+/g, ",")
       .replace(/\s{2,}/g, " ")

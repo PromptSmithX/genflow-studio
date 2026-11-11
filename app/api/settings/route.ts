@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api/errors";
 import { settingsUpdateSchema } from "@/lib/validations/settings";
-import { getOrCreateSettings, redactSettings } from "@/lib/settings";
+import { getOrCreateSettings, redactSettings, omitManagedFields } from "@/lib/settings";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,9 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = settingsUpdateSchema.parse(await request.json());
+    const parsedBody = settingsUpdateSchema.parse(await request.json());
+    // Loại bỏ các trường do biến môi trường quản lý để không ghi đè DB
+    const body = omitManagedFields(parsedBody);
 
     let runpodEndpointId: string | null | undefined = undefined;
     if (body.runpodEndpointId !== undefined) {
@@ -48,7 +50,7 @@ export async function PUT(request: NextRequest) {
     }
 
     await getOrCreateSettings();
-    const updated = await prisma.appSettings.update({
+    await prisma.appSettings.update({
       where: { id: "main" },
       data: {
         ...(runpodEndpointId !== undefined ? { runpodEndpointId } : {}),
@@ -73,7 +75,8 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(redactSettings(updated));
+    const refreshed = await getOrCreateSettings();
+    return NextResponse.json(redactSettings(refreshed));
   } catch (error) {
     return handleApiError(error);
   }

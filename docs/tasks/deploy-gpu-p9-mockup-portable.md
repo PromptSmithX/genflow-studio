@@ -59,11 +59,34 @@ Trên máy người dùng, bước "2. Chuẩn bị file in & mockup" báo "Tạ
 - `git status` sạch, **không** có file trong `resources/`.
 
 ## 5. Definition of Done
-- [ ] `.gitignore` loại `resources/secrets`, `resources/python`.
-- [ ] 5 template trong `assets/mockup_templates/`; prepare script copy vào `resources/app`.
-- [ ] Không còn đường dẫn `D:\` hardcode trong `lib/`; `resolveTemplatesDir` có test.
-- [ ] Lỗi mockup hiện lý do thật tới UI.
-- [ ] `build:python` hoạt động; builder ship `resources/python`; `main.js` đặt `MOCKUP_PYTHON`.
-- [ ] Mục 4 xanh; Ghi chú + danh sách commit + pin version Pillow/numpy.
+- [x] `.gitignore` loại `resources/secrets`, `resources/python`.
+- [x] 5 template trong `assets/mockup_templates/`; prepare script copy vào `resources/app`.
+- [x] Không còn đường dẫn `D:\` hardcode trong `lib/`; `resolveTemplatesDir` có test.
+- [x] Lỗi mockup hiện lý do thật tới UI.
+- [x] `build:python` hoạt động; builder ship `resources/python`; `main.js` đặt `MOCKUP_PYTHON`.
+- [x] Mục 4 xanh; Ghi chú + danh sách commit + pin version Pillow/numpy.
 
 ## Ghi chú của người thực thi
+1. **Phiên bản pin và lý do lựa chọn:**
+   - `PYTHON_VERSION = "3.11.9"`: Bản Python embeddable chính thức win-amd64 từ python.org, tương thích hoàn toàn với Electron child process.
+   - `PILLOW_VERSION = "11.3.0"`: Bản mới nhất thuộc nhánh Pillow 11.x có sẵn pre-built wheel `cp311-cp311-win_amd64`, tương thích hoàn hảo với các lệnh PIL trong `wrap_mockup.py`.
+   - `NUMPY_VERSION = "2.3.5"`: Bản mới nhất thuộc nhánh numpy 2.3.x có sẵn pre-built wheel `cp311-cp311-win_amd64`, hỗ trợ đầy đủ các phép toán ma trận/homography của `wrap_mockup.py`.
+
+2. **Kết quả kiểm tra (Mục 4):**
+   - `npm test`: 34 test files pass, 219/219 tests pass (100%).
+   - `npx tsc --noEmit`: Exit code 0, không có lỗi type.
+   - `npm run lint`: Exit code 0, eslint sạch.
+   - `npm run build`: Next.js 16.4.3 production build thành công (26/26 routes).
+   - `npm run build:python`: Chạy thành công; embed python tải và cấu hình `python311._pth` chuẩn xác; pip cài đặt thành công wheel vào `Lib/site-packages`.
+   - Kiểm tra import embed python: `resources/python/python.exe -c "import PIL, numpy; print(PIL.__version__, numpy.__version__)"` in ra `11.3.0 2.3.5`.
+   - Kiểm tra mockup script: `resources/python/python.exe scripts/mockup/wrap_mockup.py --help` hiển thị trợ giúp bình thường không lỗi import.
+   - `git status` sạch hoàn toàn, thư mục `resources/` đã được gitignore.
+
+3. **Danh sách commit:**
+   - `74ba1ee` docs: add task p9 mockup portable spec
+   - `cb16030` build: ignore resources/secrets and resources/python in gitignore
+   - `88fb682` feat(mockup): add templates to repo and package into electron resources
+   - `ca632d2` fix(mockup): resolve template dir dynamically and propagate detailed mockup errors
+   - `3ea1b0d` feat(electron): embed portable python runtime for mockup generation
+   - `abde3ea` test: add tests for mockup templates, electron packaging, and error propagation
+   - `73fb371` docs: document build:python step and mockup templates location

@@ -47,4 +47,11 @@ if (fs.existsSync(publicDir)) {
   fs.cpSync(publicDir, path.join(appDir, "public"), { recursive: true });
 }
 
+// Copy template mockup cho bản đóng gói
+const mockupTemplatesDir = path.join(root, "assets", "mockup_templates");
+if (!fs.existsSync(mockupTemplatesDir)) {
+  throw new Error(`Thiếu thư mục template mockup tại ${mockupTemplatesDir}.`);
+}
+fs.cpSync(mockupTemplatesDir, path.join(appDir, "assets", "mockup_templates"), { recursive: true });
+
 console.log(`Prepared Electron app resources at ${appDir}`);

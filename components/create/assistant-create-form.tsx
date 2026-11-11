@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Wand2, Loader2, Check, Circle, AlertTriangle } from "lucide-react";
+import { Wand2, Loader2, Check, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +24,7 @@ import type { SuggestPromptsResponse } from "@/lib/validations/llm";
 import type { WorkflowSummaryResponse } from "@/lib/types";
 import { ApiRequestError } from "@/lib/client/api";
 import { cn } from "@/lib/utils";
+import { setNavigationLock } from "@/lib/client/navigation-lock";
 
 type AdvancedParamField = "width" | "height" | "steps" | "cfg";
 type AdvancedParams = Record<AdvancedParamField, string>;
@@ -69,7 +70,6 @@ export function AssistantCreateForm() {
   const activeMediums = useMemo(() => (mediums ?? []).filter((m) => m.isActive), [mediums]);
 
   const [requestText, setRequestText] = useState("");
-  const [imageCount, setImageCount] = useState(CALENDAR_IMAGE_COUNT);
   const [mediumId, setMediumId] = useState("");
   const [params, setParams] = useState<AdvancedParams>({ width: "", height: "", steps: "", cfg: "" });
 
@@ -95,10 +95,9 @@ export function AssistantCreateForm() {
     }
   }
 
-  const maxImages = settings?.maxImagesPerBatch ?? 15;
-  // Settings tải không đồng bộ, và trần có thể bị hạ trong Cài đặt -- kẹp lại
-  // để số hiển thị/gửi đi không bao giờ vượt trần (server sẽ từ chối batch).
-  const safeImageCount = Math.min(imageCount, maxImages);
+  // Luôn tạo cố định 1 bộ lịch 13 ảnh. Vẫn kẹp theo trần trong Cài đặt (tải không
+  // đồng bộ, có thể bị hạ) để server không từ chối batch.
+  const safeImageCount = Math.min(CALENDAR_IMAGE_COUNT, settings?.maxImagesPerBatch ?? 15);
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
   const isReady = connectionState === "connected" && workflowReady;
   // Trợ lý AI yêu cầu API key đã cấu hình trong Cài đặt (settings.hasLlmKey).
@@ -108,9 +107,14 @@ export function AssistantCreateForm() {
   const isWorking = suggestMutation.isPending || createMutation.isPending;
   const canGenerate = llmReady && isReady && requestText.trim().length > 0 && !isWorking;
 
-  function handleCountChange(next: number) {
-    setImageCount(Math.max(1, Math.min(maxImages, next)));
-  }
+  // Rời trang giữa chừng sẽ huỷ form -> bước tạo batch (gọi trong onSuccess của
+  // bước soạn prompt) không chạy -> mất ảnh mà người dùng không biết. Khoá điều
+  // hướng ở sidebar trong suốt thời gian đang làm; cleanup mở khoá kể cả khi unmount.
+  useEffect(() => {
+    if (!isWorking) return;
+    setNavigationLock("Đang tạo ảnh — vui lòng đợi xong rồi mới chuyển trang, nếu không ảnh sẽ không được tạo.");
+    return () => setNavigationLock(null);
+  }, [isWorking]);
 
   // Bấm 1 lần: LLM soạn mô tả -> tự gửi batch tạo ảnh. Người dùng không xem lại
   // prompt ở giữa; lỗi ở bước nào cũng toast và giữ nguyên màn nhập.
@@ -250,7 +254,10 @@ export function AssistantCreateForm() {
       <Card>
         <CardContent className="space-y-3 p-4">
           <h3 className="text-sm font-medium">2. Kiểu ảnh</h3>
-          <p className="text-xs text-muted-foreground">Cả bộ lịch sẽ theo cùng một kiểu này.</p>
+          <p className="text-xs text-muted-foreground">
+            Cả bộ lịch sẽ theo cùng một kiểu này. Mỗi lần tạo {CALENDAR_IMAGE_COUNT} ảnh: 1 bìa trước + 12 tháng (bìa
+            sau app tự ghép khi xuất file in).
+          </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {activeMediums.map((medium) => (
               <button
@@ -273,47 +280,6 @@ export function AssistantCreateForm() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="space-y-3 p-4">
-          <h3 className="text-sm font-medium">3. Số lượng ảnh</h3>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Bớt 1 ảnh"
-              onClick={() => handleCountChange(safeImageCount - 1)}
-              disabled={isWorking || safeImageCount <= 1}
-            >
-              −
-            </Button>
-            <span className="w-12 text-center text-lg font-semibold">{safeImageCount}</span>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Thêm 1 ảnh"
-              onClick={() => handleCountChange(safeImageCount + 1)}
-              disabled={isWorking || safeImageCount >= maxImages}
-            >
-              +
-            </Button>
-            {safeImageCount !== CALENDAR_IMAGE_COUNT && CALENDAR_IMAGE_COUNT <= maxImages && (
-              <Button variant="link" size="sm" onClick={() => handleCountChange(CALENDAR_IMAGE_COUNT)} disabled={isWorking}>
-                Về mặc định {CALENDAR_IMAGE_COUNT}
-              </Button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {CALENDAR_IMAGE_COUNT} ảnh = 1 bìa trước + 12 tháng. Bìa sau được app tự ghép khi xuất file in. Tối đa{" "}
-            {maxImages} ảnh/lần.
-          </p>
-          {safeImageCount !== CALENDAR_IMAGE_COUNT && (
-            <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>Chỉ bộ 13 ảnh mới được tự động xuất & ghi Google Sheet.</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {advancedMode && (
         <Accordion>
@@ -383,6 +349,9 @@ export function AssistantCreateForm() {
               state={createMutation.isPending ? "active" : "waiting"}
               text="Gửi sang máy tạo ảnh — xong sẽ tự chuyển sang trang Kết quả."
             />
+            <p className="pt-1 text-xs text-muted-foreground">
+              Vui lòng ở lại trang này cho tới khi xong — chuyển trang lúc này ảnh sẽ không được tạo.
+            </p>
           </CardContent>
         </Card>
       )}

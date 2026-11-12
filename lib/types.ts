@@ -59,7 +59,21 @@ export interface MappingValidationResponse {
 }
 
 export type JobStatusDTO = "queued" | "running" | "completed" | "failed" | "unknown";
-export type BatchStatusDTO = "queued" | "running" | "completed" | "partial" | "failed";
+export type BatchStatusDTO = "drafting" | "queued" | "running" | "completed" | "partial" | "failed";
+
+/** Một dòng của panel "Hàng đợi" ở trang Tạo (lib/generations/draft-queue.ts::listDraftQueue). */
+export interface DraftQueueItemDTO {
+  id: string;
+  ideaPrompt: string;
+  mediumName: string | null;
+  createdAt: string;
+  state: "waiting" | "drafting" | "draft_failed" | "generating";
+  /** Thứ tự chờ (1 = kế tiếp), chỉ có khi state = "waiting". */
+  queuePosition: number | null;
+  draftError: string | null;
+  readyCount: number;
+  totalCount: number;
+}
 
 export interface GenerationJobDTO {
   id: string;
@@ -128,6 +142,10 @@ export interface GenerationBatchDTO {
   autoError?: string | null;
   autoFinishedAt?: string | null;
   sheetSyncedAt?: string | null;
+  /** Chỉ có ý nghĩa khi status = "drafting": null = đang chờ/đang soạn. */
+  draftError?: string | null;
+  /** Do /api/history tính: trạng thái trong hàng đợi soạn mô tả; null khi đã qua bước soạn. */
+  draftState?: "waiting" | "drafting" | "draft_failed" | null;
 }
 
 export interface HistoryListResponse {

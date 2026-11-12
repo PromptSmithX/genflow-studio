@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api/errors";
 import { serializeBigInts } from "@/lib/api/serialize";
 import type { Prisma } from "@prisma/client";
+import { getActiveDraftBatchId } from "@/lib/generations/draft-queue";
 
 export const runtime = "nodejs";
 
@@ -29,9 +30,22 @@ export async function GET(request: NextRequest) {
 
     const hasMore = batches.length > PAGE_SIZE;
     const page = hasMore ? batches.slice(0, PAGE_SIZE) : batches;
+    const activeDraftId = getActiveDraftBatchId();
 
     return NextResponse.json({
-      batches: serializeBigInts(page),
+      batches: serializeBigInts(
+        page.map((batch) => ({
+          ...batch,
+          draftState:
+            batch.status !== "drafting"
+              ? null
+              : batch.draftError
+                ? "draft_failed"
+                : batch.id === activeDraftId
+                  ? "drafting"
+                  : "waiting",
+        })),
+      ),
       nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
     });
   } catch (error) {

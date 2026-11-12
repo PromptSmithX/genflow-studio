@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, Check, Circle, Cloud, FileSpreadsheet, Layers, Loader2, RefreshCcw, Wand2 } from "lucide-react";
+import { AlertTriangle, Check, Circle, Clock, Cloud, FileSpreadsheet, Layers, Loader2, RefreshCcw, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAutoPublishBatch } from "@/hooks/use-history";
+import { useRetryDraft } from "@/hooks/use-draft-queue";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { GenerationBatchDTO } from "@/lib/types";
@@ -148,6 +149,62 @@ interface PipelineProgressProps {
 }
 
 export function PipelineProgress({ batch }: PipelineProgressProps) {
+  if (batch.status === "drafting") return <DraftingProgress batch={batch} />;
+  return <AutoPipelineProgress batch={batch} />;
+}
+
+/** Bộ còn trong hàng đợi soạn mô tả (lib/generations/draft-queue.ts), chưa có ảnh nào. */
+function DraftingProgress({ batch }: PipelineProgressProps) {
+  const retryMutation = useRetryDraft();
+  const failed = batch.draftState === "draft_failed";
+  const drafting = batch.draftState === "drafting";
+
+  function handleRetry() {
+    retryMutation.mutate(batch.id, {
+      onSuccess: () => toast.success("Đã đưa lại vào hàng đợi"),
+      onError: (err) => toast.error(err instanceof Error ? err.message : "Thử lại thất bại"),
+    });
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 text-sm",
+        failed
+          ? "border-red-200 bg-red-50/80 text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
+          : "bg-card",
+      )}
+    >
+      <div className="flex min-w-0 items-start gap-2">
+        {failed ? (
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+        ) : drafting ? (
+          <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
+        ) : (
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
+        <div className="min-w-0 space-y-0.5">
+          <p className="font-medium">
+            {failed ? "AI soạn mô tả bị lỗi" : drafting ? "AI đang soạn mô tả cho 13 ảnh…" : "Đang chờ tới lượt soạn mô tả"}
+          </p>
+          <p className="text-xs opacity-80">
+            {failed
+              ? batch.draftError
+              : "Soạn xong sẽ tự gửi sang máy tạo ảnh. Bạn có thể làm việc khác, trang tự cập nhật."}
+          </p>
+        </div>
+      </div>
+      {failed && (
+        <Button size="sm" variant="outline" onClick={handleRetry} disabled={retryMutation.isPending}>
+          {retryMutation.isPending ? <Loader2 className="animate-spin" /> : <RefreshCcw />}
+          Thử lại
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function AutoPipelineProgress({ batch }: PipelineProgressProps) {
   const autoPublishMutation = useAutoPublishBatch();
 
   const jobs = batch.jobs ?? [];

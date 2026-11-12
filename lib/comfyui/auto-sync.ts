@@ -7,6 +7,7 @@ import { slotLabel } from "@/lib/calendar/slot-label";
 import { regenerateJobFreshPrompt } from "@/lib/generations/regenerate-fresh";
 import { runAutoPublishExclusive, getCalendarSkipReason } from "@/lib/pipeline/auto-publish";
 import { syncBatchToSheet } from "@/lib/sheets/sync";
+import { kickDraftQueue } from "@/lib/generations/draft-queue";
 
 const POLL_INTERVAL_MS = 15_000;
 // Chỉ đồng bộ batch gần đây; batch cũ hơn ngưỡng này sẽ không poll nữa để tránh gọi RunPod vô hạn.
@@ -165,6 +166,8 @@ export async function runSyncTick(): Promise<void> {
   if (autoSyncState.isTicking) return;
   autoSyncState.isTicking = true;
   try {
+    // Bộ còn chờ soạn mô tả (vd app vừa khởi động lại giữa chừng) -> chạy tiếp.
+    kickDraftQueue();
     const settings = await getOrCreateSettings();
 
     if (settings.runpodEndpointId && settings.runpodApiKey) {
@@ -211,6 +214,7 @@ export function startAutoSyncPoller(): void {
   void resetInterruptedBatches().catch((err) => {
     console.error("[auto-sync] reset batch bị gián đoạn thất bại:", err);
   });
+  kickDraftQueue();
   autoSyncState.interval = setInterval(() => {
     void runSyncTick();
   }, POLL_INTERVAL_MS);

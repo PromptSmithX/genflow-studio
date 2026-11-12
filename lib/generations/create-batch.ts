@@ -24,7 +24,10 @@ export { GenerationSetupError };
  * submit failure marks only that job as failed -- it never blocks the
  * other images in the same batch, and never gets silently retried.
  */
-export async function createAndSubmitBatch(input: CreateGenerationInput) {
+export async function createAndSubmitBatch(
+  input: CreateGenerationInput,
+  { existingBatchId }: { existingBatchId?: string } = {},
+) {
   const settings = await getOrCreateSettings();
   const client = getRunpodClient(settings);
 
@@ -87,21 +90,26 @@ export async function createAndSubmitBatch(input: CreateGenerationInput) {
     input.ideaPrompt?.trim() ||
     (style ? `${style.name} — ${input.images.length} ảnh` : `Trợ lý AI — ${input.images.length} ảnh`);
 
-  const batch = await prisma.generationBatch.create({
-    data: {
-      ideaPrompt: batchLabel,
-      requestedCount: input.images.length,
-      status: "queued",
-      mediumId: input.mediumId ?? null,
-      etsyTitle: input.etsy?.title ?? null,
-      etsyDescription: input.etsy?.description ?? null,
-      etsyTagsJson: input.etsy?.tags ? JSON.stringify(input.etsy.tags) : null,
-      conceptTheme: input.concept?.theme || null,
-      conceptAnchorTags: input.concept?.anchorTags || null,
-      conceptSeedKey: input.concept?.seedKey || null,
-      appearanceKey: input.concept?.appearanceKey || null,
-    },
-  });
+  const batchData = {
+    ideaPrompt: batchLabel,
+    requestedCount: input.images.length,
+    status: "queued" as const,
+    mediumId: input.mediumId ?? null,
+    etsyTitle: input.etsy?.title ?? null,
+    etsyDescription: input.etsy?.description ?? null,
+    etsyTagsJson: input.etsy?.tags ? JSON.stringify(input.etsy.tags) : null,
+    conceptTheme: input.concept?.theme || null,
+    conceptAnchorTags: input.concept?.anchorTags || null,
+    conceptSeedKey: input.concept?.seedKey || null,
+    appearanceKey: input.concept?.appearanceKey || null,
+  };
+  // Hàng đợi soạn mô tả đã tạo sẵn batch "drafting" -> chuyển nó sang queued.
+  const batch = existingBatchId
+    ? await prisma.generationBatch.update({
+        where: { id: existingBatchId },
+        data: { ...batchData, draftError: null, draftParamsJson: null },
+      })
+    : await prisma.generationBatch.create({ data: batchData });
 
   const jobs = [];
   for (let index = 0; index < input.images.length; index++) {

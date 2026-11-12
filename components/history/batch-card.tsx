@@ -96,6 +96,30 @@ function renderAutoStatusBadge(status?: string | null) {
   }
 }
 
+function renderDraftBadge(draftState: GenerationBatchDTO["draftState"]) {
+  if (draftState === "draft_failed") {
+    return (
+      <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 text-xs">
+        <AlertTriangle className="mr-1 h-3 w-3" />
+        Lỗi soạn mô tả
+      </Badge>
+    );
+  }
+  if (draftState === "drafting") {
+    return (
+      <Badge variant="secondary" className="bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 text-xs">
+        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+        AI đang soạn mô tả
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="text-xs">
+      Trong hàng đợi
+    </Badge>
+  );
+}
+
 function renderUnifiedStatusBadge(
   batch: GenerationBatchDTO,
   pendingCount: number,
@@ -198,6 +222,8 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
     });
   }
 
+  // Còn trong hàng đợi soạn mô tả: chưa có job nào nên không tính tiến độ ảnh.
+  const isDrafting = batch.status === "drafting";
   const jobs = [...batch.jobs].sort((a, b) => a.indexInBatch - b.indexInBatch);
   const total = batch.requestedCount || jobs.length || 13;
   const pendingCount = jobs.filter(isPending).length;
@@ -259,7 +285,9 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
                 Đã đẩy R2
               </Badge>
             )}
-            {advancedMode ? (
+            {isDrafting ? (
+              renderDraftBadge(batch.draftState)
+            ) : advancedMode ? (
               <>
                 {renderAutoStatusBadge(batch.autoStatus)}
                 <Badge
@@ -323,7 +351,14 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
         </div>
       </div>
 
-      {open && (
+      {open && isDrafting && (
+        <div className="space-y-3 border-t p-4">
+          <PipelineProgress batch={batch} />
+          <p className="text-xs text-muted-foreground">Ảnh sẽ hiện ở đây khi AI soạn xong mô tả và bắt đầu tạo ảnh.</p>
+        </div>
+      )}
+
+      {open && !isDrafting && (
         <div className="space-y-6 border-t p-4">
           {!advancedMode ? (
             <>

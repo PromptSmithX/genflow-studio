@@ -11,6 +11,7 @@ function hasUnsettledJob(pages: HistoryListResponse[] | undefined): boolean {
   return pages.some((page) =>
     page.batches.some(
       (batch) =>
+        batch.status === "drafting" ||
         batch.jobs.some((job) => job.status === "queued" || job.status === "running") ||
         batch.autoStatus === "pending" ||
         batch.autoStatus === "processing" ||

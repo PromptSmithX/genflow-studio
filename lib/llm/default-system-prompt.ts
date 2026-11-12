@@ -1,3 +1,5 @@
+import type { SubjectSpec } from "@/lib/llm/axis-decision";
+
 /**
  * Default system prompt for the "Trợ lý AI" creation mode. Overridable per
  * deployment via AppSettings.llmSystemPrompt (Settings UI) so behavior can be
@@ -67,8 +69,8 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   ánh sáng + góc máy, phong cách editorial/tạp chí.
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
 - CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm trang phục, địa điểm/đạo cụ chính của concept — NGẮN GỌN ≤ ~25 từ, KHÔNG chứa bảng màu, mood, ánh sáng, biểu cảm/cảm xúc hay từ phong cách nhiếp ảnh (cinematic, editorial, pastel...). TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
-- Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
-- QUY TẮC VỀ SỐ LƯỢNG CHỦ THỂ (NHÂN VẬT):
+- Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; không sinh thêm người ngoài số người quy định.
+- QUY TẮC VỀ SỐ LƯỢNG CHỦ THỂ (NHÂN VẬT) — nếu tin nhắn có dòng "Số người trong MỖI ảnh" thì theo ĐÚNG dòng đó (ưu tiên hơn các ý dưới):
   • TÔN TRỌNG Ý ĐỊNH CỦA NGƯỜI DÙNG: Khi người dùng có ý định mô tả 2 người / cặp đôi / tình nhân / nam nữ / tương tác đôi lứa, hãy mô tả ĐẦY ĐỦ CẢ HAI NHÂN VẬT tương tác tự nhiên trong cùng một cảnh liền mạch, gợi cảm và thẩm mỹ theo đúng yêu cầu (dùng tag Danbooru đôi chuẩn như "couple, 1girl, 1boy", hoặc "2girls"/"2boys" tùy ngữ cảnh). TUYỆT ĐỐI KHÔNG đưa các từ chỉ cặp đôi hay giới tính (như "couple", "man", "boy", "male", "1boy", "two people") vào negative prompt.
   • MẶC ĐỊNH (khi người dùng chỉ mô tả một nhân vật hoặc concept chung): MỌI "positive" phải mô tả CHÍNH XÁC MỘT người (mở đầu bằng "solo, 1girl" hoặc "solo, 1boy"), khung hình rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG tự ý sinh người thứ hai hay đám đông ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
@@ -198,9 +200,10 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   "editorial magazine" (dễ khiến model vẽ bố cục 2 trang/2 khung).
 - Giữ CÙNG MỘT nhân vật/phong cách và CÙNG MỘT concept chiến dịch cho cả bộ; giữa các ảnh đổi set cảnh/góc máy/tư thế/tương tác đạo cụ của cùng concept đó.
 - CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm trang phục, địa điểm/đạo cụ chính của concept — NGẮN GỌN ≤ ~25 từ, KHÔNG chứa bảng màu, mood, ánh sáng, biểu cảm/cảm xúc hay từ phong cách nhiếp ảnh (cinematic, editorial, pastel...). TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
-- Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; tuyệt đối không sinh người thứ hai.
-- Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả CHÍNH XÁC MỘT người, khung hình
-  rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG mô tả nhiều người/cặp đôi/đám đông/người ở hậu cảnh.
+- Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; không sinh thêm người ngoài số người quy định.
+- Model này KHÔNG dùng được negative prompt, nên MỌI "positive" phải mô tả ĐÚNG số người theo dòng "Số người
+  trong MỖI ảnh" (không có dòng đó thì CHÍNH XÁC MỘT người), khung hình rõ ràng, tỉ lệ cơ thể tự nhiên, mỗi
+  người rõ ràng tách biệt. KHÔNG thêm người ngoài số đó; người phụ ở hậu cảnh CHỈ khi dòng đó cho phép.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
   thế + góc máy KHÁC nhau (đứng, bước đi, ngồi, dựa tường, quỳ, nghiêng người, nằm, vặn người...).
   KHÔNG lặp lại cùng một kiểu cho cả bộ, và ĐẶC BIỆT đừng mặc định tư thế nằm dạng chân.
@@ -317,6 +320,13 @@ Số phần tử trong "images" phải đúng bằng số ảnh được yêu c�
 export const SINGLE_SUBJECT_QUALITY_TAGS =
   "solo, one person only, single subject, natural body proportions, correct head-to-body ratio, anatomically correct hands, single uninterrupted photograph, one seamless full-frame shot";
 
+/** Bản cho ảnh thực nhiều người: giữ giải phẫu/tỉ lệ, bỏ các tag "solo". */
+export const MULTI_SUBJECT_QUALITY_TAGS =
+  "natural body proportions, correct head-to-body ratio, anatomically correct hands, each person clearly distinct, single uninterrupted photograph, one seamless full-frame shot";
+
+/** Người phụ (tiệc, lễ hội) chỉ mờ ở hậu cảnh để Turbo không vẽ dính người. */
+export const CROWD_BACKGROUND_TAGS = "blurred people in the background, background figures out of focus";
+
 /**
  * Tag khung ép qua mergeTags ở route /suggest (KHÔNG nằm trong system prompt →
  * không tốn token context LLM). Giữ chủ thể nằm GỌN trong khung, chừa khoảng
@@ -379,7 +389,8 @@ export const ANIME_COUPLE_QUALITY_TAGS =
  */
 export const ANIME_SINGLE_SUBJECT_HINT =
   `Vì model anime dễ sinh thừa người / sai tỉ lệ và negative prompt bị vô hiệu: Hãy hiểu đúng ý định ` +
-  `của người dùng trong "Yêu cầu của người dùng":` +
+  `của người dùng trong "Yêu cầu của người dùng". Nếu có dòng "Số người trong MỖI ảnh" thì theo ĐÚNG dòng đó ` +
+  `(ưu tiên hơn các ý dưới):` +
   `\n- Nếu người dùng CÓ Ý ĐỊNH về 2 người / cặp đôi / tình nhân / tương tác đôi: hãy mô tả ngữ cảnh ` +
   `cặp đôi đầy đủ và thẩm mỹ (như ảnh đôi, tương tác lãng mạn/gợi cảm của cả hai nhân vật), mở đầu ` +
   `bằng tag Danbooru cặp đôi phù hợp (vd: "couple, 1girl, 1boy" hoặc "2girls"/"2boys" tùy giới tính), ` +
@@ -400,7 +411,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 
 2. BÁM SÁT MÔ TẢ NGOẠI HÌNH CHỦ THỂ (KỂ CẢ TIẾNG LÓNG/THÔNG TỤC) KHI NGƯỜI DÙNG CÓ MÔ TẢ TRONG PROMPT. Người dùng có thể tả vóc dáng, thân hình, độ tuổi, chiều cao, khuôn mặt, làn da, vòng eo/ngực/mông/hông... bằng từ thông tục hoặc tiếng lóng (ví dụ "bốc lửa", "gầy/mình dây", "đô con/cơ bắp", "bánh bèo", "da bánh mật"...). Hãy HIỂU đúng ý nghĩa thực sự của từ đó rồi DỊCH thành tag tiếng Anh RÕ RÀNG, và LẶP LẠI GIỐNG HỆT trong MỌI ảnh vì đây là đặc điểm cố định của nhân vật. TUYỆT ĐỐI KHÔNG bỏ sót, làm nhạt hay thay thế bất kỳ đặc điểm ngoại hình nào người dùng đã nêu bằng mặc định của bạn. Khi một đặc điểm đi NGƯỢC xu hướng mặc định của model ảnh (ví dụ model hay tự vẽ dáng thon/gầy, da quá mịn/hoàn hảo, ngực/mông nhỏ...), hãy CỦNG CỐ đặc điểm đó bằng NHIỀU tag bổ trợ nhau thay vì một tag yếu lẻ loi — ví dụ "da bánh mật" → "sun-kissed tan skin, warm bronze complexion, golden undertones" — để model không quay về mặc định. Ngược lại, KHÔNG BAO GIỜ tự thêm dáng béo/mũm mĩm/bụng mỡ (chubby, plump, overweight, fat, soft belly, chunky, bbw, full figure) khi người dùng KHÔNG nêu.
 
-3. TỰ LẤP PHẦN THIẾU, KHÔNG HỎI LẠI. Người dùng thường mô tả ngắn và không rành kỹ thuật. Với mọi chi tiết họ KHÔNG nói rõ, hãy tự suy luận một lựa chọn CỤ THỂ, hợp lý nhất với ý tưởng (một chủ thể rõ ràng: ngoại hình, độ tuổi, trang phục, bối cảnh, ánh sáng, tâm trạng) rồi giữ nhất quán cho cả bộ. Luôn tự quyết và điền đủ, không bao giờ hỏi lại hay để trống vì "thiếu thông tin". Nếu tin nhắn có "Ngoại hình gợi ý" thì DÙNG nó cho mọi đặc điểm ngoại hình người dùng KHÔNG nêu (quốc tịch, tóc, mắt, nét mặt, tuổi, dáng người) và giữ Y HỆT ở mọi ảnh của bộ — đừng quay về kiểu mặc định quen thuộc của bạn.
+3. TỰ LẤP PHẦN THIẾU, KHÔNG HỎI LẠI. Người dùng thường mô tả ngắn và không rành kỹ thuật. Với mọi chi tiết họ KHÔNG nói rõ, hãy tự suy luận một lựa chọn CỤ THỂ, hợp lý nhất với ý tưởng (một chủ thể rõ ràng: ngoại hình, độ tuổi, trang phục, bối cảnh, ánh sáng, tâm trạng) rồi giữ nhất quán cho cả bộ. Luôn tự quyết và điền đủ, không bao giờ hỏi lại hay để trống vì "thiếu thông tin". Nếu tin nhắn có "Ngoại hình gợi ý" thì DÙNG nó cho mọi đặc điểm ngoại hình người dùng KHÔNG nêu và KHÔNG ngụ ý (vd quốc tịch ngụ ý màu tóc/mắt/nét mặt đặc trưng — khi đó giữ đúng nét đặc trưng ấy) (quốc tịch, tóc, mắt, nét mặt, tuổi, dáng người) và giữ Y HỆT ở mọi ảnh của bộ — đừng quay về kiểu mặc định quen thuộc của bạn.
 
 4. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
 
@@ -408,18 +419,18 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt, mái tóc, màu da , kiểu dáng, kiểu tóc qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy
 7. CÂU CHUYỆN VÀ CONCEPT CHIẾN DỊCH THƯƠNG MẠI CHO BỘ LỊCH (COMMERCIAL CAMPAIGN STORYLINE & DIVERSE CONCEPTS):
    Một bộ lịch 12 tháng được xây dựng như một CHIẾN DỊCH CHỤP ẢNH THƯƠNG MẠI CAO CẤP (Commercial Editorial Photoshoot Campaign) của một nhãn hàng hoặc thương hiệu xa xỉ thuê người mẫu chụp.
-   - NẾU NGƯỜI DÙNG CÓ NÊU CỤ THỂ Ý TƯỞNG / BỐI CẢNH / ĐẠO CỤ (ví dụ: "cô gái thợ làm bánh", "nữ điệp viên", "chụp ở thư viện", "chụp bên bờ biển"...):
+   - NẾU NGƯỜI DÙNG CÓ NÊU CỤ THỂ Ý TƯỞNG / HOẠT ĐỘNG / SỰ KIỆN / BỐI CẢNH / ĐẠO CỤ (ví dụ: "cô gái thợ làm bánh", "nữ điệp viên", "bữa tiệc", "chụp ở thư viện", "chụp bên bờ biển"...):
      LUÔN TUÂN THỦ 100% Ý TƯỞNG NGƯỜI DÙNG (Nguyên tắc số 1). KHÔNG tự ý chèn ép thêm concept khác làm loãng ý đồ của họ.
    - NẾU NGƯỜI DÙNG CHỈ MÔ TẢ NHÂN VẬT HOẶC QUỐC TỊCH TỐI GIẢN (ví dụ: "cô gái", "cô gái Việt Nam", "người mẫu Nhật Bản", "cô gái tóc vàng"... mà không có bối cảnh cụ thể):
      Bạn PHẢI TỰ CHỌN một "Campaign Theme" cụ thể, có tính thương mại cao, sang trọng và thu hút người xem lịch. Cả 12 tháng xoay quanh concept chiến dịch này.
-   - CHỌN CONCEPT ĐA DẠNG: hệ thống có thể gửi kèm trong tin nhắn người dùng một "Hướng concept" (bốc ngẫu nhiên: nhóm địa điểm + thời điểm + phong cách) và danh sách "Concept các bộ gần đây". Khi người dùng KHÔNG nêu bối cảnh: phát triển Hướng concept thành MỘT địa điểm cụ thể, độc đáo, hợp nhân vật/văn hoá, và TUYỆT ĐỐI KHÔNG chọn lại địa điểm/đạo cụ trùng với các bộ gần đây. Khi người dùng ĐÃ nêu bối cảnh: bỏ qua cả hai, theo đúng người dùng.
+   - CHỌN CONCEPT ĐA DẠNG: hệ thống có thể gửi kèm trong tin nhắn người dùng một "Hướng concept" (bốc ngẫu nhiên: nhóm địa điểm + thời điểm + phong cách) và danh sách "Concept các bộ gần đây". Khi người dùng KHÔNG nêu bối cảnh: phát triển Hướng concept thành MỘT địa điểm cụ thể, độc đáo, hợp nhân vật/văn hoá, và TUYỆT ĐỐI KHÔNG chọn lại địa điểm/đạo cụ trùng với các bộ gần đây. Khi người dùng ĐÃ nêu bối cảnh: bỏ qua cả hai, theo đúng người dùng. Hướng concept KHÔNG BAO GIỜ thay thế hoạt động/sự kiện/chủ đề người dùng nêu: địa điểm phải là nơi hoạt động đó diễn ra tự nhiên (vd tiệc → hộp đêm, biệt thự, lounge…), nếu Hướng concept không hợp thì bỏ nó và tự chọn nơi hợp.
    - ĐỒNG NHẤT CONCEPT TRONG BỘ (CONCEPT COHESION — BẮT BUỘC):
-     Concept = MỘT địa điểm/bối cảnh chính + tối đa MỘT loại đạo cụ chính. Nếu có đạo cụ chính thì giữ NGUYÊN đúng món đó (cùng mẫu, cùng màu) ở mọi tháng có xuất hiện nó. TUYỆT ĐỐI KHÔNG đổi loại đạo cụ/phương tiện giữa các tháng (không tháng này xe hơi, tháng kia mô tô, máy bay, thuyền) và KHÔNG nhảy sang địa điểm khác loại. 12 tháng CHỈ thay đổi: góc máy, tư thế, giờ trong ngày/ánh sáng, và các góc nhỏ khác nhau BÊN TRONG cùng địa điểm đó (ví dụ concept thư viện cổ: tháng bên kệ sách cao, tháng ngồi trên thang trượt, tháng bên cửa sổ vòm, tháng ở bàn đọc dưới đèn...).
+     Concept = MỘT địa điểm/bối cảnh chính + tối đa MỘT loại đạo cụ chính + hoạt động/sự kiện người dùng nêu (nếu có — phải thể hiện rõ ở MỌI tháng và nêu trong campaignTheme). Nếu có đạo cụ chính thì giữ NGUYÊN đúng món đó (cùng mẫu, cùng màu) ở mọi tháng có xuất hiện nó. TUYỆT ĐỐI KHÔNG đổi loại đạo cụ/phương tiện giữa các tháng (không tháng này xe hơi, tháng kia mô tô, máy bay, thuyền) và KHÔNG nhảy sang địa điểm khác loại. 12 tháng CHỈ thay đổi: góc máy, tư thế, giờ trong ngày/ánh sáng, và các góc nhỏ khác nhau BÊN TRONG cùng địa điểm đó (ví dụ concept thư viện cổ: tháng bên kệ sách cao, tháng ngồi trên thang trượt, tháng bên cửa sổ vòm, tháng ở bàn đọc dưới đèn...).
      BẮT BUỘC phát ra concept đã chọn vào field "concept" của JSON (campaignTheme + anchorTags). "campaignTheme" viết TIẾNG ANH ngắn gọn (≤ ~10 từ, nêu địa điểm + đạo cụ chính). "anchorTags" là các đặc điểm BẤT BIẾN của cả bộ (ngoại hình nhân vật, nhóm trang phục, địa điểm/đạo cụ chính — ≤ ~25 từ, KHÔNG bảng màu/mood/biểu cảm/phong cách nhiếp ảnh) sẽ được LẶP LẠI Y HỆT ở mọi tháng; TUYỆT ĐỐI không đưa cảnh/tư thế/góc máy riêng của từng tháng vào anchorTags.
    - TƯƠNG TÁC TỰ NHIÊN VỚI ĐẠO CỤ (NATURAL INTERACTION - TRÁNH BĂM ĐÔI KHUNG HÌNH):
      Khi người mẫu tương tác với đạo cụ lớn, mô tả bằng các động từ tương tác gắn kết tự nhiên trong cùng câu (ví dụ: "leaning elegantly against...", "sitting naturally inside...", "hand resting gently on...", "standing gracefully beside..."). TUYỆT ĐỐI KHÔNG dùng cách hành văn định vị phân mảnh ("on the left is a girl, on the right is an object") để đảm bảo model AI vẽ một bố cục liền mạch duy nhất.
-   - RÀNG BUỘC DUY NHẤT 1 NGƯỜI MẪU (STRICT SINGLE SUBJECT):
-     Dù có phương tiện hay đạo cụ lớn, TUYỆT ĐỐI CHỈ CÓ DUY NHẤT 1 NGƯỜI MẪU tương tác với đồ vật. Không vẽ thêm tài xế, trợ lý, phụ tá, thợ máy hay bất kỳ người nào khác trong khung hình.
+   - SỐ NGƯỜI THEO HỆ THỐNG:
+     Mỗi ảnh có ĐÚNG số người ở dòng "Số người trong MỖI ảnh" (nếu tin nhắn có); không có dòng đó thì CHỈ 1 người mẫu. Dù có phương tiện hay đạo cụ lớn, không vẽ thêm tài xế, trợ lý, phụ tá, thợ máy hay bất kỳ người nào ngoài số đó.
 8. BIỂU CẢM THEO KHOẢNH KHẮC: biểu cảm, ánh mắt và ngôn ngữ cơ thể thuộc về TỪNG ảnh, không phải đặc điểm cố định của nhân vật. Với mỗi ảnh, hãy tự suy ra chúng từ chính hành động, cảm xúc và bối cảnh của khoảnh khắc đó, sao cho logic như một người thật đang trải qua đúng khoảnh khắc ấy, và nhất quán với concept cùng ý người dùng. Nếu trong ảnh có nhiều người, MỖI người đều phản ứng hợp với điều đang xảy ra giữa họ. Không mặc định một biểu cảm và không lặp một kiểu biểu cảm cho cả bộ.`;
 
 export interface ComposeUserMessageInput {
@@ -443,6 +454,19 @@ export interface ComposeUserMessageInput {
    * conceptSeed/avoidConcepts -- ảnh mới phải khớp đúng concept của bộ.
    */
   lockedConcept?: { theme?: string | null; anchorTags?: string | null };
+  /** Hoạt động/sự kiện cốt lõi từ lượt phân tích intent (lib/llm/intent-analysis.ts). */
+  coreIntent?: string | null;
+  /** Số người mỗi ảnh từ lượt phân tích intent. */
+  subjects?: SubjectSpec | null;
+  isAnime?: boolean;
+}
+
+function subjectLine(subjects: SubjectSpec, isAnime: boolean): string {
+  const lead = isAnime ? `mở đầu positive bằng "${subjects.tags}"` : `mô tả rõ "${subjects.description}"`;
+  const crowd = subjects.crowd
+    ? " Có thể có người phụ MỜ ở hậu cảnh (out of focus), không tranh chỗ với nhóm chính."
+    : " Không có người nào khác trong khung hình.";
+  return `Số người trong MỖI ảnh (BẮT BUỘC): ${subjects.description} — ${lead}, mỗi người rõ ràng, tách biệt.${crowd}`;
 }
 
 export function composeUserMessage({
@@ -453,9 +477,18 @@ export function composeUserMessage({
   avoidConcepts,
   appearanceSeed,
   lockedConcept,
+  coreIntent,
+  subjects,
+  isAnime = false,
 }: ComposeUserMessageInput): string {
   const lines = [`Số ảnh cần tạo: ${count}`, `Yêu cầu của người dùng: ${request}`];
   if (styleHint) lines.push(styleHint);
+  if (coreIntent?.trim()) {
+    lines.push(
+      `Ý chính BẮT BUỘC thể hiện rõ ở MỌI ảnh: ${coreIntent.trim()}. Địa điểm phải là nơi hoạt động này diễn ra tự nhiên.`,
+    );
+  }
+  if (subjects) lines.push(subjectLine(subjects, isAnime));
 
   const lockedTheme = lockedConcept?.theme?.trim();
   const lockedAnchor = lockedConcept?.anchorTags?.trim();
@@ -470,12 +503,12 @@ export function composeUserMessage({
 
   if (conceptSeed?.trim()) {
     lines.push(
-      `Hướng concept cho bộ này (CHỈ dùng khi người dùng KHÔNG nêu bối cảnh): ${conceptSeed.trim()}. Hãy TỰ nghĩ MỘT địa điểm cụ thể và tối đa MỘT đạo cụ chính phù hợp hướng này và hợp nhân vật.`,
+      `Hướng concept cho bộ này (CHỈ cho phần người dùng chưa xác định; KHÔNG thay thế hoạt động/sự kiện/chủ đề người dùng nêu): ${conceptSeed.trim()}. Hãy TỰ nghĩ MỘT địa điểm cụ thể và tối đa MỘT đạo cụ chính phù hợp hướng này và hợp nhân vật.`,
     );
   }
   if (appearanceSeed?.trim()) {
     lines.push(
-      `Ngoại hình gợi ý cho nhân vật (CHỈ dùng cho đặc điểm người dùng KHÔNG nêu, chỉnh cho hợp lý với quốc tịch; giữ y hệt mọi ảnh): ${appearanceSeed.trim()}`,
+      `Ngoại hình gợi ý cho các đặc điểm người dùng còn để trống (đã lọc cho khớp yêu cầu; giữ y hệt mọi ảnh — nếu vẫn mâu thuẫn với điều người dùng nêu hoặc ngụ ý thì theo người dùng): ${appearanceSeed.trim()}`,
     );
   }
   if (avoidConcepts && avoidConcepts.length > 0) {

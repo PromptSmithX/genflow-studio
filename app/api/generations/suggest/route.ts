@@ -14,8 +14,22 @@ import {
 } from "@/lib/llm/default-system-prompt";
 import { finalizeSuggestedImage, finalizeEtsy } from "@/lib/llm/finalize-suggestion";
 import { resolveLlmConfig } from "@/lib/llm/resolve-config";
-import { loadRecentConcepts, pickConceptSeed } from "@/lib/llm/concept-diversity";
-import { loadRecentAppearances, pickAppearanceSeed, requestWantsHeavyBody } from "@/lib/llm/appearance-diversity";
+import {
+  ANIME_LOOK,
+  LOCATION_FAMILIES,
+  PHOTO_LOOK,
+  TIME_WEATHER,
+  loadRecentConcepts,
+  pickConceptSeed,
+} from "@/lib/llm/concept-diversity";
+import { applyDecision } from "@/lib/llm/axis-decision";
+import { analyzeIntent, summarizeIntent } from "@/lib/llm/intent-analysis";
+import {
+  loadRecentAppearances,
+  pickAnimeAppearanceSeed,
+  pickAppearanceSeed,
+  requestWantsHeavyBody,
+} from "@/lib/llm/appearance-diversity";
 
 export const runtime = "nodejs";
 
@@ -48,12 +62,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const client = new LlmClient({
+      baseUrl: llmConfig.baseUrl,
+      apiKey: llmConfig.apiKey,
+      model: llmConfig.model,
+    });
+
+    // Xác định trục nào người dùng đã nêu/ngụ ý để seed đa dạng không đè lên ý họ.
+    // null (lượt phân tích lỗi) -> bốc như cũ.
+    const analysis = await analyzeIntent(client, input.request, isAnimeMedium);
+    const intent = analysis?.axes ?? null;
+    console.info(`[LLM intent] ${summarizeIntent(analysis)}`);
+
     // Đa dạng concept giữa các bộ bằng code: né concept vài bộ gần nhất + bốc
-    // ngẫu nhiên 1 concept gợi ý (chỉ áp dụng khi người dùng không nêu bối cảnh).
+    // ngẫu nhiên 1 hướng concept cho các phần người dùng không nêu.
     const recentConcepts = await loadRecentConcepts();
-    const conceptSeed = pickConceptSeed(recentConcepts);
+    const conceptSeed = pickConceptSeed(recentConcepts, Math.random, {
+      families: applyDecision(LOCATION_FAMILIES, (family) => family.key, intent?.location),
+      timeWeather: applyDecision(TIME_WEATHER, (item) => item, intent?.timeWeather),
+      looks: applyDecision(isAnimeMedium ? ANIME_LOOK : PHOTO_LOOK, (item) => item, intent?.look),
+    });
     // Đa dạng ngoại hình nhân vật giữa các bộ (chỉ cho đặc điểm người dùng không nêu).
-    const appearanceSeed = pickAppearanceSeed(input.request, await loadRecentAppearances());
+    const recentAppearances = await loadRecentAppearances();
+    const appearanceSeed = isAnimeMedium
+      ? pickAnimeAppearanceSeed(recentAppearances, Math.random, intent)
+      : pickAppearanceSeed(input.request, recentAppearances, Math.random, intent);
     const allowHeavyBody = requestWantsHeavyBody(input.request);
     const userMessage = composeUserMessage({
       request: input.request,
@@ -62,7 +95,11 @@ export async function POST(request: NextRequest) {
       conceptSeed: conceptSeed.text,
       avoidConcepts: recentConcepts.themes,
       appearanceSeed: appearanceSeed.text,
+      coreIntent: analysis?.coreIntent,
+      subjects: analysis?.subjects,
+      isAnime: isAnimeMedium,
     });
+    console.info(`[LLM intent] concept seed: ${JSON.stringify(conceptSeed.text)}`);
     // Trợ lý AI luôn tạo bộ ảnh lịch (ảnh #1 = bìa có chữ, còn lại = artwork sạch).
     // Chọn system prompt tách riêng theo loại: anime vs người thực.
     const baseSystemPrompt = isAnimeMedium ? CALENDAR_SYSTEM_PROMPT_ANIME : CALENDAR_SYSTEM_PROMPT_REAL;
@@ -72,11 +109,6 @@ export async function POST(request: NextRequest) {
     const systemPrompt = SHARED_BIAS_PROMPT.trim()
       ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}`
       : baseSystemPrompt;
-    const client = new LlmClient({
-      baseUrl: llmConfig.baseUrl,
-      apiKey: llmConfig.apiKey,
-      model: llmConfig.model,
-    });
 
     let result;
     try {
@@ -105,6 +137,7 @@ export async function POST(request: NextRequest) {
         isAnimeMedium,
         anchorTags: result.concept?.anchorTags,
         allowHeavyBody,
+        subjects: analysis?.subjects,
       });
     });
     if (result.etsy) {

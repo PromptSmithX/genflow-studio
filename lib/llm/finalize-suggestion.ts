@@ -1,7 +1,10 @@
 import { mergeTags } from "@/lib/prompts/merge-tags";
 import type { EtsySuggestion, LlmImageSuggestion } from "@/lib/validations/llm";
+import type { SubjectSpec } from "@/lib/llm/axis-decision";
 import {
   SINGLE_SUBJECT_QUALITY_TAGS,
+  MULTI_SUBJECT_QUALITY_TAGS,
+  CROWD_BACKGROUND_TAGS,
   FRAMING_MARGIN_TAGS,
   FRAMING_HEADROOM_TAGS,
   ANIME_SINGLE_SUBJECT_TAGS,
@@ -89,6 +92,29 @@ function resolveAnimeSubjectTags(positive: string): string {
   return ANIME_COUPLE_REGEX.test(positive) ? ANIME_COUPLE_QUALITY_TAGS : ANIME_SINGLE_SUBJECT_TAGS;
 }
 
+/**
+ * Tag chủ thể ép lên ĐẦU positive. Có `subjects` (từ lượt phân tích intent) thì
+ * theo đúng số người đó; không có (intent lỗi) thì giữ hành vi cũ: real luôn
+ * solo, anime đoán cặp đôi từ positive.
+ */
+function subjectLeadTags(isAnimeMedium: boolean, positive: string, subjects?: SubjectSpec | null): string {
+  if (!subjects || (subjects.kind === "solo" && !subjects.crowd)) {
+    return isAnimeMedium ? resolveAnimeSubjectTags(positive) : SINGLE_SUBJECT_QUALITY_TAGS;
+  }
+  let lead: string;
+  if (subjects.kind === "solo") {
+    // 1 người chính + người phụ mờ: không dùng tag "no other people".
+    lead = isAnimeMedium
+      ? `solo focus, ${subjects.tags}, ${ANIME_COUPLE_QUALITY_TAGS}`
+      : `one main subject in sharp focus, ${MULTI_SUBJECT_QUALITY_TAGS}`;
+  } else {
+    lead = isAnimeMedium
+      ? `${subjects.tags}, ${ANIME_COUPLE_QUALITY_TAGS}`
+      : `${subjects.description}, ${MULTI_SUBJECT_QUALITY_TAGS}`;
+  }
+  return subjects.crowd ? `${lead}, ${CROWD_BACKGROUND_TAGS}` : lead;
+}
+
 // Ảnh toàn thân -> cần đủ khoảng trống quanh người (FRAMING_MARGIN_TAGS).
 const FULL_BODY_REGEX = /\b(full[\s-]?body|head[\s-]+to[\s-]+toe|full[\s-]?length)\b/i;
 
@@ -150,7 +176,14 @@ export function finalizeSuggestedImage(
     isAnimeMedium,
     anchorTags,
     allowHeavyBody = false,
-  }: { isCover: boolean; isAnimeMedium: boolean; anchorTags?: string | null; allowHeavyBody?: boolean },
+    subjects,
+  }: {
+    isCover: boolean;
+    isAnimeMedium: boolean;
+    anchorTags?: string | null;
+    allowHeavyBody?: boolean;
+    subjects?: SubjectSpec | null;
+  },
 ): LlmImageSuggestion {
   // Làm sạch bất kỳ từ khoá copy space / split nào LLM có thể đã sinh ra.
   image.positive = image.positive
@@ -208,9 +241,7 @@ export function finalizeSuggestedImage(
     // trọng số token đầu mạnh) để giảm lỗi nhân đôi chủ thể ở Turbo (negative
     // bị ZeroOut nên không có lớp chặn duplicate).
     image.positive = dedupePhrases(
-      isAnimeMedium
-        ? mergeTags(resolveAnimeSubjectTags(image.positive), framing, anchor, image.positive)
-        : mergeTags(SINGLE_SUBJECT_QUALITY_TAGS, framing, anchor, image.positive),
+      mergeTags(subjectLeadTags(isAnimeMedium, image.positive, subjects), framing, anchor, image.positive),
     );
     return image;
   }
@@ -243,23 +274,14 @@ export function finalizeSuggestedImage(
   }
 
   image.positive = dedupePhrases(
-    isAnimeMedium
-      ? mergeTags(
-          resolveAnimeSubjectTags(image.positive),
-          framing,
-          anchor,
-          image.positive,
-          ...missingTags,
-          "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-        )
-      : mergeTags(
-          SINGLE_SUBJECT_QUALITY_TAGS,
-          framing,
-          anchor,
-          image.positive,
-          ...missingTags,
-          "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
-        ),
+    mergeTags(
+      subjectLeadTags(isAnimeMedium, image.positive, subjects),
+      framing,
+      anchor,
+      image.positive,
+      ...missingTags,
+      "large clear readable typography, text placed in empty background area away from the subject, single continuous scene",
+    ),
   );
   return image;
 }

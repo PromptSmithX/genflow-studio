@@ -54,9 +54,10 @@ export class LlmClient {
   private async chatCompletion(
     systemPrompt: string,
     userMessage: string,
+    { temperature = 1, timeoutMs = this.timeoutMs }: { temperature?: number; timeoutMs?: number } = {},
   ): Promise<{ content: string; usage: TokenUsage | null }> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -72,8 +73,7 @@ export class LlmClient {
             { role: "user", content: userMessage },
           ],
           response_format: { type: "json_object" },
-          // Set temperature/top_p high for variety between generation batches.
-          temperature: 1,
+          temperature,
           top_p: 1,
         }),
         signal: controller.signal,
@@ -118,6 +118,20 @@ export class LlmClient {
         }
       : null;
     return { content, usage };
+  }
+
+  /** Một lượt gọi trả JSON tuỳ ý (không retry); người gọi tự kiểm tra shape. */
+  async completeJson(
+    systemPrompt: string,
+    userMessage: string,
+    options: { temperature?: number; timeoutMs?: number } = {},
+  ): Promise<unknown> {
+    const { content } = await this.chatCompletion(systemPrompt, userMessage, options);
+    try {
+      return JSON.parse(content);
+    } catch {
+      throw new LlmApiError("LLM không trả về JSON hợp lệ", "invalid_json", { content: content.slice(0, 500) });
+    }
   }
 
   private parseResult(content: string, expectedCount: number): LlmSuggestionResult {

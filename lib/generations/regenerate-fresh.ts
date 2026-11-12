@@ -17,6 +17,7 @@ import {
 import { finalizeSuggestedImage } from "@/lib/llm/finalize-suggestion";
 import { resolveLlmConfig } from "@/lib/llm/resolve-config";
 import { requestWantsHeavyBody } from "@/lib/llm/appearance-diversity";
+import { analyzeIntent } from "@/lib/llm/intent-analysis";
 import { GenerationSetupError } from "@/lib/generations/create-batch";
 
 interface FreshPrompt {
@@ -67,17 +68,29 @@ async function generateFreshPromptForJob({
     }
   }
 
-  // Batch có concept đã chốt -> khoá LLM vào đúng concept đó (không gợi ý concept
-  // mới) để ảnh sửa lại không lệch khỏi phần còn lại của bộ.
-  const userMessage = composeUserMessage({ request, count: 2, styleHint, lockedConcept: concept });
-  const baseSystemPrompt = isAnimeMedium ? CALENDAR_SYSTEM_PROMPT_ANIME : CALENDAR_SYSTEM_PROMPT_REAL;
-  const systemPrompt = SHARED_BIAS_PROMPT.trim() ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}` : baseSystemPrompt;
-
   const client = new LlmClient({
     baseUrl: llmConfig.baseUrl,
     apiKey: llmConfig.apiKey,
     model: llmConfig.model,
   });
+  // Phân tích lại yêu cầu gốc (temperature 0 nên ổn định) để ảnh sửa lại giữ đúng
+  // ý chính và số người như lúc tạo bộ.
+  const analysis = await analyzeIntent(client, request, isAnimeMedium);
+
+  // Batch có concept đã chốt -> khoá LLM vào đúng concept đó (không gợi ý concept
+  // mới) để ảnh sửa lại không lệch khỏi phần còn lại của bộ.
+  const userMessage = composeUserMessage({
+    request,
+    count: 2,
+    styleHint,
+    lockedConcept: concept,
+    coreIntent: analysis?.coreIntent,
+    subjects: analysis?.subjects,
+    isAnime: isAnimeMedium,
+  });
+  const baseSystemPrompt = isAnimeMedium ? CALENDAR_SYSTEM_PROMPT_ANIME : CALENDAR_SYSTEM_PROMPT_REAL;
+  const systemPrompt = SHARED_BIAS_PROMPT.trim() ? `${SHARED_BIAS_PROMPT}\n\n${baseSystemPrompt}` : baseSystemPrompt;
+
   const result = await client.generatePrompts({ systemPrompt, userMessage, expectedCount: 2 });
 
   // images[0] = bìa (vai trò ảnh #1 trong system prompt), images[1] = artwork.
@@ -87,6 +100,7 @@ async function generateFreshPromptForJob({
     isAnimeMedium,
     anchorTags: concept.anchorTags ?? result.concept?.anchorTags,
     allowHeavyBody: requestWantsHeavyBody(request),
+    subjects: analysis?.subjects,
   });
 
   return { positive: image.positive, negative: result.negative };

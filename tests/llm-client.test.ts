@@ -44,6 +44,17 @@ describe("LlmClient", () => {
     expect(result.usage).toBeNull();
   });
 
+  it("completeJson sends the requested temperature and returns the parsed object", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ axes: {} }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new LlmClient({ baseUrl: "http://localhost:1234/v1", model: "test-model" });
+    expect(await client.completeJson("sys", "user", { temperature: 0 })).toEqual({ axes: {} });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).temperature).toBe(0);
+
+    await client.generatePrompts({ systemPrompt: "s", userMessage: "u", expectedCount: 0 }).catch(() => {});
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).temperature).toBe(1);
+  });
+
   it("sends standard headers and omits bypass-tunnel-reminder", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       chatResponse({

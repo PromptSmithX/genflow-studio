@@ -71,7 +71,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - CONCEPT CHUNG (BẮT BUỘC, QUYẾT TRƯỚC khi viết từng ảnh): chốt MỘT concept/câu chuyện chiến dịch cho cả bộ, rồi rút ra "anchorTags" — một chuỗi tag tiếng Anh CHỈ gồm phần BẤT BIẾN sẽ lặp lại Ở MỌI ảnh: ngoại hình nhân vật (màu & kiểu tóc, màu mắt, nét nhận dạng khuôn mặt — hình dáng mặt, không phải tag chi tiết da/mắt cận cảnh —, dáng người, độ tuổi, nét đặc trưng), nhóm trang phục, địa điểm/đạo cụ chính của concept — NGẮN GỌN ≤ ~25 từ, KHÔNG chứa bảng màu, mood, ánh sáng, biểu cảm/cảm xúc hay từ phong cách nhiếp ảnh (cinematic, editorial, pastel...). TUYỆT ĐỐI KHÔNG đưa cảnh cụ thể/tư thế/góc máy từng tháng vào anchorTags (những thứ này PHẢI thay đổi giữa các ảnh). Trả "campaignTheme" (ngắn gọn) + "anchorTags" ở field "concept", và viết MỌI "positive" nhất quán với anchorTags đó.
 - Khi tương tác với đạo cụ lớn, dùng động từ gắn kết tự nhiên ("leaning on...", "sitting by...", "posing with...") để giữ bố cục liền mạch trong cùng một cảnh; không sinh thêm người ngoài số người quy định.
 - QUY TẮC VỀ SỐ LƯỢNG CHỦ THỂ (NHÂN VẬT) — nếu tin nhắn có dòng "Số người trong MỖI ảnh" thì theo ĐÚNG dòng đó (ưu tiên hơn các ý dưới):
-  • TÔN TRỌNG Ý ĐỊNH CỦA NGƯỜI DÙNG: Khi người dùng có ý định mô tả 2 người / cặp đôi / tình nhân / nam nữ / tương tác đôi lứa, hãy mô tả ĐẦY ĐỦ CẢ HAI NHÂN VẬT tương tác tự nhiên trong cùng một cảnh liền mạch, gợi cảm và thẩm mỹ theo đúng yêu cầu (dùng tag Danbooru đôi chuẩn như "couple, 1girl, 1boy", hoặc "2girls"/"2boys" tùy ngữ cảnh). TUYỆT ĐỐI KHÔNG đưa các từ chỉ cặp đôi hay giới tính (như "couple", "man", "boy", "male", "1boy", "two people") vào negative prompt.
+  • TÔN TRỌNG Ý ĐỊNH CỦA NGƯỜI DÙNG: Khi người dùng có ý định mô tả 2 người / cặp đôi / tình nhân / nam nữ / tương tác đôi lứa, hãy mô tả ĐẦY ĐỦ CẢ HAI NHÂN VẬT tương tác tự nhiên trong cùng một cảnh liền mạch, gợi cảm và thẩm mỹ theo đúng yêu cầu (nói rõ số người bằng câu tiếng Anh tự nhiên như "a man and a woman", "two women", "two men" tùy ngữ cảnh). TUYỆT ĐỐI KHÔNG đưa các từ chỉ cặp đôi hay giới tính (như "couple", "man", "boy", "male", "1boy", "two people") vào negative prompt.
   • MẶC ĐỊNH (khi người dùng chỉ mô tả một nhân vật hoặc concept chung): MỌI "positive" phải mô tả CHÍNH XÁC MỘT người (mở đầu bằng "solo, 1girl" hoặc "solo, 1boy"), khung hình rõ ràng, tỉ lệ cơ thể tự nhiên. TUYỆT ĐỐI KHÔNG tự ý sinh người thứ hai hay đám đông ở hậu cảnh.
 - Khung ảnh output là NGANG (landscape, tỉ lệ 4:3). Hãy ĐA DẠNG TƯ THẾ giữa các ảnh: MỖI ảnh một tư
   thế + góc máy KHÁC nhau (đứng, bước đi, ngồi, dựa tường, quỳ, nghiêng người, nằm, vặn người...).
@@ -383,8 +383,18 @@ export const ANIME_COUPLE_QUALITY_TAGS =
   "balanced anatomy, correct head-to-body ratio, normal head size";
 
 /**
+ * Bản anime nhiều người dùng ở đầu positive: như ANIME_COUPLE_QUALITY_TAGS cộng
+ * các tag chống nhân đôi/tách khung tương đương MULTI_SUBJECT_QUALITY_TAGS bên
+ * ảnh thực (Turbo không có negative để chặn nhân vật bị vẽ 2 lần).
+ */
+export const ANIME_MULTI_SUBJECT_TAGS =
+  `${ANIME_COUPLE_QUALITY_TAGS}, anatomically correct hands, correct number of arms and legs, ` +
+  "each character appears only once, single continuous scene, one unified composition";
+
+/**
  * Hint tiếng Việt nối vào user message khi medium là anime: hướng LLM hiểu đúng ý
- * định của người dùng, mở đầu bằng tag Danbooru phù hợp (đơn hoặc đôi), bổ trợ cho
+ * định của người dùng (1 người: mở đầu bằng tag Danbooru; nhiều người: tả số
+ * người và tư thế bằng câu tự nhiên vì model hiểu câu hơn tag), bổ trợ cho
  * ANIME_SINGLE_SUBJECT_TAGS / ANIME_COUPLE_QUALITY_TAGS.
  */
 export const ANIME_SINGLE_SUBJECT_HINT =
@@ -392,9 +402,19 @@ export const ANIME_SINGLE_SUBJECT_HINT =
   `của người dùng trong "Yêu cầu của người dùng". Nếu có dòng "Số người trong MỖI ảnh" thì theo ĐÚNG dòng đó ` +
   `(ưu tiên hơn các ý dưới):` +
   `\n- Nếu người dùng CÓ Ý ĐỊNH về 2 người / cặp đôi / tình nhân / tương tác đôi: hãy mô tả ngữ cảnh ` +
-  `cặp đôi đầy đủ và thẩm mỹ (như ảnh đôi, tương tác lãng mạn/gợi cảm của cả hai nhân vật), mở đầu ` +
-  `bằng tag Danbooru cặp đôi phù hợp (vd: "couple, 1girl, 1boy" hoặc "2girls"/"2boys" tùy giới tính), ` +
-  `và TUYỆT ĐỐI KHÔNG đưa các từ cấm như "couple, man, boy, male, 1boy, two people" vào negative prompt.` +
+  `cặp đôi đầy đủ và thẩm mỹ (như ảnh đôi, tương tác lãng mạn/gợi cảm của cả hai nhân vật), nói rõ số ` +
+  `người bằng câu tiếng Anh tự nhiên (vd "a man and a woman", "two women") — model hiểu câu tự nhiên tốt ` +
+  `hơn tag Danbooru — và TUYỆT ĐỐI KHÔNG đưa các từ cấm như "couple, man, boy, male, 1boy, two people" vào negative prompt.` +
+  `\n  Với ảnh cặp đôi/nhiều người (model chạy ít bước nên dễ vẽ thừa người, dính/thừa tay chân):` +
+  `\n  • Vẫn giữ tư thế ĐA DẠNG, nhưng TẢ tư thế bằng câu tự nhiên thay vì gọi tên tư thế: ai nằm/ngồi/quỳ/đứng, ` +
+  `ai ở trên/dưới, mỗi người quay mặt về đâu, tay chân mỗi người đặt ở đâu (vd "the woman sits on top of the ` +
+  `man facing him, her knees on either side of his hips, his hands on her waist" thay cho "cowgirl position").` +
+  `\n  • Mỗi ảnh chỉ MỘT góc máy ("from side" / "from behind" / "from below" / "from above" / "from front"). Chọn góc ` +
+  `sao cho các bộ phận cần lộ NHÌN THẤY ĐƯỢC TỰ NHIÊN từ góc đó; KHÔNG đòi thấy bộ phận mà tư thế đang che ` +
+  `(vd đang fellatio thì không ghi "pussy visible from below") — đòi thứ góc máy không thấy được khiến model vẽ thêm người.` +
+  `\n  • Trong phần hành động gọi nhân vật là "the woman" / "the man", KHÔNG tả lại tóc/mắt/dáng (app đã chèn sẵn ` +
+  `ngoại hình một lần) — tả 2 lần bằng 2 cách gọi khác nhau khiến model vẽ thành 2 người.` +
+  `\n  • Ảnh tháng KHÔNG dùng cụm "key visual" (kiểu poster hay kèm thêm chân dung nhân vật đứng riêng).` +
   `\n- Nếu người dùng KHÔNG có ý định về 2 người (mô tả 1 người hoặc ý tưởng chung): MẶC ĐỊNH MỖI ` +
   `"positive" hãy MỞ ĐẦU bằng "solo, 1girl" hoặc "solo, 1boy" đúng theo giới tính nhân vật, mô tả ` +
   `CHÍNH XÁC MỘT người, không có người thừa hay đám đông ở hậu cảnh, và giữ tỉ lệ đầu-thân tự nhiên.`;
@@ -462,7 +482,10 @@ export interface ComposeUserMessageInput {
 }
 
 function subjectLine(subjects: SubjectSpec, isAnime: boolean): string {
-  const lead = isAnime ? `mở đầu positive bằng "${subjects.tags}"` : `mô tả rõ "${subjects.description}"`;
+  // Model (Krea2 + Qwen3-VL) hiểu câu tự nhiên hơn tag Danbooru: chỉ anime 1 người
+  // không đám đông còn mở đầu bằng tag, mọi cảnh nhiều người tả bằng description.
+  const useTags = isAnime && subjects.kind === "solo" && !subjects.crowd;
+  const lead = useTags ? `mở đầu positive bằng "${subjects.tags}"` : `mô tả rõ "${subjects.description}"`;
   const crowd = subjects.crowd
     ? " Có thể có người phụ MỜ ở hậu cảnh (out of focus), không tranh chỗ với nhóm chính."
     : " Không có người nào khác trong khung hình.";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { finalizeSuggestedImage, finalizeEtsy } from "@/lib/llm/finalize-suggestion";
+import { finalizeSuggestedImage, finalizeEtsy, scrubAnimeKeyVisual } from "@/lib/llm/finalize-suggestion";
 import type { EtsySuggestion, LlmImageSuggestion } from "@/lib/validations/llm";
 
 function makeImage(overrides: Partial<LlmImageSuggestion> = {}): LlmImageSuggestion {
@@ -102,10 +102,76 @@ describe("finalizeSuggestedImage", () => {
     expect(lower).not.toContain("side by side");
   });
 
-  it("anime: does NOT strip duplicate-subject phrasing (real-only rule)", () => {
-    const image = makeImage({ positive: "a scene, the same girl appears" });
+  it("anime: also strips duplicate-subject phrasing", () => {
+    const image = makeImage({ positive: "a scene, the same girl appears, side by side" });
     const result = finalizeSuggestedImage(image, { isCover: false, isAnimeMedium: true });
-    expect(result.positive).toContain("the same girl appears");
+    expect(result.positive).not.toContain("same girl");
+    expect(result.positive).not.toContain("side by side");
+  });
+
+  const couple = { kind: "couple", tags: "1boy, 1girl", description: "a man and a woman", crowd: false } as const;
+
+  it("anime couple: leads with the natural-language description and anti-duplication tags", () => {
+    const image = makeImage({ positive: "the woman sits on top of the man facing him, from side" });
+    const result = finalizeSuggestedImage(image, { isCover: false, isAnimeMedium: true, subjects: couple });
+    expect(result.positive.startsWith("a man and a woman, balanced anatomy")).toBe(true);
+    expect(result.positive).not.toContain("1boy, 1girl");
+    expect(result.positive).toContain("each character appears only once");
+  });
+
+  it("real couple: lead tags unchanged", () => {
+    const image = makeImage({ positive: "a scene" });
+    const result = finalizeSuggestedImage(image, { isCover: false, isAnimeMedium: false, subjects: couple });
+    expect(result.positive.startsWith("a man and a woman, natural body proportions")).toBe(true);
+    expect(result.positive).not.toContain("each character appears only once");
+  });
+
+  it("anime months drop 'key visual', cover keeps it", () => {
+    const month = finalizeSuggestedImage(makeImage({ positive: "bedroom, detailed anime key visual, rain" }), {
+      isCover: false,
+      isAnimeMedium: true,
+    });
+    expect(month.positive.toLowerCase()).not.toContain("key visual");
+
+    const cover = finalizeSuggestedImage(makeImage({ positive: "bedroom, anime key visual title" }), {
+      isCover: true,
+      isAnimeMedium: true,
+    });
+    expect(cover.positive.toLowerCase()).toContain("key visual");
+  });
+
+  it("anime: does not re-inject a paraphrased anchor tag; real still does", () => {
+    const anchorTags = "adult man short black hair, large canopy bed";
+    const positive = "adult man with short black hair and muscular build, on the bed";
+    const anime = finalizeSuggestedImage(makeImage({ positive }), { isCover: false, isAnimeMedium: true, anchorTags });
+    expect(anime.positive).not.toContain("adult man short black hair");
+    expect(anime.positive).toContain("large canopy bed");
+
+    const real = finalizeSuggestedImage(makeImage({ positive }), { isCover: false, isAnimeMedium: false, anchorTags });
+    expect(real.positive).toContain("adult man short black hair");
+  });
+
+  it("anime: rewrites appearance epithets to plain nouns; real unchanged", () => {
+    const anchorTags = "long crimson hair with drill curls, golden eyes";
+    const positive =
+      "golden-eyed woman lifted in full nelson, lavender wavy hair beauty smiling, woman with long crimson hair with drill curls on all fours";
+    const anime = finalizeSuggestedImage(makeImage({ positive }), { isCover: false, isAnimeMedium: true, anchorTags });
+    expect(anime.positive).toContain("the woman lifted in full nelson");
+    expect(anime.positive).toContain("the woman smiling");
+    expect(anime.positive).toContain("the woman on all fours");
+    expect(anime.positive).not.toMatch(/golden-eyed woman|hair beauty|woman with long crimson/);
+
+    const real = finalizeSuggestedImage(makeImage({ positive }), { isCover: false, isAnimeMedium: false, anchorTags });
+    expect(real.positive).toContain("golden-eyed woman");
+  });
+});
+
+describe("scrubAnimeKeyVisual", () => {
+  it("rewrites the medium preset phrase and removes loose key-visual tags", () => {
+    const out = scrubAnimeKeyVisual(
+      "anime style, high quality anime key visual, clean lineart, detailed anime key visual, anime key visual, rain",
+    );
+    expect(out).toBe("anime style, high quality anime illustration, clean lineart, rain");
   });
 });
 

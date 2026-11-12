@@ -104,7 +104,7 @@ export const PHOTO_LOOK = [
 // Bản anime của PHOTO_LOOK: gợi ý chất render/ánh sáng, không chứa "photo".
 export const ANIME_LOOK = [
   "soft cel-shaded lighting",
-  "detailed anime key visual",
+  "detailed anime illustration",
   "painterly anime background art",
   "cinematic anime film still",
   "vibrant slice-of-life anime scene",

@@ -5,6 +5,7 @@ import { getWorkflowConfig } from "@/lib/comfyui/workflow-store";
 import { getRunpodClient } from "@/lib/comfyui/runpod-client";
 import { suggestPrompts } from "@/lib/llm/suggest-prompts";
 import { mergeTags } from "@/lib/prompts/merge-tags";
+import { isAnimeMediumPreset, scrubAnimeKeyVisual } from "@/lib/llm/finalize-suggestion";
 import { randomSeed } from "@/lib/seed";
 import { createAndSubmitBatch } from "@/lib/generations/create-batch";
 import { GenerationSetupError } from "@/lib/generations/errors";
@@ -182,13 +183,17 @@ export async function runDraft(batch: {
       ? await prisma.mediumPreset.findUnique({ where: { id: batch.mediumId } })
       : null;
     const params = parseDraftParams(batch.draftParamsJson);
+    const isAnime = isAnimeMediumPreset(medium);
 
     await createAndSubmitBatch(
       {
         ideaPrompt: batch.ideaPrompt,
         mediumId: batch.mediumId,
-        images: suggestions.images.map((image) => ({
-          positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
+        images: suggestions.images.map((image, index) => ({
+          positiveOverride:
+            isAnime && index > 0
+              ? scrubAnimeKeyVisual(mergeTags(medium?.positivePrompt, image.positive))
+              : mergeTags(medium?.positivePrompt, image.positive),
           negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,
         })),
         etsy: suggestions.etsy

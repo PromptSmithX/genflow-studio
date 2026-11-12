@@ -14,7 +14,7 @@ import {
   ANIME_SINGLE_SUBJECT_HINT,
   composeUserMessage,
 } from "@/lib/llm/default-system-prompt";
-import { finalizeSuggestedImage } from "@/lib/llm/finalize-suggestion";
+import { finalizeSuggestedImage, isAnimeMediumPreset, scrubAnimeKeyVisual } from "@/lib/llm/finalize-suggestion";
 import { resolveLlmConfig } from "@/lib/llm/resolve-config";
 import { requestWantsHeavyBody } from "@/lib/llm/appearance-diversity";
 import { analyzeIntent } from "@/lib/llm/intent-analysis";
@@ -154,7 +154,8 @@ export async function regenerateJobFreshPrompt(jobId: string) {
   });
 
   const medium = batch.mediumId ? await prisma.mediumPreset.findUnique({ where: { id: batch.mediumId } }) : null;
-  const positiveOverride = mergeTags(medium?.positivePrompt, fresh.positive);
+  const merged = mergeTags(medium?.positivePrompt, fresh.positive);
+  const positiveOverride = isAnimeMediumPreset(medium) && !isCover ? scrubAnimeKeyVisual(merged) : merged;
   const negativeOverride = mergeTags(medium?.negativePrompt, fresh.negative) || undefined;
 
   const globalPrompt = await getOrCreateGlobalPrompt();

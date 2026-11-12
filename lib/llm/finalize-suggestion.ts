@@ -8,7 +8,7 @@ import {
   FRAMING_MARGIN_TAGS,
   FRAMING_HEADROOM_TAGS,
   ANIME_SINGLE_SUBJECT_TAGS,
-  ANIME_COUPLE_QUALITY_TAGS,
+  ANIME_MULTI_SUBJECT_TAGS,
 } from "@/lib/llm/default-system-prompt";
 
 const CALENDAR_YEAR = "2027";
@@ -83,13 +83,63 @@ const CALENDAR_LABEL = "CALENDAR";
 
 /**
  * Với anime: nếu LLM đã nhận diện và mở đầu bằng tag cặp đôi/hai người, dùng
- * tag giải phẫu tỉ lệ (ANIME_COUPLE_QUALITY_TAGS) để không chèn các tag solo/no
+ * tag nhiều người (ANIME_MULTI_SUBJECT_TAGS) để không chèn các tag solo/no
  * second person đè lên prompt cặp đôi. Mặc định các trường hợp 1 người (solo)
  * vẫn khoá bằng ANIME_SINGLE_SUBJECT_TAGS như cũ.
  */
 const ANIME_COUPLE_REGEX = /^\s*(couple|1boy\s*,\s*1girl|1girl\s*,\s*1boy|2girls|2boys)\b/i;
 function resolveAnimeSubjectTags(positive: string): string {
-  return ANIME_COUPLE_REGEX.test(positive) ? ANIME_COUPLE_QUALITY_TAGS : ANIME_SINGLE_SUBJECT_TAGS;
+  return ANIME_COUPLE_REGEX.test(positive) ? ANIME_MULTI_SUBJECT_TAGS : ANIME_SINGLE_SUBJECT_TAGS;
+}
+
+// "Key visual" = poster quảng bá anime, hay kèm chân dung nhân vật lớn đứng riêng
+// cạnh cảnh chính -> ở ảnh tháng khiến nhân vật bị vẽ 2 lần. Bìa giữ nguyên.
+const KEY_VISUAL_QUALITY_REGEX = /\bhigh\s+quality\s+anime\s+key\s+visual\b/gi;
+const KEY_VISUAL_REGEX = /\b(detailed\s+)?(anime\s+)?key\s+visual\b/gi;
+
+/** Anime, ảnh tháng: bỏ "key visual" (kể cả phần tag của preset Kiểu ảnh). */
+export function scrubAnimeKeyVisual(positive: string): string {
+  return tidyCommas(
+    positive.replace(KEY_VISUAL_QUALITY_REGEX, "high quality anime illustration").replace(KEY_VISUAL_REGEX, ""),
+  );
+}
+
+/** Nhận diện Kiểu ảnh anime -- cùng quy tắc ở suggest-prompts/regenerate-fresh. */
+export function isAnimeMediumPreset(medium: { name: string; description?: string | null } | null | undefined): boolean {
+  if (!medium) return false;
+  return medium.name.toLowerCase().includes("anime") || (medium.description?.toLowerCase().includes("anime") ?? false);
+}
+
+function tidyCommas(text: string): string {
+  return text
+    .replace(/\s*,(\s*,)+/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+,/g, ",")
+    .replace(/^\s*,\s*/g, "")
+    .replace(/,\s*$/g, "")
+    .trim();
+}
+
+// Anime: LLM hay gọi nhân vật bằng đặc điểm ngoại hình ("golden-eyed woman",
+// "lavender wavy hair beauty") trong khi anchor đã tả ngoại hình -> model hiểu
+// thành 2 người. Đổi các cách gọi đó về danh từ trơn.
+const EPITHET_FEMALE_REGEX =
+  /\b(?:[a-z]+[\s-])?(?:[a-z]+-(?:eyed|haired)|(?:[a-z]+\s+){1,3}hair)\s+(?:woman|girl|beauty|lady)\b/gi;
+const EPITHET_MALE_REGEX = /\b(?:[a-z]+[\s-])?[a-z]+-(?:eyed|haired)\s+(?:man|guy|boy)\b/gi;
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Anime: thay các cụm gọi nhân vật bằng ngoại hình thành "the woman"/"the man". */
+export function neutralizeAnimeEpithets(positive: string, anchorTags: string | null | undefined): string {
+  let result = positive.replace(EPITHET_FEMALE_REGEX, "the woman").replace(EPITHET_MALE_REGEX, "the man");
+  // "woman with long crimson hair ..." khi "long crimson hair ..." chính là tag anchor.
+  for (const tag of (anchorTags ?? "").split(",").map((t) => t.trim()).filter((t) => /\bhair\b/i.test(t))) {
+    result = result.replace(new RegExp(`\\b(?:woman|girl|lady)\\s+with\\s+${escapeRegex(tag)}`, "gi"), "the woman");
+    result = result.replace(new RegExp(`\\b(?:man|guy|boy)\\s+with\\s+${escapeRegex(tag)}`, "gi"), "the man");
+  }
+  return result;
 }
 
 /**
@@ -105,11 +155,13 @@ function subjectLeadTags(isAnimeMedium: boolean, positive: string, subjects?: Su
   if (subjects.kind === "solo") {
     // 1 người chính + người phụ mờ: không dùng tag "no other people".
     lead = isAnimeMedium
-      ? `solo focus, ${subjects.tags}, ${ANIME_COUPLE_QUALITY_TAGS}`
+      ? `one main character in sharp focus, ${subjects.description}, ${ANIME_MULTI_SUBJECT_TAGS}`
       : `one main subject in sharp focus, ${MULTI_SUBJECT_QUALITY_TAGS}`;
   } else {
+    // Anime cũng tả số người bằng câu tự nhiên như ảnh thực: model (Krea2 +
+    // Qwen3-VL) hiểu "a man and a woman" tốt hơn tag Danbooru "1boy, 1girl".
     lead = isAnimeMedium
-      ? `${subjects.tags}, ${ANIME_COUPLE_QUALITY_TAGS}`
+      ? `${subjects.description}, ${ANIME_MULTI_SUBJECT_TAGS}`
       : `${subjects.description}, ${MULTI_SUBJECT_QUALITY_TAGS}`;
   }
   return subjects.crowd ? `${lead}, ${CROWD_BACKGROUND_TAGS}` : lead;
@@ -143,8 +195,13 @@ export function dedupePhrases(positive: string): string {
  * thuộc LLM tự lặp lại. Bỏ tag đã có sẵn (không phân biệt hoa thường) để không
  * nhân đôi token.
  */
-export function missingAnchorTags(anchorTags: string | null | undefined, positive: string): string {
+export function missingAnchorTags(
+  anchorTags: string | null | undefined,
+  positive: string,
+  { fuzzy = false }: { fuzzy?: boolean } = {},
+): string {
   const lowerPositive = positive.toLowerCase();
+  const positiveWords = new Set(lowerPositive.match(/[a-z0-9]+/g) ?? []);
   const seen = new Set<string>();
   return (anchorTags ?? "")
     .split(",")
@@ -152,10 +209,24 @@ export function missingAnchorTags(anchorTags: string | null | undefined, positiv
     .filter((tag) => {
       const key = tag.toLowerCase();
       if (!tag || seen.has(key) || lowerPositive.includes(key)) return false;
+      if (fuzzy && isParaphrased(key, positiveWords)) return false;
       seen.add(key);
       return true;
     })
     .join(", ");
+}
+
+const FUZZY_STOPWORDS = new Set(["a", "an", "the", "with", "and", "in", "of", "on", "her", "his", "their", "to"]);
+
+/**
+ * Tag đã có trong positive dưới dạng viết lại ("adult man short black hair" vs
+ * "adult man with short black hair") -- chèn thêm sẽ thành tả nhân vật 2 lần.
+ */
+function isParaphrased(tag: string, positiveWords: Set<string>): boolean {
+  const words = (tag.match(/[a-z0-9]+/g) ?? []).filter((w) => !FUZZY_STOPWORDS.has(w));
+  if (words.length < 2) return false;
+  const present = words.filter((w) => positiveWords.has(w)).length;
+  return present / words.length >= 2 / 3;
 }
 
 /**
@@ -193,16 +264,19 @@ export function finalizeSuggestedImage(
     .replace(/,\s*,/g, ",")
     .trim();
 
-  // Real-only: xoá cụm nhân đôi chủ thể (anime giữ nguyên hành vi cũ).
-  if (!isAnimeMedium) {
-    image.positive = image.positive
-      .replace(SAME_BEFORE_SUBJECT_REGEX, "")
-      .replace(DUP_SUBJECT_REGEX, "")
-      .replace(/,(\s*,)+/g, ",")
-      .replace(/\s{2,}/g, " ")
-      .replace(/^\s*,\s*/g, "")
-      .replace(/,\s*$/g, "")
-      .trim();
+  // Xoá cụm nhân đôi chủ thể (cả ảnh thực lẫn anime).
+  image.positive = image.positive
+    .replace(SAME_BEFORE_SUBJECT_REGEX, "")
+    .replace(DUP_SUBJECT_REGEX, "")
+    .replace(/,(\s*,)+/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^\s*,\s*/g, "")
+    .replace(/,\s*$/g, "")
+    .trim();
+
+  if (isAnimeMedium) {
+    image.positive = neutralizeAnimeEpithets(image.positive, anchorTags);
+    if (!isCover) image.positive = scrubAnimeKeyVisual(image.positive);
   }
 
   if (!allowHeavyBody) {
@@ -214,15 +288,17 @@ export function finalizeSuggestedImage(
       .replace(/,\s*$/g, "")
       .trim();
   }
-  let anchor = missingAnchorTags(anchorTags, image.positive);
+  let anchor = missingAnchorTags(anchorTags, image.positive, { fuzzy: isAnimeMedium });
   if (!allowHeavyBody) {
     anchor = anchor.replace(HEAVY_BODY_TAGS_REGEX, "");
   }
   // anchorTags cũng do LLM viết -> làm sạch y như positive (split/nhân đôi chủ thể).
-  anchor = anchor.replace(SPLIT_TAGS_REGEX, "").replace(BANNER_TAGS_REGEX, "");
-  if (!isAnimeMedium) {
-    anchor = anchor.replace(SAME_BEFORE_SUBJECT_REGEX, "").replace(DUP_SUBJECT_REGEX, "");
-  }
+  anchor = anchor
+    .replace(SPLIT_TAGS_REGEX, "")
+    .replace(BANNER_TAGS_REGEX, "")
+    .replace(SAME_BEFORE_SUBJECT_REGEX, "")
+    .replace(DUP_SUBJECT_REGEX, "");
+  if (isAnimeMedium && !isCover) anchor = scrubAnimeKeyVisual(anchor);
   anchor = anchor
     .split(",")
     .map((tag) => tag.trim())

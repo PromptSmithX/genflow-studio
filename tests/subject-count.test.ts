@@ -29,9 +29,10 @@ describe("finalizeSuggestedImage subject tags", () => {
     expect(positive).not.toMatch(/\bsolo\b|one person only/);
   });
 
-  it("anime group leads with the Danbooru tags", () => {
+  it("anime group leads with the natural-language description like real", () => {
     const positive = finalize(true, group);
-    expect(positive.startsWith("1boy, 2girls")).toBe(true);
+    expect(positive.startsWith("one man and two women, balanced anatomy")).toBe(true);
+    expect(positive).toContain("each character appears only once");
     expect(positive).not.toMatch(/\bsolo\b|no other people/);
   });
 
@@ -41,7 +42,7 @@ describe("finalizeSuggestedImage subject tags", () => {
   });
 
   it("solo with a crowd keeps one main subject without 'no other people'", () => {
-    expect(finalize(true, soloInCrowd).startsWith("solo focus, 1girl")).toBe(true);
+    expect(finalize(true, soloInCrowd).startsWith("one main character in sharp focus, one woman")).toBe(true);
     expect(finalize(true, soloInCrowd)).not.toContain("no other people");
     expect(finalize(false, soloInCrowd).startsWith("one main subject in sharp focus")).toBe(true);
   });
@@ -54,15 +55,19 @@ describe("finalizeSuggestedImage subject tags", () => {
 });
 
 describe("composeUserMessage intent lines", () => {
-  it("adds the core intent and subject lines (real uses description, anime uses tags)", () => {
+  it("adds the core intent and subject lines (description for multi-person, tags only for anime solo)", () => {
     const real = composeUserMessage({ request: "bữa tiệc", count: 13, coreIntent: "a wild party", subjects: party });
     expect(real).toContain("Ý chính BẮT BUỘC thể hiện rõ ở MỌI ảnh: a wild party");
     expect(real).toContain('mô tả rõ "one man and two women"');
     expect(real).toContain("người phụ MỜ ở hậu cảnh");
 
     const anime = composeUserMessage({ request: "x", count: 13, subjects: group, isAnime: true });
-    expect(anime).toContain('mở đầu positive bằng "1boy, 2girls"');
+    expect(anime).toContain('mô tả rõ "one man and two women"');
+    expect(anime).not.toContain('"1boy, 2girls"');
     expect(anime).toContain("Không có người nào khác");
+
+    const animeSolo = composeUserMessage({ request: "x", count: 13, subjects: solo, isAnime: true });
+    expect(animeSolo).toContain('mở đầu positive bằng "1girl"');
   });
 
   it("keeps the lines when the concept is locked (regenerate flow)", () => {

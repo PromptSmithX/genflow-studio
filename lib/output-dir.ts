@@ -67,3 +67,15 @@ export function resolveFinalRoot(outputRoot: string): string {
   const base = path.basename(outputRoot);
   return path.join(parent, `${base}_final`);
 }
+
+/**
+ * Thư mục kết quả cho người dùng mở xem, cùng cấu trúc với R2 -- vd
+ * "../data/outputs" -> "../data/outputs_ket-qua". Mỗi batch:
+ * "<slug>/{14x11.5,11x8.5}/{org,cen}/", "<slug>/previews/", "<slug>/etsy.txt".
+ * Xem lib/generations/results-folder.ts.
+ */
+export function resolveResultsRoot(outputRoot: string): string {
+  const parent = path.dirname(outputRoot);
+  const base = path.basename(outputRoot);
+  return path.join(parent, `${base}_ket-qua`);
+}

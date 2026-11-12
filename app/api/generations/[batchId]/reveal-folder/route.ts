@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { apiError, handleApiError } from "@/lib/api/errors";
 import { resolveSafePath } from "@/lib/files/safe-output";
 import { getOrCreateSettings } from "@/lib/settings";
-import { resolveOutputRoot, resolveFinalRoot } from "@/lib/output-dir";
+import { resolveOutputRoot, resolveFinalRoot, resolveResultsRoot } from "@/lib/output-dir";
 
 export const runtime = "nodejs";
 
@@ -31,10 +31,21 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const settings = await getOrCreateSettings();
-    const finalRoot = resolveFinalRoot(resolveOutputRoot(settings));
-    let folderPath = resolveSafePath(finalRoot, batch.finalExportRelativePath);
-
+    const outputRoot = resolveOutputRoot(settings);
     const sub = request.nextUrl.searchParams.get("folder");
+
+    // Thư mục kết quả (2 khổ + mockup, cấu trúc như R2) -- lib/generations/results-folder.ts.
+    if (sub === "results") {
+      const resultsPath = resolveSafePath(resolveResultsRoot(outputRoot), batch.finalExportRelativePath);
+      const resultsStat = await fs.stat(resultsPath).catch(() => null);
+      if (!resultsStat?.isDirectory()) {
+        return apiError("not_found", "Thư mục kết quả chưa có, đợi bộ lịch xuất file xong", 404);
+      }
+      spawn("explorer.exe", [resultsPath], { detached: true, stdio: "ignore" }).unref();
+      return NextResponse.json({ ok: true });
+    }
+
+    let folderPath = resolveSafePath(resolveFinalRoot(outputRoot), batch.finalExportRelativePath);
     if (sub === "mockup") {
       const subPath = resolveSafePath(folderPath, "mockup");
       const subStat = await fs.stat(subPath).catch(() => null);

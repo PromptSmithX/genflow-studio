@@ -396,6 +396,14 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
                   )}
                 </div>
               )}
+
+              <OpenFolderButton
+                batchId={batch.id}
+                status={batch.finalExportStatus}
+                folder="results"
+                label="Mở thư mục kết quả (14×11.5 · 11×8.5 · mockup)"
+                className="w-full"
+              />
             </>
           ) : (
             <>
@@ -683,7 +691,20 @@ function FolderSummary({
           </li>
         ))}
       </ul>
+      <div className="space-y-1 border-t pt-2">
+        <p className="text-xs font-medium">Thư mục kết quả (cùng cấu trúc với kho R2):</p>
+        <ul className="space-y-1 text-xs text-muted-foreground">
+          <li>
+            <code>14x11.5/</code>, <code>11x8.5/</code> — mỗi khổ có <code>org</code> (bản gốc, để in) và{" "}
+            <code>cen</code> (bản đã che, để đăng bán)
+          </li>
+          <li>
+            <code>previews/</code> — 5 ảnh mockup
+          </li>
+        </ul>
+      </div>
       <div className="flex flex-wrap gap-2 pt-1">
+        <OpenFolderButton batchId={batch.id} status={batch.finalExportStatus} folder="results" label="Mở thư mục kết quả" variant="default" />
         <OpenFolderButton batchId={batch.id} status={batch.finalExportStatus} />
         <BackCoverDownloadButton batchId={batch.id} status={batch.backCoverStatus} version={new Date(batch.updatedAt).getTime()} />
       </div>

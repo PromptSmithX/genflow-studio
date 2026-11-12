@@ -58,7 +58,7 @@ describe("auto-publish", () => {
       failed: 0,
       backCover: "done",
       finalExport: "done",
-      mockup: "done",
+      mockup: "done", resultsFolder: "done",
     });
 
     vi.mocked(pushBatches).mockResolvedValue({
@@ -202,7 +202,7 @@ describe("auto-publish", () => {
       failed: 0,
       backCover: "done",
       finalExport: "done",
-      mockup: "failed",
+      mockup: "failed", resultsFolder: "skipped",
     });
 
     const result = await runAutoPublish("batch-4");
@@ -235,7 +235,7 @@ describe("auto-publish", () => {
       failed: 0,
       backCover: "done",
       finalExport: "done",
-      mockup: "failed",
+      mockup: "failed", resultsFolder: "skipped",
       mockupError: "Không tìm thấy Python để tạo mockup (MOCKUP_PYTHON=python.exe)",
     });
 
@@ -268,7 +268,7 @@ describe("auto-publish", () => {
       failed: 0,
       backCover: "done",
       finalExport: "done",
-      mockup: "done",
+      mockup: "done", resultsFolder: "done",
     });
 
     vi.mocked(pushBatches).mockResolvedValue({
@@ -309,7 +309,7 @@ describe("auto-publish", () => {
       failed: 0,
       backCover: "done",
       finalExport: "done",
-      mockup: "done",
+      mockup: "done", resultsFolder: "done",
     });
 
     vi.mocked(pushBatches).mockResolvedValue({

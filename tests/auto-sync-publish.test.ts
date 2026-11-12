@@ -10,6 +10,7 @@ import {
   autoSyncState,
   startAutoSyncPoller,
   resetInterruptedBatches,
+  failInterruptedRegenerations,
 } from "@/lib/comfyui/auto-sync";
 
 vi.mock("@/lib/db", () => ({
@@ -21,6 +22,7 @@ vi.mock("@/lib/db", () => ({
     },
     generationJob: {
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
   },
 }));
@@ -304,5 +306,17 @@ describe("auto-sync-publish", () => {
     const count = await resetInterruptedBatches();
     expect(count).toBe(2);
     expect(prisma.generationBatch.updateMany).toHaveBeenCalledTimes(2);
+  });
+
+  it("marks regenerations cut off by a restart (queued, no promptId) as failed", async () => {
+    vi.mocked(prisma.generationJob.updateMany).mockResolvedValueOnce({ count: 2 } as never);
+
+    const count = await failInterruptedRegenerations();
+
+    expect(count).toBe(2);
+    expect(prisma.generationJob.updateMany).toHaveBeenCalledWith({
+      where: { status: "queued", promptId: null, batch: { status: { not: "drafting" } } },
+      data: expect.objectContaining({ status: "failed", errorCode: "interrupted" }),
+    });
   });
 });

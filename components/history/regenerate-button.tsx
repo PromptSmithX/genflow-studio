@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import { toast } from "sonner";
 import { Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,18 +43,11 @@ export function RegenerateButton({
   const regenerateMutation = useRegenerateFresh();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // Server chạy LLM + gửi job ở nền -> đóng hộp thoại ngay, không chờ, để người
+  // dùng bấm tạo lại tiếp các ảnh khác.
   function run() {
-    regenerateMutation.mutate(jobId, {
-      onSuccess: () =>
-        toast.success(
-          simple ? `Đang tạo lại "${label}"...` : `Đang tạo lại "${label}" với mô tả mới...`,
-        ),
-      onError: (e) =>
-        toast.error(
-          e instanceof Error ? e.message : simple ? "Tạo lại thất bại" : "Sửa lại thất bại",
-        ),
-      onSettled: () => setConfirmOpen(false),
-    });
+    setConfirmOpen(false);
+    regenerateMutation.mutate({ jobId, label });
   }
 
   function handleClick(event: MouseEvent) {
@@ -98,14 +90,13 @@ export function RegenerateButton({
             </AlertDialogTitle>
             <AlertDialogDescription>
               {simple
-                ? `Ảnh ${label} sẽ được tạo lại (khoảng 1 phút). Xong app tự cập nhật lên kho dữ liệu và Google Sheet, bạn không cần làm gì thêm.`
+                ? `Ảnh ${label} sẽ được tạo lại ngầm (khoảng 1–2 phút), bạn có thể tiếp tục tạo lại ảnh khác. Xong app tự cập nhật lên kho dữ liệu và Google Sheet, bạn không cần làm gì thêm.`
                 : `Bộ lịch này đã xuất file in. Sau khi ảnh mới tạo xong, bạn cần bấm "Xuất file in" lại để thư mục trên máy và ảnh mockup được cập nhật theo ảnh mới.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Thôi</AlertDialogCancel>
-            <AlertDialogAction onClick={run} disabled={regenerateMutation.isPending}>
-              {regenerateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            <AlertDialogAction onClick={run}>
               {simple ? "Tạo lại" : "Sửa lại ảnh này"}
             </AlertDialogAction>
           </AlertDialogFooter>

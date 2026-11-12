@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { apiGet, apiPost } from "@/lib/client/api";
 import type { GenerationBatchDTO, HistoryListResponse, JobDetailDTO } from "@/lib/types";
 
@@ -56,8 +57,43 @@ export function useJobDetail(jobId: string | null) {
 export function useRegenerateFresh() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (jobId: string) => apiPost<GenerationBatchDTO>(`/api/history/${jobId}/regenerate-fresh`),
-    onSuccess: (batch) => {
+    mutationFn: ({ jobId }: { jobId: string; label: string }) =>
+      apiPost<GenerationBatchDTO>(`/api/history/${jobId}/regenerate-fresh`),
+    // Server chạy LLM + submit ở nền; đổi ô ảnh sang "đang tạo lại" ngay trong
+    // cache, không đợi lượt poll kế tiếp. Toast đặt ở đây (không ở mutate()) vì
+    // nút Tạo lại bị gỡ khỏi ô ngay khi ô chuyển sang trạng thái chờ.
+    onMutate: async ({ jobId }) => {
+      await queryClient.cancelQueries({ queryKey: ["history"] });
+      queryClient.setQueriesData<InfiniteData<HistoryListResponse>>({ queryKey: ["history"] }, (data) =>
+        data?.pages
+          ? {
+              ...data,
+              pages: data.pages.map((page) => ({
+                ...page,
+                batches: page.batches.map((batch) =>
+                  batch.jobs.some((job) => job.id === jobId)
+                    ? {
+                        ...batch,
+                        status: "running",
+                        jobs: batch.jobs.map((job) =>
+                          job.id === jobId
+                            ? { ...job, status: "queued", images: [], errorCode: null, errorMessage: null }
+                            : job,
+                        ),
+                      }
+                    : batch,
+                ),
+              })),
+            }
+          : data,
+      );
+    },
+    onError: (error, { label }) => {
+      toast.error(error instanceof Error ? error.message : `Tạo lại "${label}" thất bại`);
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
+    onSuccess: (batch, { label }) => {
+      toast.success(`Đang tạo lại "${label}"`, { description: "Bạn có thể tạo lại thêm ảnh khác trong lúc chờ." });
       queryClient.invalidateQueries({ queryKey: ["history"] });
       queryClient.invalidateQueries({ queryKey: ["mockup", batch.id] });
     },

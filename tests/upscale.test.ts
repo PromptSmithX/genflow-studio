@@ -26,14 +26,16 @@ async function makeSourcePng(width: number, height: number): Promise<Buffer> {
   return canvas.encode("png");
 }
 
-/** Ảnh nửa trái đỏ / nửa phải xanh lá, để kiểm tra cover-crop có cắt vào 2 bên hay không. */
-async function makeSplitSourcePng(width: number, height: number): Promise<Buffer> {
+/** Ảnh có dải đỏ sát mép trên, dải xanh lá sát mép dưới -- để kiểm tra không bị cắt mép. */
+async function makeEdgeBandsSourcePng(width: number, height: number, band: number): Promise<Buffer> {
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = "#ff0000";
-  ctx.fillRect(0, 0, width / 2, height);
+  ctx.fillRect(0, 0, width, band);
   ctx.fillStyle = "#00ff00";
-  ctx.fillRect(width / 2, 0, width / 2, height);
+  ctx.fillRect(0, height - band, width, band);
   return canvas.encode("png");
 }
 
@@ -64,21 +66,20 @@ describe("upscaleToSize", () => {
     expect(result.height).toBe(2625);
   });
 
-  it("never crops the sides when the source ratio already matches the calendar formats (only top/bottom get trimmed)", async () => {
-    // Tỉ lệ gen thật của app (1152x952 ~ 1.21, xem COVER_DEFAULT_WIDTH/HEIGHT ở
-    // assistant-create-form.tsx) -- bằng-hoặc-vuông-hơn mọi khổ lịch, nên
-    // cover-crop phải luôn khít theo chiều ngang (không cắt chữ bìa 2 bên).
-    const src = await makeSplitSourcePng(1152, 952);
-    const format = makeFormat({ widthPx: 3375, heightPx: 2625 }); // 11x8.5", khổ rộng nhất
+  it("stretches instead of cropping: content at the very top and bottom edges survives on 11x8.5", async () => {
+    // Ảnh gen thật 1152x952 (~1.21) lên khổ 11x8.5 (1.286): cover-crop cũ cắt
+    // ~82px mỗi mép trên/dưới (mất chữ bìa); kéo giãn phải giữ nguyên 2 mép.
+    const src = await makeEdgeBandsSourcePng(1152, 952, 8);
+    const format = makeFormat({ widthPx: 3375, heightPx: 2625 });
     const out = await upscaleToSize(src, format);
     const result = await loadImage(out);
     const canvas = createCanvas(result.width, result.height);
     const ctx = canvas.getContext("2d");
     ctx.drawImage(result, 0, 0);
 
-    const midY = Math.round(format.heightPx / 2);
-    expect(isReddish(ctx, 1, midY)).toBe(true);
-    expect(isGreenish(ctx, format.widthPx - 2, midY)).toBe(true);
+    const midX = Math.round(format.widthPx / 2);
+    expect(isReddish(ctx, midX, 1)).toBe(true);
+    expect(isGreenish(ctx, midX, format.heightPx - 2)).toBe(true);
   });
 });
 

@@ -51,6 +51,30 @@ export async function resetInterruptedBatches(): Promise<number> {
   }
 }
 
+/**
+ * Tạo lại ảnh chạy nền (LLM + submit) bị cắt ngang khi server tắt để lại job
+ * `queued` chưa có promptId -- job-sync bỏ qua job đó mãi mãi. Lúc khởi động
+ * không có lượt nền nào đang chạy, nên đánh dấu lỗi để người dùng/auto-retry
+ * tạo lại.
+ */
+export async function failInterruptedRegenerations(): Promise<number> {
+  try {
+    const result = await prisma.generationJob.updateMany({
+      where: { status: "queued", promptId: null, batch: { status: { not: "drafting" } } },
+      data: {
+        status: "failed",
+        errorCode: "interrupted",
+        errorMessage: "Bị gián đoạn khi tạo lại, bấm Tạo lại lần nữa",
+        finishedAt: new Date(),
+      },
+    });
+    return result.count;
+  } catch (error) {
+    console.error("[auto-sync] đánh dấu job tạo lại bị gián đoạn thất bại:", error);
+    return 0;
+  }
+}
+
 export async function processAutoWorkflow(): Promise<void> {
   const since = new Date(Date.now() - MAX_BATCH_AGE_MS);
   const candidates = await prisma.generationBatch.findMany({
@@ -214,6 +238,7 @@ export function startAutoSyncPoller(): void {
   void resetInterruptedBatches().catch((err) => {
     console.error("[auto-sync] reset batch bị gián đoạn thất bại:", err);
   });
+  void failInterruptedRegenerations();
   kickDraftQueue();
   autoSyncState.interval = setInterval(() => {
     void runSyncTick();

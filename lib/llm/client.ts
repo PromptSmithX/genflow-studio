@@ -150,6 +150,10 @@ export class LlmClient {
         parsed,
       );
     }
+    const empty = parsed.images.findIndex((image) => !image.positive && !image.scene && !image.woman && !image.man);
+    if (empty >= 0) {
+      throw new LlmApiError(`LLM trả ảnh #${empty + 1} không có nội dung prompt`, "bad_shape", parsed);
+    }
     return parsed;
   }
 

@@ -1,4 +1,4 @@
-import type { SubjectSpec } from "@/lib/llm/axis-decision";
+import { animeTemplateMode, type AnimeTemplateMode, type SubjectSpec } from "@/lib/llm/axis-decision";
 
 /**
  * Default system prompt for the "Trợ lý AI" creation mode. Overridable per
@@ -102,6 +102,16 @@ MỌI ảnh (kể cả ảnh quay từ sau lưng), anchorTags CHỈ gồm ngoạ
 blouse, pleated skirt") + địa điểm. KHÔNG ghi bộ phận nào bị lộ hay tình trạng trang phục ("exposing
 breasts", "pulled aside"...) — việc đó viết trong "positive" theo "visible" của từng ảnh. KHÔNG ghi số người
 ("a man and a woman"), KHÔNG dùng chữ "couple".
+
+ĐỊNH DẠNG ẢNH THEO CHẾ ĐỘ (CHỈ khi tin nhắn có dòng "Định dạng ảnh: couple | solo_f | solo_m"; không có dòng đó thì viết "positive" tự do như các mục trên):
+Ở chế độ này MỖI ảnh KHÔNG trả "positive" mà trả các trường riêng; app tự ghép thành positive cuối (thêm câu đếm người, ngoại hình bất biến, và NỐI "shot.camera" ở cuối nên bạn không cần lặp camera trong các trường). Mọi quy tắc khác (một cảnh duy nhất, một khoảnh khắc, cự ly, tư thế đa dạng, chữ bìa...) giữ nguyên, áp dụng cho nội dung các trường:
+- "scene": địa điểm, đạo cụ, ánh sáng, không khí của MỘT cảnh liền mạch. TUYỆT ĐỐI KHÔNG tả người, KHÔNG nhắc đám đông/người phụ (app tự thêm khi cần), KHÔNG tag phong cách (preset đã có). Ảnh bìa (#1): "scene" chứa thêm 3 khối chữ theo QUY TẮC CHỮ TRÊN BÌA.
+- "woman" (chế độ couple, solo_f): CỤM HÀNH ĐỘNG của người nữ trong khoảnh khắc này — tư thế, hướng nhìn, biểu cảm, tay chân đặt ở đâu, phần cơ thể/trang phục nhìn thấy được theo "shot.visible". Bắt đầu thẳng bằng động từ (vd "sits on the edge of a low brick wall, leans forward to kiss him, hands on his shoulders").
+- "man" (chế độ couple, solo_m): tương tự cho người nam (vd "stands between her legs, holding her waist, eyes closed").
+- Trong "woman"/"man" TUYỆT ĐỐI KHÔNG viết "a man", "a woman", "a young man", "couple", "both"... (app đã nói số người đúng một lần); KHÔNG tả tóc/mắt/tuổi/dáng người (anchorTags và ngoại hình gợi ý đã lo); nhắc người kia bằng đại từ "her"/"him". Chế độ solo_f chỉ có "woman", solo_m chỉ có "man" (không trả trường còn lại).
+Dạng mỗi phần tử trong "images" ở chế độ này (thay cho dạng có "positive" ở schema bên dưới; "concept", "negative", "etsy" giữ nguyên):
+{ "shot": { "camera": "...", "poses": "...", "visible": "..." }, "scene": "...", "woman": "...", "man": "...", "caption": "...", "title": "...", "year": "2027" }
+("title"/"year" CHỈ ảnh #1.)
 
 QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
 - Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
@@ -444,6 +454,12 @@ export const ANIME_SINGLE_SUBJECT_HINT =
   `\n  • Trong phần hành động gọi nhân vật là "the woman" / "the man", KHÔNG tả lại tóc/mắt/dáng (app đã chèn sẵn ` +
   `ngoại hình một lần) — tả 2 lần bằng 2 cách gọi khác nhau khiến model vẽ thành 2 người.` +
   `\n  • Ảnh tháng KHÔNG dùng cụm "key visual" (kiểu poster hay kèm thêm chân dung nhân vật đứng riêng).` +
+  `\n  • Khi có dòng "Định dạng ảnh: ...": điền "scene"/"woman"/"man" theo mục ĐỊNH DẠNG ẢNH; KHÔNG viết "a man"/"a woman"/"couple" trong các trường (app đã nói số người đúng một lần).` +
+  `\n  • Khi viết "positive" tự do (không có dòng đó): "positive" ảnh cặp đôi/nhóm phải bắt đầu NGAY BẰNG câu cảnh "a [desc1] and a [desc2] on/at [location]..." ` +
+  `(vd "a young man and a young woman on a rainy neon street at night, ..."). TUYỆT ĐỐI KHÔNG viết tag ` +
+  `standalone tuổi/ngoại hình riêng cho từng người TRƯỚC câu cảnh đó (vd KHÔNG viết "young woman early 20s, ` +
+  `young man early 20s, a young man and...") — app đã inject sẵn đặc điểm bất biến vào đầu positive, viết lại ` +
+  `thành nhắc số người 2 lần và model vẽ ra 2 cặp.` +
   `\n  • Nói số người ĐÚNG MỘT LẦN ở đầu câu cảnh (vd "a young man and a young woman on …"), phần sau chỉ gọi ` +
   `"the woman" / "the man" — nhắc số người 2 lần khiến model vẽ thành 2 cặp. KHÔNG dùng "both", "couple", ` +
   `"lovers" để gọi chung hai người (vd "both looking back" → "the woman and the man looking back") — model ` +
@@ -535,6 +551,11 @@ function subjectLine(subjects: SubjectSpec, isAnime: boolean): string {
   return `Số người trong MỖI ảnh (BẮT BUỘC): ${subjects.description} — ${lead}, mỗi người rõ ràng, tách biệt.${crowd}`;
 }
 
+function templateLine(mode: AnimeTemplateMode): string {
+  const fields = mode === "couple" ? '"scene", "woman", "man"' : mode === "solo_f" ? '"scene", "woman"' : '"scene", "man"';
+  return `Định dạng ảnh: ${mode} — MỖI ảnh trả ${fields} (cùng "shot", "caption"; ảnh #1 thêm "title"/"year") THAY CHO "positive", theo mục "ĐỊNH DẠNG ẢNH THEO CHẾ ĐỘ" trong hướng dẫn.`;
+}
+
 export function composeUserMessage({
   request,
   count,
@@ -555,6 +576,8 @@ export function composeUserMessage({
     );
   }
   if (subjects) lines.push(subjectLine(subjects, isAnime));
+  const templateMode = isAnime ? animeTemplateMode(subjects) : null;
+  if (templateMode) lines.push(templateLine(templateMode));
 
   const lockedTheme = lockedConcept?.theme?.trim();
   const lockedAnchor = lockedConcept?.anchorTags?.trim();

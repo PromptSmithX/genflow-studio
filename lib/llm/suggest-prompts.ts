@@ -20,7 +20,7 @@ import {
   loadRecentConcepts,
   pickConceptSeed,
 } from "@/lib/llm/concept-diversity";
-import { applyDecision } from "@/lib/llm/axis-decision";
+import { animeTemplateMode, applyDecision } from "@/lib/llm/axis-decision";
 import { analyzeIntent, summarizeIntent } from "@/lib/llm/intent-analysis";
 import {
   loadRecentAppearances,
@@ -132,6 +132,11 @@ export async function suggestPrompts(
   // Chỉ ẢNH ĐẦU TIÊN (trang bìa) được có chữ; mọi ảnh sau là artwork sạch.
   // finalizeSuggestedImage dùng chung với luồng "Sửa lại" (regenerate-fresh)
   // nên 2 nơi luôn áp đúng cùng một ràng buộc.
+  const templateMode = isAnimeMedium ? animeTemplateMode(analysis?.subjects) : null;
+  if (templateMode) {
+    const withFields = result.images.filter((image) => image.scene && (image.woman || image.man)).length;
+    console.info(`[LLM template] mode=${templateMode} fields=${withFields}/${result.images.length} (còn lại dùng positive tự do)`);
+  }
   result.images.forEach((image, index) => {
     finalizeSuggestedImage(image, {
       isCover: index === 0,

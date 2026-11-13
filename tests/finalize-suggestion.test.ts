@@ -111,7 +111,7 @@ describe("finalizeSuggestedImage", () => {
 
   const couple = { kind: "couple", tags: "1boy, 1girl", description: "a man and a woman", crowd: false } as const;
 
-  it("anime couple: one count line, LLM scene kept verbatim, count-only anchor tags dropped", () => {
+  it("anime couple: scene already introduces the pair -> no extra count line, scene kept verbatim", () => {
     const scene = "a young man and a young woman on a rooftop, the woman sits on top of the man facing him, from side";
     const result = finalizeSuggestedImage(makeImage({ positive: scene }), {
       isCover: false,
@@ -120,10 +120,39 @@ describe("finalizeSuggestedImage", () => {
       anchorTags: "1boy, 1girl, a young man and a young woman, silver hair, rooftop terrace",
     });
     expect(result.positive.startsWith("balanced anatomy")).toBe(true);
-    expect(result.positive.match(/exactly two people: one woman and one man/g)?.length).toBe(1);
+    expect(result.positive).not.toContain("exactly two people");
     expect(result.positive.endsWith(scene)).toBe(true);
     expect(result.positive).not.toMatch(/1boy|1girl/);
     expect(result.positive).toContain("silver hair");
+  });
+
+  it("anime couple: the pair is introduced with a/an exactly once (no repeated man/woman)", () => {
+    const scene =
+      "a young man and a young woman on a moonlit vibrant city street at night, the woman sits on the edge of a low brick wall, the man stands between her legs holding her waist, from front, upper body";
+    const result = finalizeSuggestedImage(makeImage({ positive: scene }), {
+      isCover: false,
+      isAnimeMedium: true,
+      subjects: { ...couple, description: "a young man and a young woman" },
+      anchorTags:
+        "short orange hair with hairclip, aqua eyes, young man short dark hair, young woman mid 20s, romantic couple outfits",
+    });
+    expect(result.positive.match(/\ban?\s+(?:young\s+)?(?:man|woman)\b/gi)).toHaveLength(2);
+    expect(result.positive).toContain("the man short dark hair");
+    expect(result.positive).toContain("the woman mid 20s");
+    expect(result.positive).toContain("romantic outfits");
+    expect(result.positive).not.toMatch(/couple/i);
+    expect(result.positive).toContain("short orange hair with hairclip");
+    expect(result.positive.endsWith(scene)).toBe(true);
+  });
+
+  it("anime non-mixed groups keep their anchor tags untouched", () => {
+    const result = finalizeSuggestedImage(makeImage({ positive: "two women on a sofa, from front" }), {
+      isCover: false,
+      isAnimeMedium: true,
+      subjects: { kind: "couple", tags: "2girls", description: "two women", crowd: false },
+      anchorTags: "young woman mid 20s, silver hair",
+    });
+    expect(result.positive).toContain("young woman mid 20s");
   });
 
   it("anime couple: count line is present even when the LLM scene omits the count", () => {
@@ -145,7 +174,8 @@ describe("finalizeSuggestedImage", () => {
     });
     expect(result.positive).not.toMatch(/\bno\s|\bonly\b|\bonce\b|panel|empty space/);
     expect(result.positive).not.toMatch(/headroom|framing|breathing room|top of the head/);
-    expect(result.positive).toContain("adult woman in her mid 20s");
+    expect(result.positive).toContain("the woman in her mid 20s");
+    expect(result.positive).toContain("the man in his late 20s");
     expect(result.positive).toContain("from side view, full body");
   });
 

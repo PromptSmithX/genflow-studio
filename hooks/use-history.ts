@@ -100,6 +100,20 @@ export function useRegenerateFresh() {
   });
 }
 
+export function useDeleteBatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) => apiPost<{ ok: boolean }>(`/api/generations/${batchId}/delete`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+      toast.success("Đã xóa batch và toàn bộ ảnh");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Xóa batch thất bại");
+    },
+  });
+}
+
 export function useResyncBatch() {
   const queryClient = useQueryClient();
   return useMutation({

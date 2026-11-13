@@ -14,10 +14,16 @@ import {
   Folder,
   Loader2,
   RefreshCcw,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BatchUpscaleButton } from "@/components/history/batch-upscale-button";
 import { BackCoverDownloadButton } from "@/components/history/back-cover-download-button";
 import { OpenFolderButton } from "@/components/history/open-folder-button";
@@ -25,7 +31,7 @@ import { EtsyMetadataCard } from "@/components/history/etsy-metadata-card";
 import { BatchMockupSection } from "@/components/history/batch-mockup-section";
 import { RegenerateButton } from "@/components/history/regenerate-button";
 import { PipelineProgress } from "@/components/history/pipeline-progress";
-import { useResyncBatch, useAutoPublishBatch } from "@/hooks/use-history";
+import { useResyncBatch, useAutoPublishBatch, useDeleteBatch } from "@/hooks/use-history";
 import { useAdvancedMode } from "@/hooks/use-settings";
 import { useSheetUrl } from "@/hooks/use-sheets";
 import { slotLabel } from "@/lib/calendar/slot-label";
@@ -208,10 +214,12 @@ function renderUnifiedStatusBadge(
 
 export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const advancedMode = useAdvancedMode();
   const sheetUrl = useSheetUrl();
   const resyncMutation = useResyncBatch();
   const autoPublishMutation = useAutoPublishBatch();
+  const deleteMutation = useDeleteBatch();
 
   const canRetryAuto =
     batch.autoStatus === "failed" || batch.autoStatus === "legacy" || batch.autoStatus === "skipped";
@@ -350,6 +358,22 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
               Chạy lại tự động
             </Button>
           )}
+          {pendingCount === 0 && !isDrafting && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+              disabled={deleteMutation.isPending}
+              title="Xóa batch"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           {open ? (
             <ChevronUp className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
           ) : (
@@ -357,6 +381,26 @@ export function BatchCard({ batch, defaultOpen }: { batch: GenerationBatchDTO; d
           )}
         </div>
       </div>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa batch này?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Toàn bộ ảnh đã gen của batch này sẽ bị xóa khỏi ổ cứng và không thể khôi phục.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate(batch.id)}
+            >
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {open && isDrafting && (
         <div className="space-y-3 border-t p-4">

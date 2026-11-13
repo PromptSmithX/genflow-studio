@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { FolderOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings";
+import { useOpenDirectory } from "@/lib/hooks/use-electron";
 
 export function DefaultsCard() {
   const { data, isLoading } = useSettings();
   const updateMutation = useUpdateSettings();
+  const openDirectory = useOpenDirectory();
 
   const [form, setForm] = useState({
     defaultWidth: 1024,
@@ -144,10 +147,24 @@ export function DefaultsCard() {
           </div>
           <div className="space-y-2">
             <Label>Thư mục lưu ảnh</Label>
-            <Input
-              value={form.outputDirectory}
-              onChange={(e) => setForm((f) => ({ ...f, outputDirectory: e.target.value }))}
-            />
+            <div className="flex gap-2">
+              <Input
+                value={form.outputDirectory}
+                onChange={(e) => setForm((f) => ({ ...f, outputDirectory: e.target.value }))}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const dir = await openDirectory();
+                  if (dir) setForm((f) => ({ ...f, outputDirectory: dir }));
+                }}
+              >
+                <FolderOpen className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 

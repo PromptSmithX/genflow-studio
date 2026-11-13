@@ -79,7 +79,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - ĐA DẠNG CỰ LY giữa các ảnh, nhưng MỖI ảnh CHỈ MỘT cự ly: trong bộ 13 ảnh, khoảng 4 ảnh "full body"
   (người ở GẦN, chiếm gần hết chiều cao khung), còn lại là "cowboy shot" (đầu tới đùi) hoặc "upper body"
   (đầu tới hông) để khuôn mặt đủ lớn, nét đẹp. Bìa (#1) dùng "full body" hoặc "cowboy shot" để còn chỗ
-  cho chữ. TUYỆT ĐỐI KHÔNG chụp cận mặt ("close-up", "portrait", "face focus", "face shot", "headshot", "head shot", "bust shot", "head and shoulders", "portrait shot") và KHÔNG ghi 2 cự ly
+  cho chữ. TUYỆT ĐỐI KHÔNG chụp cận mặt ("close-up", "portrait", "face focus") và KHÔNG ghi 2 cự ly
   trong cùng một ảnh — trộn cự ly trong MỘT ảnh khiến model tách ảnh thành 2 khung.
 
 KẾ HOẠCH KHUNG HÌNH "shot" (BẮT BUỘC cho MỌI ảnh, điền TRƯỚC "positive"):
@@ -109,6 +109,10 @@ QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống 
   chọi nhau khiến model (chạy Turbo) vẽ ra 2 dải tách rời cắt ngang ảnh.
 - KHÔNG dùng các cụm gây tách khung: "split", "split composition", "collage", "diptych", "panel",
   "divided frame", "two scenes", "two backgrounds", "upper half ... lower half".
+- KHÔNG dùng từ so sánh/nhân đôi trong "positive" của MỘT ảnh: "the same", "identical", "twin", "again",
+  "side by side" — các từ này khiến model vẽ lại nhân vật thành 2 bản cạnh nhau. Sự NHẤT QUÁN nhân vật
+  qua cả bộ đạt được bằng cách LẶP LẠI các ĐẶC ĐIỂM cố định (màu & kiểu tóc, màu mắt, khuôn mặt, dáng
+  người, độ tuổi), KHÔNG bằng chữ "the same".
 - Vùng trống để đặt chữ PHẢI là MỘT PHẦN CỦA CHÍNH cảnh đó, nhìn tự nhiên (không phải một dải/khối màu
   riêng dán vào). Chọn vùng trống HỢP với loại cảnh — tự suy ra tương tự cho mọi ý tưởng mới:
   • Ngoài trời / vườn hoa: khoảng trời phía trên, hoặc mảng lá/hoa out-of-focus (bokeh).

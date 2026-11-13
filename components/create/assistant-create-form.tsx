@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ListPlus, Loader2 } from "lucide-react";
+import { FolderOpen, ListPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,11 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useMediums } from "@/hooks/use-mediums";
-import { useSettings, useAdvancedMode } from "@/hooks/use-settings";
+import { useSettings, useAdvancedMode, useUpdateSettings } from "@/hooks/use-settings";
 import { useWorkflow } from "@/hooks/use-workflow";
 import { useHeaderConnectionState } from "@/hooks/use-connection";
 import { useEnqueueDraft } from "@/hooks/use-draft-queue";
+import { useOpenDirectory } from "@/lib/hooks/use-electron";
 import type { WorkflowSummaryResponse } from "@/lib/types";
 import { ApiRequestError } from "@/lib/client/api";
 import { cn } from "@/lib/utils";
@@ -89,6 +95,10 @@ export function AssistantCreateForm() {
     }
   }
 
+  const updateSettings = useUpdateSettings();
+  const openDirectory = useOpenDirectory();
+  const [showDirDialog, setShowDirDialog] = useState(false);
+
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
   const isReady = connectionState === "connected" && workflowReady;
   // Trợ lý AI yêu cầu API key đã cấu hình trong Cài đặt (settings.hasLlmKey).
@@ -96,15 +106,16 @@ export function AssistantCreateForm() {
   const isSubmitting = enqueueMutation.isPending;
   const canGenerate = llmReady && isReady && requestText.trim().length > 0 && !isSubmitting;
 
-  // Chỉ xếp vào hàng đợi ở server rồi trả về ngay; AI soạn mô tả + gửi tạo ảnh
-  // chạy nền (lib/generations/draft-queue.ts), nên người dùng nhập bộ tiếp hoặc
-  // chuyển trang thoải mái. Giữ nguyên kiểu ảnh và thông số cho bộ kế tiếp.
-  function handleEnqueue() {
+  async function handleChangeSaveDir() {
+    const dir = await openDirectory();
+    if (dir) updateSettings.mutate({ outputDirectory: dir });
+  }
+
+  function doEnqueue() {
     enqueueMutation.mutate(
       {
         request: requestText.trim(),
         mediumId: mediumId || undefined,
-        // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.
         width: params.width ? Number(params.width) : undefined,
         height: params.height ? Number(params.height) : undefined,
         steps: params.steps ? Number(params.steps) : undefined,
@@ -123,6 +134,14 @@ export function AssistantCreateForm() {
         },
       },
     );
+  }
+
+  function handleEnqueue() {
+    if (settings?.outputDirectory === "outputs") {
+      setShowDirDialog(true);
+      return;
+    }
+    doEnqueue();
   }
 
   return (
@@ -282,6 +301,18 @@ export function AssistantCreateForm() {
         </Accordion>
       )}
 
+      <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate text-muted-foreground">
+            Lưu vào: <span className="text-foreground">{settings?.outputDirectory || "outputs"}</span>
+          </span>
+        </div>
+        <Button type="button" variant="ghost" size="sm" className="ml-2 h-7 shrink-0" onClick={handleChangeSaveDir}>
+          Đổi
+        </Button>
+      </div>
+
       <div className="space-y-2">
         <Button size="lg" className="w-full text-base font-semibold" onClick={handleEnqueue} disabled={!canGenerate}>
           {isSubmitting ? (
@@ -300,6 +331,36 @@ export function AssistantCreateForm() {
             : "AI soạn mô tả và tạo ảnh ở chế độ nền — bạn có thể thêm bộ tiếp hoặc chuyển trang ngay."}
         </p>
       </div>
+
+      <AlertDialog open={showDirDialog} onOpenChange={setShowDirDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Chọn thư mục lưu ảnh</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn chưa chọn thư mục lưu ảnh. Hãy chọn một thư mục cụ thể để dễ tìm ảnh sau khi tạo xong, hoặc dùng
+              thư mục mặc định (<code>outputs</code> trong thư mục cài đặt app).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowDirDialog(false); doEnqueue(); }}>
+              Dùng thư mục mặc định
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setShowDirDialog(false);
+                const dir = await openDirectory();
+                if (dir) {
+                  updateSettings.mutate({ outputDirectory: dir }, { onSuccess: () => doEnqueue() });
+                } else {
+                  doEnqueue();
+                }
+              }}
+            >
+              <FolderOpen className="h-4 w-4" /> Chọn thư mục
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <DraftQueuePanel />
     </div>

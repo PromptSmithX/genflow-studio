@@ -3,13 +3,14 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FileSpreadsheet, Wand2 } from "lucide-react";
+import { FileSpreadsheet, FolderOpen, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HistoryFiltersBar } from "@/components/history/history-filters";
 import { HistoryGrid } from "@/components/history/history-grid";
-import { useAdvancedMode } from "@/hooks/use-settings";
+import { useAdvancedMode, useSettings, useUpdateSettings } from "@/hooks/use-settings";
 import { useSheetUrl } from "@/hooks/use-sheets";
+import { useOpenDirectory } from "@/lib/hooks/use-electron";
 import type { HistoryFilters } from "@/hooks/use-history";
 
 function HistoryContent() {
@@ -27,6 +28,14 @@ function HistoryContent() {
 
 export default function HistoryPage() {
   const sheetUrl = useSheetUrl();
+  const { data: settings } = useSettings();
+  const updateSettings = useUpdateSettings();
+  const openDirectory = useOpenDirectory();
+
+  async function handleChangeSaveDir() {
+    const dir = await openDirectory();
+    if (dir) updateSettings.mutate({ outputDirectory: dir });
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -35,6 +44,12 @@ export default function HistoryPage() {
           Bộ lịch tự chạy đến khi xong, bạn không cần bấm gì thêm.
         </p>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleChangeSaveDir} title={settings?.outputDirectory || "outputs"}>
+            <FolderOpen className="h-4 w-4" />
+            <span className="max-w-[160px] truncate">
+              {settings?.outputDirectory || "outputs"}
+            </span>
+          </Button>
           {sheetUrl ? (
             <Button
               variant="outline"

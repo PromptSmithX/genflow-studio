@@ -1,5 +1,6 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import type { CalendarFormat } from "@/lib/calendar/formats";
+import { withPngDpi } from "@/lib/images/png-dpi";
 
 /**
  * Phóng ảnh về ĐÚNG kích thước trang in của template lịch (ví dụ 3375×2625 cho
@@ -22,5 +23,5 @@ export async function upscaleToSize(input: Buffer, format: CalendarFormat): Prom
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(image, 0, 0, targetW, targetH);
 
-  return canvas.encode("png");
+  return withPngDpi(await canvas.encode("png"), format.dpi);
 }

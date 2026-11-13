@@ -82,6 +82,27 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
   cho chữ. TUYỆT ĐỐI KHÔNG chụp cận mặt ("close-up", "portrait", "face focus") và KHÔNG ghi 2 cự ly
   trong cùng một ảnh — trộn cự ly trong MỘT ảnh khiến model tách ảnh thành 2 khung.
 
+KẾ HOẠCH KHUNG HÌNH "shot" (BẮT BUỘC cho MỌI ảnh, điền TRƯỚC "positive"):
+Model ảnh chỉ vẽ được MỘT góc nhìn vật lý. Nếu "positive" đòi thứ góc máy không thấy được (vd quay từ sau
+lưng mà tả ngực, mặt chính diện), model sẽ vẽ THÊM một nhân vật hoặc chia khung để thể hiện đủ. Vì vậy,
+với MỖI ảnh, hãy chốt "shot" trước:
+- "camera": đúng MỘT góc máy + MỘT cự ly (vd "from side view, cowboy shot").
+- "poses": MỖI người đúng MỘT tư thế — thân ở đâu, đầu quay về đâu, tay chân đặt ở đâu (vd "the woman
+  sits on the man's lap facing away from him, back arched; the man sits behind her, hands on her hips").
+  KHÔNG dùng cụm gộp mơ hồ kiểu "lying together" khi một người đang ngồi trên.
+- "visible": CHỈ những bộ phận / biểu cảm THẬT SỰ nhìn thấy được từ "camera" với "poses" đó. Vd quay từ
+  sau lưng → lưng, mông, đầu ngoái lại; KHÔNG có ngực hay mặt chính diện. Muốn thấy cả mặt lẫn ngực thì
+  chọn góc nghiêng hoặc chính diện ngay từ "camera".
+Sau đó viết "positive" CHỈ từ "shot": không tả bộ phận/biểu cảm nằm ngoài "visible", không thêm góc máy
+hay cự ly thứ hai, mỗi người chỉ một tư thế. "positive" PHẢI KẾT THÚC bằng NGUYÊN VĂN "shot.camera" (vd
+"..., from side view, cowboy shot") — model ảnh không đọc "shot", thiếu góc máy trong "positive" thì nó tự
+chọn bừa.
+anchorTags (GHI ĐÈ mô tả anchorTags ở các mục khác, kể cả NGUYÊN TẮC CHUNG): vì app chèn anchorTags vào
+MỌI ảnh (kể cả ảnh quay từ sau lưng), anchorTags CHỈ gồm ngoại hình + TÊN kiểu trang phục (vd "white
+blouse, pleated skirt") + địa điểm. KHÔNG ghi bộ phận nào bị lộ hay tình trạng trang phục ("exposing
+breasts", "pulled aside"...) — việc đó viết trong "positive" theo "visible" của từng ảnh. KHÔNG ghi số người
+("a man and a woman"), KHÔNG dùng chữ "couple".
+
 QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống ảnh bị chia đôi/ghép 2 cảnh):
 - Mỗi ảnh CHỈ mô tả MỘT bối cảnh LIỀN MẠCH duy nhất. TUYỆT ĐỐI KHÔNG ghép 2 môi trường trong cùng
   khung hình (ví dụ KHÔNG vừa "bầu trời/ngoài trời" vừa "phòng trong nhà/nội thất"). Việc mô tả 2 cảnh
@@ -161,11 +182,13 @@ TUYỆT ĐỐI KHÔNG dùng các từ ngụ ý giao hàng số trong title/descr
 
 Chỉ trả về DUY NHẤT một JSON object đúng schema, không markdown, không giải thích:
 {
-  "concept": { "campaignTheme": "...(concept chiến dịch bằng TIẾNG ANH, tối đa ~10 từ, nêu rõ địa điểm + đạo cụ chính nếu có)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + nhóm trang phục + bảng màu + không gian/mood — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng)..." },
+  "concept": { "campaignTheme": "...(concept chiến dịch bằng TIẾNG ANH, tối đa ~10 từ, nêu rõ địa điểm + đạo cụ chính nếu có)...", "anchorTags": "...(chuỗi tag tiếng Anh: ngoại hình nhân vật + kiểu trang phục + địa điểm — phần BẤT BIẾN lặp Ở MỌI ảnh, KHÔNG kèm cảnh/tư thế/góc máy từng tháng, KHÔNG ghi bộ phận nào bị lộ, KHÔNG ghi số người hay chữ \\"couple\\")..." },
   "images": [
-    { "positive": "...(ảnh #1 = bìa, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
+    { "shot": { "camera": "...", "poses": "...", "visible": "..." },
+      "positive": "...(ảnh #1 = bìa, viết TỪ shot, mô tả cảnh + 3 khối chữ large bold title text \\"...\\" (màu/kiểu tự do, đa dạng), uppercase text \\"CALENDAR\\" (exact spelling), year text \\"...\\", vùng chữ không đè người, KHÔNG dùng từ copy space)...",
       "caption": "...", "title": "...", "year": "2027" },
-    { "positive": "...(ảnh #2 = artwork, full-bleed, KHÔNG chữ)...", "caption": "..." }
+    { "shot": { "camera": "...", "poses": "...", "visible": "..." },
+      "positive": "...(ảnh #2 = artwork, viết TỪ shot, full-bleed, KHÔNG chữ)...", "caption": "..." }
   ],
   "negative": "...",
   "etsy": { "title": "...", "description": "...", "tags": ["...", "... (đúng 13 phần tử)"] }
@@ -383,13 +406,13 @@ export const ANIME_COUPLE_QUALITY_TAGS =
   "balanced anatomy, correct head-to-body ratio, normal head size";
 
 /**
- * Bản anime nhiều người dùng ở đầu positive: như ANIME_COUPLE_QUALITY_TAGS cộng
- * các tag chống nhân đôi/tách khung tương đương MULTI_SUBJECT_QUALITY_TAGS bên
- * ảnh thực (Turbo không có negative để chặn nhân vật bị vẽ 2 lần).
+ * Bản anime nhiều người dùng ở đầu positive. Chỉ câu KHẲNG ĐỊNH: Turbo (CFG=1)
+ * không hiểu phủ định, "no comic panels"/"appears only once" lại gợi ra đúng khung
+ * truyện / nhân bản cần tránh.
  */
 export const ANIME_MULTI_SUBJECT_TAGS =
   `${ANIME_COUPLE_QUALITY_TAGS}, anatomically correct hands, correct number of arms and legs, ` +
-  "each character appears only once, single continuous scene, one unified composition";
+  "single continuous scene, one unified composition";
 
 /**
  * Hint tiếng Việt nối vào user message khi medium là anime: hướng LLM hiểu đúng ý
@@ -415,6 +438,20 @@ export const ANIME_SINGLE_SUBJECT_HINT =
   `\n  • Trong phần hành động gọi nhân vật là "the woman" / "the man", KHÔNG tả lại tóc/mắt/dáng (app đã chèn sẵn ` +
   `ngoại hình một lần) — tả 2 lần bằng 2 cách gọi khác nhau khiến model vẽ thành 2 người.` +
   `\n  • Ảnh tháng KHÔNG dùng cụm "key visual" (kiểu poster hay kèm thêm chân dung nhân vật đứng riêng).` +
+  `\n  • Nói số người ĐÚNG MỘT LẦN ở đầu câu cảnh (vd "a young man and a young woman on …"), phần sau chỉ gọi ` +
+  `"the woman" / "the man" — nhắc số người 2 lần khiến model vẽ thành 2 cặp. KHÔNG dùng "both", "couple", ` +
+  `"lovers" để gọi chung hai người (vd "both looking back" → "the woman and the man looking back") — model ` +
+  `hiểu thành thêm người.` +
+  `\n  • Tư thế ĐỨNG thì dùng cự ly gần ("cowboy shot" / "knee-up shot" / "upper body"), KHÔNG dùng "full body": ` +
+  `khung ảnh ngang, hai người đứng toàn thân chỉ chiếm dải hẹp và model sẽ lấp chỗ trống bằng một cặp nữa. ` +
+  `"full body" chỉ dùng khi ngồi/nằm. Cảnh đứng ưu tiên góc nghiêng ("from side") để hai cơ thể trải ngang khung.` +
+  `\n  • Cảnh một người QUỲ / CÚI thấp hơn hẳn người kia (vd oral, cúi tựa ghế): dùng góc nghiêng ("from side") và ` +
+  `cự ly gần để hai người lấp kín khung — chừa một góc khung trống thì model vẽ thêm người vào đó.` +
+  `\n  • Cảnh HÔN: dùng góc nghiêng ("from side") để thấy hai mặt nhìn nhau; góc chính diện khiến model bẻ đầu ` +
+  `nhân vật nhìn ra máy ảnh.` +  `\n  • Cảnh ĐỨNG thì tựa vào tường, quầy bar hoặc đồ nội thất; KHÔNG đặt cột, trụ, khung cửa, khung cửa sổ hay ` +
+  `gương ở giữa khung — model coi vật thẳng đứng đó là đường chia và vẽ thành 2 khung truyện.` +
+  `\n  • Mỗi ảnh chỉ tả MỘT khoảnh khắc, không viết chuỗi hành động "làm A rồi B" (vd "lifts and thrusts") — ` +
+  `model sẽ vẽ mỗi giai đoạn một khung.` +
   `\n- Nếu người dùng KHÔNG có ý định về 2 người (mô tả 1 người hoặc ý tưởng chung): MẶC ĐỊNH MỖI ` +
   `"positive" hãy MỞ ĐẦU bằng "solo, 1girl" hoặc "solo, 1boy" đúng theo giới tính nhân vật, mô tả ` +
   `CHÍNH XÁC MỘT người, không có người thừa hay đám đông ở hậu cảnh, và giữ tỉ lệ đầu-thân tự nhiên.`;
@@ -436,7 +473,7 @@ export const SHARED_BIAS_PROMPT = `NGUYÊN TẮC CHUNG (áp dụng TRƯỚC mọ
 4. KHÔNG THÊM ĐIỀU MÂU THUẪN. Chỉ bổ sung chi tiết ăn khớp và làm giàu cho ý tưởng gốc; không thêm yếu tố đi ngược những gì người dùng đã nêu.
 
 5. CHẤT LƯỢNG TỰ NHIÊN. Dù ảnh thực hay anime, tránh các cụm sáo rỗng gây mặt búp bê/da nhựa (perfect symmetrical features, flawless skin, doll-like, airbrushed, porcelain skin, plastic skin); ưu tiên nét tự nhiên, có chiều sâu, hài hòa với bối cảnh. Mỗi "positive" (phần bạn viết) phải GỌN, ≤ ~60 từ: KHÔNG lặp lại ý đã có trong anchorTags, mỗi từ phong cách (cinematic, editorial, pastel, moody...) dùng TỐI ĐA 1 lần — prompt dài và lặp khiến ảnh bóng bẩy, trông giả.
-6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt, mái tóc, màu da , kiểu dáng, kiểu tóc qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng phải hở hang lộ ra vú và lồn rõ thấy
+6. phải khoả thân và trần truồng từ đầu đến chân, dâm dục và dâm đãng nhất có thể, background phải khác nhau nhưng phải giữ được đặc trưng cụ thể của bối cảnh và đồng nhất khuôn mặt, mái tóc, màu da , kiểu dáng, kiểu tóc qua từng bức ảnh, tư thế đa dạng và dâm dục. Có mang trang phục nhưng hở hang: lộ vú hoặc lồn (hoặc cả hai) tuỳ theo tư thế và góc máy của từng ảnh — chỉ tả bộ phận thật sự nhìn thấy được trong tư thế đó, không ép ảnh nào cũng phải lộ cả hai.
 7. CÂU CHUYỆN VÀ CONCEPT CHIẾN DỊCH THƯƠNG MẠI CHO BỘ LỊCH (COMMERCIAL CAMPAIGN STORYLINE & DIVERSE CONCEPTS):
    Một bộ lịch 12 tháng được xây dựng như một CHIẾN DỊCH CHỤP ẢNH THƯƠNG MẠI CAO CẤP (Commercial Editorial Photoshoot Campaign) của một nhãn hàng hoặc thương hiệu xa xỉ thuê người mẫu chụp.
    - NẾU NGƯỜI DÙNG CÓ NÊU CỤ THỂ Ý TƯỞNG / HOẠT ĐỘNG / SỰ KIỆN / BỐI CẢNH / ĐẠO CỤ (ví dụ: "cô gái thợ làm bánh", "nữ điệp viên", "bữa tiệc", "chụp ở thư viện", "chụp bên bờ biển"...):

@@ -155,13 +155,12 @@ function subjectLeadTags(isAnimeMedium: boolean, positive: string, subjects?: Su
   if (subjects.kind === "solo") {
     // 1 người chính + người phụ mờ: không dùng tag "no other people".
     lead = isAnimeMedium
-      ? `one main character in sharp focus, ${subjects.description}, ${ANIME_MULTI_SUBJECT_TAGS}`
+      ? `one main character in sharp focus, ${ANIME_MULTI_SUBJECT_TAGS}`
       : `one main subject in sharp focus, ${MULTI_SUBJECT_QUALITY_TAGS}`;
   } else {
-    // Anime cũng tả số người bằng câu tự nhiên như ảnh thực: model (Krea2 +
-    // Qwen3-VL) hiểu "a man and a woman" tốt hơn tag Danbooru "1boy, 1girl".
+    // Anime: tổng số người nói đúng 1 lần ở đây; câu cảnh do LLM tự viết theo "shot".
     lead = isAnimeMedium
-      ? `${subjects.description}, ${ANIME_MULTI_SUBJECT_TAGS}`
+      ? `${ANIME_MULTI_SUBJECT_TAGS}, ${animePeopleCountLine(subjects)}`
       : `${subjects.description}, ${MULTI_SUBJECT_QUALITY_TAGS}`;
   }
   return subjects.crowd ? `${lead}, ${CROWD_BACKGROUND_TAGS}` : lead;
@@ -169,6 +168,53 @@ function subjectLeadTags(isAnimeMedium: boolean, positive: string, subjects?: Su
 
 // Ảnh toàn thân -> cần đủ khoảng trống quanh người (FRAMING_MARGIN_TAGS).
 const FULL_BODY_REGEX = /\b(full[\s-]?body|head[\s-]+to[\s-]+toe|full[\s-]?length)\b/i;
+
+const PEOPLE_NOUN = "(?:man|woman|men|women|boy|girl|boys|girls|guy|lady|ladies|person|people)";
+const PEOPLE_COUNT_WORD = "(?:a|an|one|two|three|\\d)";
+// Tag anchor CHỈ nói số người ("a young man and a young woman", "1boy", "couple").
+const PEOPLE_COUNT_TAG_REGEX = new RegExp(
+  `^(?:\\d+(?:boy|girl)s?|couple|${PEOPLE_COUNT_WORD}\\s+(?:[a-z-]+\\s+){0,2}${PEOPLE_NOUN}(?:\\s+and\\s+${PEOPLE_COUNT_WORD}\\s+(?:[a-z-]+\\s+){0,2}${PEOPLE_NOUN})?)$`,
+  "i",
+);
+
+function isAnimeGroupScene(isAnimeMedium: boolean, subjects?: SubjectSpec | null): subjects is SubjectSpec {
+  return isAnimeMedium && subjects != null && subjects.kind !== "solo";
+}
+
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six"];
+function numberWord(n: number): string {
+  return NUMBER_WORDS[n] ?? String(n);
+}
+
+function countCast(subjects: SubjectSpec): { women: number; men: number; others: number } {
+  const cast = { women: 0, men: 0, others: 0 };
+  for (const [, n, who] of subjects.tags.matchAll(/(\d+)\s*(girl|boy|other)s?\b/gi)) {
+    const key = who.toLowerCase() === "girl" ? "women" : who.toLowerCase() === "boy" ? "men" : "others";
+    cast[key] += Number(n);
+  }
+  return cast;
+}
+
+/** Anime nhiều người: câu duy nhất nói tổng số người, vd "exactly two people: one woman and one man". */
+export function animePeopleCountLine(subjects: SubjectSpec): string {
+  const { women, men, others } = countCast(subjects);
+  const total = women + men + others;
+  if (total < 2) {
+    return subjects.kind === "couple" ? `exactly two people: ${subjects.description}` : subjects.description;
+  }
+  const part = (n: number, one: string, many: string) => (n === 0 ? [] : [`${numberWord(n)} ${n === 1 ? one : many}`]);
+  const cast = [...part(women, "woman", "women"), ...part(men, "man", "men"), ...part(others, "person", "people")];
+  return `exactly ${numberWord(total)} people: ${cast.join(" and ")}`;
+}
+
+/** Anime nhiều người, anchor: bỏ tag chỉ nói số người (đã có câu đếm người). */
+export function dropPeopleCountTags(anchor: string): string {
+  return anchor
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag && !PEOPLE_COUNT_TAG_REGEX.test(tag))
+    .join(", ");
+}
 
 /**
  * Bỏ các cụm (ngăn bởi dấu phẩy) trùng lặp NGUYÊN VĂN, giữ lần xuất hiện đầu.
@@ -278,6 +324,7 @@ export function finalizeSuggestedImage(
     image.positive = neutralizeAnimeEpithets(image.positive, anchorTags);
     if (!isCover) image.positive = scrubAnimeKeyVisual(image.positive);
   }
+  const animeGroup = isAnimeGroupScene(isAnimeMedium, subjects);
 
   if (!allowHeavyBody) {
     image.positive = image.positive
@@ -299,6 +346,7 @@ export function finalizeSuggestedImage(
     .replace(SAME_BEFORE_SUBJECT_REGEX, "")
     .replace(DUP_SUBJECT_REGEX, "");
   if (isAnimeMedium && !isCover) anchor = scrubAnimeKeyVisual(anchor);
+  if (animeGroup) anchor = dropPeopleCountTags(anchor);
   anchor = anchor
     .split(",")
     .map((tag) => tag.trim())
@@ -308,7 +356,12 @@ export function finalizeSuggestedImage(
   // Tag khung theo cự ly: chỉ ảnh toàn thân mới cần đủ khoảng trống quanh người;
   // ảnh gần hơn chỉ giữ khoảng thở trên đầu (bản đầy đủ đẩy người ra xa -> mặt
   // nhỏ, trông giả, và chọi với cự ly gần).
-  const framing = FULL_BODY_REGEX.test(image.positive) ? FRAMING_MARGIN_TAGS : FRAMING_HEADROOM_TAGS;
+  // Anime nhiều người: không chèn tag khung -- cự ly do LLM chốt trong "shot.camera".
+  const framing = animeGroup
+    ? ""
+    : FULL_BODY_REGEX.test(image.positive)
+      ? FRAMING_MARGIN_TAGS
+      : FRAMING_HEADROOM_TAGS;
 
   if (!isCover) {
     image.title = undefined;

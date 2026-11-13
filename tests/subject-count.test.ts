@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { SubjectSpec } from "@/lib/llm/axis-decision";
 import {
   ANIME_SINGLE_SUBJECT_TAGS,
+  CALENDAR_SYSTEM_PROMPT_ANIME,
+  CALENDAR_SYSTEM_PROMPT_REAL,
   CROWD_BACKGROUND_TAGS,
   MULTI_SUBJECT_QUALITY_TAGS,
   SHARED_BIAS_PROMPT,
@@ -29,11 +31,12 @@ describe("finalizeSuggestedImage subject tags", () => {
     expect(positive).not.toMatch(/\bsolo\b|one person only/);
   });
 
-  it("anime group leads with the natural-language description like real", () => {
+  it("anime group: one total-count line from the intent tags", () => {
     const positive = finalize(true, group);
-    expect(positive.startsWith("one man and two women, balanced anatomy")).toBe(true);
-    expect(positive).toContain("each character appears only once");
-    expect(positive).not.toMatch(/\bsolo\b|no other people/);
+    expect(positive.startsWith("balanced anatomy")).toBe(true);
+    expect(positive.match(/exactly three people: two women and one man/g)?.length).toBe(1);
+    expect(positive).not.toContain("one man and two women");
+    expect(positive).not.toMatch(/\bsolo\b|no other people|only once/);
   });
 
   it("adds blurred background people for crowd scenes, also on the cover", () => {
@@ -42,7 +45,7 @@ describe("finalizeSuggestedImage subject tags", () => {
   });
 
   it("solo with a crowd keeps one main subject without 'no other people'", () => {
-    expect(finalize(true, soloInCrowd).startsWith("one main character in sharp focus, one woman")).toBe(true);
+    expect(finalize(true, soloInCrowd).startsWith("one main character in sharp focus, balanced anatomy")).toBe(true);
     expect(finalize(true, soloInCrowd)).not.toContain("no other people");
     expect(finalize(false, soloInCrowd).startsWith("one main subject in sharp focus")).toBe(true);
   });
@@ -86,6 +89,16 @@ describe("composeUserMessage intent lines", () => {
     const msg = composeUserMessage({ request: "x", count: 13, coreIntent: null, subjects: null });
     expect(msg).not.toContain("Ý chính");
     expect(msg).not.toContain("Số người trong MỖI ảnh");
+  });
+
+  it("anime system prompt asks for a per-image shot plan; real prompt does not", () => {
+    expect(CALENDAR_SYSTEM_PROMPT_ANIME).toContain('"shot": { "camera": "...", "poses": "...", "visible": "..." }');
+    expect(CALENDAR_SYSTEM_PROMPT_REAL).not.toContain('"shot"');
+  });
+
+  it("rule 6 lets the pose decide whether breasts, pussy or both are exposed", () => {
+    expect(SHARED_BIAS_PROMPT).toContain("lộ vú hoặc lồn (hoặc cả hai) tuỳ theo tư thế");
+    expect(SHARED_BIAS_PROMPT).not.toMatch(/phải hở hang lộ ra vú (và|hoặc) lồn rõ thấy/);
   });
 
   it("shared prompt no longer forces a single model unconditionally", () => {

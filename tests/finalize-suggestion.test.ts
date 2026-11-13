@@ -111,12 +111,78 @@ describe("finalizeSuggestedImage", () => {
 
   const couple = { kind: "couple", tags: "1boy, 1girl", description: "a man and a woman", crowd: false } as const;
 
-  it("anime couple: leads with the natural-language description and anti-duplication tags", () => {
-    const image = makeImage({ positive: "the woman sits on top of the man facing him, from side" });
+  it("anime couple: one count line, LLM scene kept verbatim, count-only anchor tags dropped", () => {
+    const scene = "a young man and a young woman on a rooftop, the woman sits on top of the man facing him, from side";
+    const result = finalizeSuggestedImage(makeImage({ positive: scene }), {
+      isCover: false,
+      isAnimeMedium: true,
+      subjects: { ...couple, description: "a young man and a young woman" },
+      anchorTags: "1boy, 1girl, a young man and a young woman, silver hair, rooftop terrace",
+    });
+    expect(result.positive.startsWith("balanced anatomy")).toBe(true);
+    expect(result.positive.match(/exactly two people: one woman and one man/g)?.length).toBe(1);
+    expect(result.positive.endsWith(scene)).toBe(true);
+    expect(result.positive).not.toMatch(/1boy|1girl/);
+    expect(result.positive).toContain("silver hair");
+  });
+
+  it("anime couple: count line is present even when the LLM scene omits the count", () => {
+    const image = makeImage({ positive: "the woman leans on the railing, the man behind her, from behind" });
     const result = finalizeSuggestedImage(image, { isCover: false, isAnimeMedium: true, subjects: couple });
-    expect(result.positive.startsWith("a man and a woman, balanced anatomy")).toBe(true);
-    expect(result.positive).not.toContain("1boy, 1girl");
-    expect(result.positive).toContain("each character appears only once");
+    expect(result.positive.match(/exactly two people/g)?.length).toBe(1);
+    expect(result.positive).not.toContain("a man and a woman");
+  });
+
+  it("anime couple: no negated phrases and no framing tags injected over the LLM's shot", () => {
+    const image = makeImage({
+      positive: "the man and the woman in a VIP booth, the woman bends over the armrest, from side view, full body",
+    });
+    const result = finalizeSuggestedImage(image, {
+      isCover: false,
+      isAnimeMedium: true,
+      subjects: couple,
+      anchorTags: "adult woman in her mid 20s, long glossy black hair, handsome adult man in his late 20s",
+    });
+    expect(result.positive).not.toMatch(/\bno\s|\bonly\b|\bonce\b|panel|empty space/);
+    expect(result.positive).not.toMatch(/headroom|framing|breathing room|top of the head/);
+    expect(result.positive).toContain("adult woman in her mid 20s");
+    expect(result.positive).toContain("from side view, full body");
+  });
+
+  it("anime group: count line built from intent tags", () => {
+    const result = finalizeSuggestedImage(makeImage({ positive: "two women and a man in a hot tub, from above" }), {
+      isCover: false,
+      isAnimeMedium: true,
+      subjects: { kind: "group", tags: "2girls, 1boy", description: "two women and a man", crowd: false },
+    });
+    expect(result.positive).toContain("exactly three people: two women and one man");
+    expect(result.positive).toContain("two women and a man in a hot tub");
+  });
+
+  it("anime couple: the app no longer rewrites the LLM's scene (pose, distance, props)", () => {
+    const scene = "a man and a woman, both standing face to face against a neon pillar, from front view, full body";
+    const result = finalizeSuggestedImage(makeImage({ positive: scene }), {
+      isCover: false,
+      isAnimeMedium: true,
+      subjects: couple,
+    });
+    expect(result.positive.endsWith(scene)).toBe(true);
+  });
+
+  it("real couple standing against a pillar: unchanged", () => {
+    const real = finalizeSuggestedImage(makeImage({ positive: "the woman stands against a pillar" }), {
+      isCover: false,
+      isAnimeMedium: false,
+      subjects: couple,
+    });
+    expect(real.positive).toContain("against a pillar");
+  });
+
+  it("real couple standing full body: framing unchanged", () => {
+    const image = makeImage({ positive: "the woman stands kissing the man, full body" });
+    const result = finalizeSuggestedImage(image, { isCover: false, isAnimeMedium: false, subjects: couple });
+    expect(result.positive).toContain("full body");
+    expect(result.positive).toContain("breathing room");
   });
 
   it("real couple: lead tags unchanged", () => {

@@ -79,7 +79,7 @@ RẤT QUAN TRỌNG cho MỌI ảnh:
 - ĐA DẠNG CỰ LY giữa các ảnh, nhưng MỖI ảnh CHỈ MỘT cự ly: trong bộ 13 ảnh, khoảng 4 ảnh "full body"
   (người ở GẦN, chiếm gần hết chiều cao khung), còn lại là "cowboy shot" (đầu tới đùi) hoặc "upper body"
   (đầu tới hông) để khuôn mặt đủ lớn, nét đẹp. Bìa (#1) dùng "full body" hoặc "cowboy shot" để còn chỗ
-  cho chữ. TUYỆT ĐỐI KHÔNG chụp cận mặt ("close-up", "portrait", "face focus") và KHÔNG ghi 2 cự ly
+  cho chữ. TUYỆT ĐỐI KHÔNG chụp cận mặt ("close-up", "portrait", "face focus", "face shot", "headshot", "head shot", "bust shot", "head and shoulders", "portrait shot") và KHÔNG ghi 2 cự ly
   trong cùng một ảnh — trộn cự ly trong MỘT ảnh khiến model tách ảnh thành 2 khung.
 
 KẾ HOẠCH KHUNG HÌNH "shot" (BẮT BUỘC cho MỌI ảnh, điền TRƯỚC "positive"):
@@ -115,8 +115,7 @@ QUY TẮC BỐ CỤC MỘT CẢNH DUY NHẤT (áp dụng MỌI ảnh -- chống 
   • Bờ biển: khoảng trời trên mặt biển, hoặc mặt nước phẳng.
   • Trong nhà: mảng tường trơn phía trên hoặc bên cạnh, hoặc mảng trần.
   • Ban đêm / thành phố: bầu trời tối, hoặc mảng tường tối trơn, bokeh đèn out-of-focus.
-- Đặt nhân vật LỆCH về MỘT phía khung, chừa vùng trống ở phía đối diện hoặc phía trên — tất cả vẫn nằm
-  trong CÙNG một cảnh liền mạch.
+- Đặt nhân vật LỆCH về MỘT phía khung, chừa vùng trống ở phía đối diện hoặc phía trên — tất cả vẫn nằm trong CÙNG một cảnh liền mạch.
 
 QUY TẮC CHỮ TRÊN BÌA (CHỈ ảnh #1 -- model ảnh TỰ VẼ chữ, không phải ghép sau):
 - Đặt chữ vào ĐÚNG vùng trống của cảnh đã mô tả ở trên (bầu trời, tường trơn, mặt nước, mảng bokeh...).
@@ -148,7 +147,7 @@ QUY TẮC CHỮ TRÊN BÌA (CHỈ ảnh #1 -- model ảnh TỰ VẼ chữ, khôn
 - TẤT CẢ ảnh #2..#N: KHÔNG mô tả bất kỳ chữ/text/typography nào, bố cục full-bleed không cần chừa chỗ.
 
 RẤT QUAN TRỌNG VỀ TỪ KHÓA BỐ CỤC (áp dụng cho vùng trống đặt chữ ở ảnh #1):
-TUYỆT ĐỐI KHÔNG dùng các từ: "copy space", "negative space", "clean simple floor", "solid background" vì mô hình AI sẽ hiểu nhầm và vẽ ra một thanh banner màu đặc nhân tạo cắt cụt cơ thể nhân vật! Chỉ dùng các từ nhiếp ảnh tự nhiên như: "empty sky", "plain wall", "clear background area", "headroom", "rule of thirds", "wide angle shot".
+TUYỆT ĐỐI KHÔNG dùng các từ: "copy space", "negative space", "clean simple floor", "solid background", "white area", "blank area", "white panel", "blank panel", "empty panel", "white side", "white left side", "white right side", "blank left", "blank right" vì mô hình AI sẽ hiểu nhầm và vẽ ra một thanh banner màu đặc nhân tạo hoặc panel trắng tách rời cắt đôi ảnh! Chỉ dùng các từ nhiếp ảnh tự nhiên như: "empty sky", "plain wall", "clear background area", "headroom", "rule of thirds", "wide angle shot".
 
 "negative": một chuỗi tag tiếng Anh dùng chung cho cả bộ, liệt kê lỗi/kết quả không mong muốn liên quan
 đến yêu cầu (sai giới tính, sai số lượng người, sai bối cảnh...). Không cần lặp lỗi chất lượng chung.
@@ -386,7 +385,10 @@ export const ANIME_COVER_TYPOGRAPHY_HINT =
   `ĐÚNG CHÍNH TẢ. Xếp 3 khối chữ (title / "CALENDAR" / năm) GỌN trong CÙNG một vùng trống của cảnh (vd ` +
   `title lớn phía trên, "CALENDAR" và năm ngay dưới nó) — có thể lệch tầng cho sinh động nhưng KHÔNG rải ` +
   `ra khắp khung làm băm nhỏ bố cục; tất cả vẫn né mặt và thân nhân vật, nằm trong MỘT cảnh liền mạch, ` +
-  `và KHÔNG dùng các cụm "copy space"/"negative space"/"split"/"collage".`;
+  `và KHÔNG dùng các cụm "copy space"/"negative space"/"split"/"collage". ` +
+  `NGUY HIỂM VỚI MODEL ANIME: KHÔNG mô tả "white area on the left/right", "blank panel for text", ` +
+  `"clear zone beside character", "white side", "blank area on [side]" hay bất kỳ cụm nào ngụ ý khoảng ` +
+  `trắng/rỗng bên CẠNH nhân vật — model sẽ vẽ thành 2 nửa tách rời. Vùng chữ phải là NỀN SCENE TỰ NHIÊN của chính cảnh đó.`;
 
 /**
  * Tag single-subject chuyên cho anime, ÉP LÊN ĐẦU positive (route /suggest) khi

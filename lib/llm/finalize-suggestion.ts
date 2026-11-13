@@ -207,6 +207,11 @@ const CAST_PERSON = `an?\\s+(?:${CAST_ADJ}\\s+){0,2}(?:man|woman)`;
 const SCENE_PAIR_REGEX = new RegExp(`\\b${CAST_PERSON}\\s+and\\s+${CAST_PERSON}\\b`, "i");
 const ANCHOR_LEAD_PERSON_REGEX = new RegExp(`^(?:an?\\s+)?(?:${CAST_ADJ}\\s+){0,2}(man|woman)\\b\\s*`, "i");
 
+const OWNED_TAG_REGEX = /^the\s+(?:woman|man)\b/i;
+// Danh sách đóng các món đồ nữ-tính; đồ trung tính (shirt, suit...) không đụng tới.
+const FEMALE_GARMENT_REGEX =
+  /\b(?:lingerie|bra|bralette|panties|thong|g-string|stockings?|thigh[\s-]highs?|garters?|corset|bustier|babydoll|negligee|nightgown|bikini|dress|gown|skirt|miniskirt|heels)\b/i;
+
 /** Đúng 1 nữ + 1 nam (không ai khác): nhóm khác giữ nguyên để khỏi sửa nhầm. */
 function isMixedPair(subjects: SubjectSpec): boolean {
   const { women, men, others } = countCast(subjects);
@@ -226,13 +231,15 @@ function sceneIntroducesPair(scene: string, subjects: SubjectSpec): boolean {
 export function referAnchorToCast(anchor: string): string {
   return anchor
     .split(",")
-    .map((tag) =>
-      tag
+    .map((raw) => {
+      const tag = raw
         .trim()
         .replace(ANCHOR_LEAD_PERSON_REGEX, (_match, noun: string) => `the ${noun.toLowerCase()} `)
         .replace(/\bcouples?\b\s*/gi, "")
-        .trim(),
-    )
+        .trim();
+      // Đồ nữ-tính không ghi chủ -> model mặc cho cả hai; gán cho người nữ.
+      return tag && !OWNED_TAG_REGEX.test(tag) && FEMALE_GARMENT_REGEX.test(tag) ? `the woman wearing ${tag}` : tag;
+    })
     .filter(Boolean)
     .join(", ");
 }

@@ -124,6 +124,41 @@ describe("finalizeSuggestedImage with the anime template", () => {
   });
 });
 
+describe("anchor garments get an owner (couple)", () => {
+  const run = (anchorTags: string) =>
+    finalizeSuggestedImage(coupleImage(), { isCover: false, isAnimeMedium: true, subjects: couple, anchorTags }).positive;
+
+  it("ownerless feminine garment goes to the woman, not the man", () => {
+    const positive = run(
+      "adult woman early 20s messy blonde bob, adult man early 20s short dark hair sharp jawline, elegant revealing lingerie, luxury hotel suite with large bed",
+    );
+    expect(positive).toContain("the woman wearing elegant revealing lingerie");
+    expect(positive).toContain("the man early 20s short dark hair sharp jawline");
+    expect(positive).toContain("luxury hotel suite with large bed");
+    expect(positive).not.toMatch(/the man[^,]*lingerie/);
+  });
+
+  it("owned garments and neutral clothing are left alone", () => {
+    const positive = run("the woman wearing a silk slip dress, the man wearing black briefs, white linen shirt, rooftop bar");
+    expect(positive).toContain("the woman wearing a silk slip dress");
+    expect(positive).not.toContain("the woman wearing the woman wearing");
+    expect(positive).toContain("the man wearing black briefs");
+    expect(positive).toContain("white linen shirt");
+    expect(positive).not.toContain("the woman wearing white linen shirt");
+  });
+
+  it("non-mixed groups keep ownerless garments untouched", () => {
+    const result = finalizeSuggestedImage(image({ positive: "two women on a sofa" }), {
+      isCover: false,
+      isAnimeMedium: true,
+      subjects: { ...couple, tags: "2girls" },
+      anchorTags: "lace lingerie, loft",
+    });
+    expect(result.positive).toContain("lace lingerie");
+    expect(result.positive).not.toContain("the woman wearing");
+  });
+});
+
 describe("llmSuggestionResultSchema (template fields)", () => {
   const base = { negative: "", images: [] as unknown[] };
 

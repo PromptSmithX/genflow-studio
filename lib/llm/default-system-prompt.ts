@@ -109,6 +109,7 @@ breasts", "pulled aside"...) — việc đó viết trong "positive" theo "visib
 - "woman" (chế độ couple, solo_f): CỤM HÀNH ĐỘNG của người nữ trong khoảnh khắc này — tư thế, hướng nhìn, biểu cảm, tay chân đặt ở đâu, phần cơ thể/trang phục nhìn thấy được theo "shot.visible". Bắt đầu thẳng bằng động từ (vd "sits on the edge of a low brick wall, leans forward to kiss him, hands on his shoulders").
 - "man" (chế độ couple, solo_m): tương tự cho người nam (vd "stands between her legs, holding her waist, eyes closed").
 - Trong "woman"/"man" TUYỆT ĐỐI KHÔNG viết "a man", "a woman", "a young man", "couple", "both"... (app đã nói số người đúng một lần); KHÔNG tả tóc/mắt/tuổi/dáng người (anchorTags và ngoại hình gợi ý đã lo); nhắc người kia bằng đại từ "her"/"him". Chế độ solo_f chỉ có "woman", solo_m chỉ có "man" (không trả trường còn lại).
+- TRANG PHỤC TRONG anchorTags (chế độ couple) PHẢI CÓ CHỦ: viết "the woman wearing ..." và "the man wearing ..." riêng cho từng người; TUYỆT ĐỐI KHÔNG viết một tag trang phục không ghi của ai (vd "elegant revealing lingerie") vì model sẽ mặc cho cả hai. Đồ của người nam phải hợp giới (áo sơ mi, vest, quần dài, boxer, cởi trần...), KHÔNG lingerie/đầm/váy cho nam trừ khi người dùng yêu cầu rõ.
 Dạng mỗi phần tử trong "images" ở chế độ này (thay cho dạng có "positive" ở schema bên dưới; "concept", "negative", "etsy" giữ nguyên):
 { "shot": { "camera": "...", "poses": "...", "visible": "..." }, "scene": "...", "woman": "...", "man": "...", "caption": "...", "title": "...", "year": "2027" }
 ("title"/"year" CHỈ ảnh #1.)

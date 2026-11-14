@@ -68,6 +68,8 @@ export const LOCATION_FAMILIES: LocationFamily[] = [
   { key: "fashion-runway", direction: "a fashion runway or showroom", keywords: ["runway", "catwalk", "showroom", "fashion show"] },
   { key: "circus-carnival", direction: "a vintage circus or carnival", keywords: ["circus", "carnival", "carousel", "fairground"] },
   { key: "casino-lounge", direction: "a casino or jazz lounge", keywords: ["casino", "jazz", "lounge", "speakeasy"] },
+  { key: "nightclub", direction: "a nightclub or dance club", keywords: ["nightclub", "night club", "club", "dance floor", "dj"] },
+  { key: "private-villa", direction: "a luxurious private mansion or villa", keywords: ["mansion", "villa", "estate"] },
   { key: "underwater-aquarium", direction: "an aquarium or underwater-themed space", keywords: ["aquarium", "underwater"] },
   { key: "bookstore-antique", direction: "an antique shop or old bookstore", keywords: ["antique", "bookstore", "curiosity shop"] },
 ];
@@ -97,6 +99,18 @@ export const PHOTO_LOOK = [
   "documentary lifestyle photo",
   "sunlit travel photo",
   "intimate window-lit photo",
+];
+
+// Bản anime của PHOTO_LOOK: gợi ý chất render/ánh sáng, không chứa "photo".
+export const ANIME_LOOK = [
+  "soft cel-shaded lighting",
+  "detailed anime illustration",
+  "painterly anime background art",
+  "cinematic anime film still",
+  "vibrant slice-of-life anime scene",
+  "glowing dusk anime lighting",
+  "crisp clean lineart with soft shading",
+  "warm watercolor-tinted anime background",
 ];
 
 /** Số bộ gần nhất đưa vào danh sách tránh (cân bằng đa dạng vs token). */
@@ -138,17 +152,29 @@ function pick<T>(items: T[], random: () => number): T {
  * điểm/thời tiết + phong cách bốc tự do. Nếu mọi nhóm đều bị né (hiếm) thì bốc
  * từ toàn bộ danh sách.
  */
+/** Danh sách cho từng phần của hướng concept; null = bỏ phần đó (người dùng đã nêu). */
+export interface ConceptPools {
+  families?: LocationFamily[] | null;
+  timeWeather?: string[] | null;
+  looks?: string[] | null;
+}
+
 export function pickConceptSeed(
   recent: RecentConcepts = { keys: [], themes: [] },
   random: () => number = Math.random,
-  families: LocationFamily[] = LOCATION_FAMILIES,
+  { families = LOCATION_FAMILIES, timeWeather = TIME_WEATHER, looks = PHOTO_LOOK }: ConceptPools = {},
 ): ConceptSeed {
-  const recentKeys = new Set(recent.keys);
-  const fresh = families.filter((family) => !recentKeys.has(family.key) && !familyConflicts(family, recent.themes));
-  const family = pick(fresh.length > 0 ? fresh : families, random);
+  let family: LocationFamily | null = null;
+  if (families) {
+    const recentKeys = new Set(recent.keys);
+    const fresh = families.filter((item) => !recentKeys.has(item.key) && !familyConflicts(item, recent.themes));
+    family = pick(fresh.length > 0 ? fresh : families, random);
+  }
   return {
-    key: family.key,
-    text: `${family.direction}, ${pick(TIME_WEATHER, random)}, ${pick(PHOTO_LOOK, random)}`,
+    key: family?.key ?? "",
+    text: [family?.direction, timeWeather && pick(timeWeather, random), looks && pick(looks, random)]
+      .filter(Boolean)
+      .join(", "),
   };
 }
 

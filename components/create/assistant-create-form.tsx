@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Wand2, Loader2, Check, Circle } from "lucide-react";
+import { FolderOpen, ListPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,19 +12,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useMediums } from "@/hooks/use-mediums";
-import { useSettings, useAdvancedMode } from "@/hooks/use-settings";
+import { useSettings, useAdvancedMode, useUpdateSettings } from "@/hooks/use-settings";
 import { useWorkflow } from "@/hooks/use-workflow";
 import { useHeaderConnectionState } from "@/hooks/use-connection";
-import { useCreateGeneration } from "@/hooks/use-generations";
-import { useSuggestPrompts } from "@/hooks/use-llm-suggest";
-import { randomSeed } from "@/lib/seed";
-import { mergeTags } from "@/lib/prompts/merge-tags";
-import type { SuggestPromptsResponse } from "@/lib/validations/llm";
+import { useEnqueueDraft } from "@/hooks/use-draft-queue";
+import { useOpenDirectory } from "@/lib/hooks/use-electron";
 import type { WorkflowSummaryResponse } from "@/lib/types";
 import { ApiRequestError } from "@/lib/client/api";
 import { cn } from "@/lib/utils";
-import { setNavigationLock } from "@/lib/client/navigation-lock";
+import { CALENDAR_IMAGE_COUNT } from "@/lib/calendar/constants";
+import { DraftQueuePanel } from "@/components/create/draft-queue-panel";
 
 type AdvancedParamField = "width" | "height" | "steps" | "cfg";
 type AdvancedParams = Record<AdvancedParamField, string>;
@@ -36,9 +39,6 @@ type AdvancedParams = Record<AdvancedParamField, string>;
 // dọc dễ sai tỉ lệ đầu/thân trên Turbo CFG=1. Áp cho cả batch (bìa + mọi trang).
 const COVER_DEFAULT_WIDTH = 1152;
 const COVER_DEFAULT_HEIGHT = 952;
-
-// 1 bìa trước + 12 tháng; bìa sau do app tự ghép -> đủ 14 trang cho file in và mockup.
-const CALENDAR_IMAGE_COUNT = 13;
 
 /**
  * Reads a field's current literal value out of the imported workflow JSON via
@@ -63,9 +63,9 @@ export function AssistantCreateForm() {
   const advancedMode = useAdvancedMode();
   const { data: workflow } = useWorkflow();
   const { state: connectionState } = useHeaderConnectionState();
-  const suggestMutation = useSuggestPrompts();
-  const createMutation = useCreateGeneration();
+  const enqueueMutation = useEnqueueDraft();
   const router = useRouter();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeMediums = useMemo(() => (mediums ?? []).filter((m) => m.isActive), [mediums]);
 
@@ -95,96 +95,53 @@ export function AssistantCreateForm() {
     }
   }
 
-  // Luôn tạo cố định 1 bộ lịch 13 ảnh. Vẫn kẹp theo trần trong Cài đặt (tải không
-  // đồng bộ, có thể bị hạ) để server không từ chối batch.
-  const safeImageCount = Math.min(CALENDAR_IMAGE_COUNT, settings?.maxImagesPerBatch ?? 15);
+  const updateSettings = useUpdateSettings();
+  const openDirectory = useOpenDirectory();
+  const [showDirDialog, setShowDirDialog] = useState(false);
+
   const workflowReady = Boolean(workflow?.configured && workflow.isValidated);
   const isReady = connectionState === "connected" && workflowReady;
   // Trợ lý AI yêu cầu API key đã cấu hình trong Cài đặt (settings.hasLlmKey).
   const llmReady = Boolean(settings?.hasLlmKey);
-  // Một nút "Tạo ảnh" chạy cả soạn prompt (LLM) lẫn gửi gen (ComfyUI) nên cần
-  // đủ cả hai sẵn sàng ngay từ đầu.
-  const isWorking = suggestMutation.isPending || createMutation.isPending;
-  const canGenerate = llmReady && isReady && requestText.trim().length > 0 && !isWorking;
+  const isSubmitting = enqueueMutation.isPending;
+  const canGenerate = llmReady && isReady && requestText.trim().length > 0 && !isSubmitting;
 
-  // Rời trang giữa chừng sẽ huỷ form -> bước tạo batch (gọi trong onSuccess của
-  // bước soạn prompt) không chạy -> mất ảnh mà người dùng không biết. Khoá điều
-  // hướng ở sidebar trong suốt thời gian đang làm; cleanup mở khoá kể cả khi unmount.
-  useEffect(() => {
-    if (!isWorking) return;
-    setNavigationLock("Đang tạo ảnh — vui lòng đợi xong rồi mới chuyển trang, nếu không ảnh sẽ không được tạo.");
-    return () => setNavigationLock(null);
-  }, [isWorking]);
+  async function handleChangeSaveDir() {
+    const dir = await openDirectory();
+    if (dir) updateSettings.mutate({ outputDirectory: dir });
+  }
 
-  // Bấm 1 lần: LLM soạn mô tả -> tự gửi batch tạo ảnh. Người dùng không xem lại
-  // prompt ở giữa; lỗi ở bước nào cũng toast và giữ nguyên màn nhập.
-  function handleGenerate() {
-    suggestMutation.mutate(
+  function doEnqueue() {
+    enqueueMutation.mutate(
       {
         request: requestText.trim(),
-        count: safeImageCount,
         mediumId: mediumId || undefined,
+        width: params.width ? Number(params.width) : undefined,
+        height: params.height ? Number(params.height) : undefined,
+        steps: params.steps ? Number(params.steps) : undefined,
+        cfg: params.cfg ? Number(params.cfg) : undefined,
       },
       {
-        onSuccess: (result) => submitBatch(result),
+        onSuccess: (batch) => {
+          setRequestText("");
+          textareaRef.current?.focus();
+          toast.success("Đã thêm vào hàng đợi — bạn có thể nhập bộ tiếp theo", {
+            action: { label: "Xem", onClick: () => router.push(`/history?batch=${batch.id}`) },
+          });
+        },
         onError: (error) => {
-          toast.error(error instanceof ApiRequestError ? error.message : "Tạo mô tả thất bại");
+          toast.error(error instanceof ApiRequestError ? error.message : "Không thêm được vào hàng đợi");
         },
       },
     );
   }
 
-  function submitBatch(suggestions: SuggestPromptsResponse) {
-    // Chung 1 seed cho cả batch để gương mặt đồng nhất giữa các ảnh trong cùng
-    // lần gen; mỗi lần bấm Tạo lại random seed mới nên các lần gen vẫn khác nhau.
-    const sharedSeed = randomSeed();
-    // Kiểu ảnh (Người thực/Anime...) ghép tag phong cách/chất lượng do app
-    // kiểm soát vào trước mỗi positive, và trộn vào negative chung -- không
-    // phụ thuộc vào chất lượng tag mà LLM tự viết.
-    const medium = activeMediums.find((m) => m.id === mediumId);
-    createMutation.mutate(
-      {
-        ideaPrompt: requestText.trim(),
-        mediumId: mediumId || undefined,
-        images: suggestions.images.map((image) => ({
-          positiveOverride: mergeTags(medium?.positivePrompt, image.positive),
-          negativeOverride: mergeTags(medium?.negativePrompt, suggestions.negative) || undefined,
-        })),
-        etsy: suggestions.etsy
-          ? {
-              title: suggestions.etsy.title || undefined,
-              description: suggestions.etsy.description || undefined,
-              tags: suggestions.etsy.tags.length ? suggestions.etsy.tags : undefined,
-            }
-          : undefined,
-        concept:
-          suggestions.concept || suggestions.conceptSeedKey || suggestions.appearanceKey
-            ? {
-                theme: suggestions.concept?.campaignTheme || undefined,
-                anchorTags: suggestions.concept?.anchorTags || undefined,
-                seedKey: suggestions.conceptSeedKey || undefined,
-                appearanceKey: suggestions.appearanceKey || undefined,
-              }
-            : undefined,
-        // Để trống một ô -> undefined -> backend giữ giá trị của workflow JSON.
-        width: params.width ? Number(params.width) : undefined,
-        height: params.height ? Number(params.height) : undefined,
-        steps: params.steps ? Number(params.steps) : undefined,
-        cfg: params.cfg ? Number(params.cfg) : undefined,
-        seedMode: "fixed",
-        fixedSeed: sharedSeed,
-        incrementFixedSeed: false,
-      },
-      {
-        onSuccess: (batch) => {
-          toast.success(`Đã gửi ${batch.jobs.length} ảnh để tạo. Theo dõi tiến độ ở trang Kết quả.`);
-          router.push(`/history?batch=${batch.id}`);
-        },
-        onError: (error) => {
-          toast.error(error instanceof ApiRequestError ? error.message : "Tạo ảnh thất bại");
-        },
-      },
-    );
+  function handleEnqueue() {
+    if (settings?.outputDirectory === "outputs") {
+      setShowDirDialog(true);
+      return;
+    }
+    doEnqueue();
   }
 
   return (
@@ -239,15 +196,21 @@ export function AssistantCreateForm() {
         <CardContent className="space-y-3 p-4">
           <h3 className="text-sm font-medium">1. Ý tưởng của bạn</h3>
           <Textarea
+            ref={textareaRef}
             value={requestText}
             onChange={(e) => setRequestText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && canGenerate) {
+                e.preventDefault();
+                handleEnqueue();
+              }
+            }}
             placeholder="Ví dụ: cô gái tóc đỏ dạo phố Nhật Bản vào mùa thu, không khí ấm áp..."
             className="min-h-28"
             autoFocus
-            disabled={isWorking}
           />
           <p className="text-xs text-muted-foreground">
-            Càng cụ thể (nhân vật, bối cảnh, mùa, cảm xúc) thì ảnh càng đúng ý.
+            Càng cụ thể (nhân vật, bối cảnh, mùa, cảm xúc) thì ảnh càng đúng ý. Nhấn Ctrl+Enter để thêm nhanh.
           </p>
         </CardContent>
       </Card>
@@ -265,7 +228,6 @@ export function AssistantCreateForm() {
                 key={medium.id}
                 type="button"
                 onClick={() => setMediumId(medium.id)}
-                disabled={isWorking}
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors",
                   mediumId === medium.id ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
@@ -339,55 +301,68 @@ export function AssistantCreateForm() {
         </Accordion>
       )}
 
-      {isWorking && (
-        <Card className="border-primary/40 bg-primary/5">
-          <CardContent className="space-y-2 p-4 text-sm">
-            <ProgressStep
-              state={suggestMutation.isPending ? "active" : "done"}
-              text={`AI đang viết mô tả cho ${safeImageCount} ảnh — thường mất 1–2 phút, đừng đóng app hoặc chuyển trang.`}
-            />
-            <ProgressStep
-              state={createMutation.isPending ? "active" : "waiting"}
-              text="Gửi sang máy tạo ảnh — xong sẽ tự chuyển sang trang Kết quả."
-            />
-            <p className="pt-1 text-xs text-muted-foreground">
-              Vui lòng ở lại trang này cho tới khi xong — chuyển trang lúc này ảnh sẽ không được tạo.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate text-muted-foreground">
+            Lưu vào: <span className="text-foreground">{settings?.outputDirectory || "outputs"}</span>
+          </span>
+        </div>
+        <Button type="button" variant="ghost" size="sm" className="ml-2 h-7 shrink-0" onClick={handleChangeSaveDir}>
+          Đổi
+        </Button>
+      </div>
 
       <div className="space-y-2">
-        {!isWorking && requestText.trim().length === 0 && (
-          <p className="text-center text-xs text-muted-foreground">Nhập ý tưởng để bắt đầu</p>
-        )}
-        <Button size="lg" className="w-full text-base font-semibold" onClick={handleGenerate} disabled={!canGenerate}>
-          {isWorking ? (
+        <Button size="lg" className="w-full text-base font-semibold" onClick={handleEnqueue} disabled={!canGenerate}>
+          {isSubmitting ? (
             <>
-              <Loader2 className="h-5 w-5 animate-spin" /> Đang xử lý...
+              <Loader2 className="h-5 w-5 animate-spin" /> Đang thêm...
             </>
           ) : (
             <>
-              <Wand2 className="h-5 w-5" /> Tạo bộ lịch
+              <ListPlus className="h-5 w-5" /> Thêm vào hàng đợi
             </>
           )}
         </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          {requestText.trim().length === 0
+            ? "Nhập ý tưởng để bắt đầu"
+            : "AI soạn mô tả và tạo ảnh ở chế độ nền — bạn có thể thêm bộ tiếp hoặc chuyển trang ngay."}
+        </p>
       </div>
-    </div>
-  );
-}
 
-function ProgressStep({ state, text }: { state: "waiting" | "active" | "done"; text: string }) {
-  return (
-    <div className={cn("flex items-start gap-2", state === "waiting" && "text-muted-foreground")}>
-      {state === "done" ? (
-        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-      ) : state === "active" ? (
-        <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
-      ) : (
-        <Circle className="mt-0.5 h-4 w-4 shrink-0" />
-      )}
-      <span>{text}</span>
+      <AlertDialog open={showDirDialog} onOpenChange={setShowDirDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Chọn thư mục lưu ảnh</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn chưa chọn thư mục lưu ảnh. Hãy chọn một thư mục cụ thể để dễ tìm ảnh sau khi tạo xong, hoặc dùng
+              thư mục mặc định (<code>outputs</code> trong thư mục cài đặt app).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowDirDialog(false); doEnqueue(); }}>
+              Dùng thư mục mặc định
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setShowDirDialog(false);
+                const dir = await openDirectory();
+                if (dir) {
+                  updateSettings.mutate({ outputDirectory: dir }, { onSuccess: () => doEnqueue() });
+                } else {
+                  doEnqueue();
+                }
+              }}
+            >
+              <FolderOpen className="h-4 w-4" /> Chọn thư mục
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DraftQueuePanel />
     </div>
   );
 }

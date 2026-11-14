@@ -7,6 +7,7 @@ import { slotLabel } from "@/lib/calendar/slot-label";
 import { regenerateJobFreshPrompt } from "@/lib/generations/regenerate-fresh";
 import { runAutoPublishExclusive, getCalendarSkipReason } from "@/lib/pipeline/auto-publish";
 import { syncBatchToSheet } from "@/lib/sheets/sync";
+import { kickDraftQueue } from "@/lib/generations/draft-queue";
 
 const POLL_INTERVAL_MS = 15_000;
 // Chỉ đồng bộ batch gần đây; batch cũ hơn ngưỡng này sẽ không poll nữa để tránh gọi RunPod vô hạn.
@@ -46,6 +47,30 @@ export async function resetInterruptedBatches(): Promise<number> {
     return result.count;
   } catch (error) {
     console.error("[auto-sync] reset batch bị gián đoạn thất bại:", error);
+    return 0;
+  }
+}
+
+/**
+ * Tạo lại ảnh chạy nền (LLM + submit) bị cắt ngang khi server tắt để lại job
+ * `queued` chưa có promptId -- job-sync bỏ qua job đó mãi mãi. Lúc khởi động
+ * không có lượt nền nào đang chạy, nên đánh dấu lỗi để người dùng/auto-retry
+ * tạo lại.
+ */
+export async function failInterruptedRegenerations(): Promise<number> {
+  try {
+    const result = await prisma.generationJob.updateMany({
+      where: { status: "queued", promptId: null, batch: { status: { not: "drafting" } } },
+      data: {
+        status: "failed",
+        errorCode: "interrupted",
+        errorMessage: "Bị gián đoạn khi tạo lại, bấm Tạo lại lần nữa",
+        finishedAt: new Date(),
+      },
+    });
+    return result.count;
+  } catch (error) {
+    console.error("[auto-sync] đánh dấu job tạo lại bị gián đoạn thất bại:", error);
     return 0;
   }
 }
@@ -165,6 +190,8 @@ export async function runSyncTick(): Promise<void> {
   if (autoSyncState.isTicking) return;
   autoSyncState.isTicking = true;
   try {
+    // Bộ còn chờ soạn mô tả (vd app vừa khởi động lại giữa chừng) -> chạy tiếp.
+    kickDraftQueue();
     const settings = await getOrCreateSettings();
 
     if (settings.runpodEndpointId && settings.runpodApiKey) {
@@ -211,6 +238,8 @@ export function startAutoSyncPoller(): void {
   void resetInterruptedBatches().catch((err) => {
     console.error("[auto-sync] reset batch bị gián đoạn thất bại:", err);
   });
+  void failInterruptedRegenerations();
+  kickDraftQueue();
   autoSyncState.interval = setInterval(() => {
     void runSyncTick();
   }, POLL_INTERVAL_MS);

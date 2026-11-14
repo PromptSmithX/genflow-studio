@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { regenerateJobFreshPrompt } from "@/lib/generations/regenerate-fresh";
+import { finishRegenerateJob, regenerateJobFreshPrompt, startRegenerateJob } from "@/lib/generations/regenerate-fresh";
 import { GenerationSetupError } from "@/lib/generations/create-batch";
 import { handleApiError } from "@/lib/api/errors";
 import { POST } from "@/app/api/history/[jobId]/regenerate-fresh/route";
@@ -269,14 +269,17 @@ describe("regenerateJobFreshPrompt", () => {
       model: "mock-model",
     });
 
-    // Verify job update resets autoRetryCount to 0 and records promptId rp-123
+    // Start phase puts the job back to queued; the new prompt resets autoRetryCount.
     expect(prisma.generationJob.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "job-fail" },
-        data: expect.objectContaining({
-          status: "queued",
-          autoRetryCount: 0,
-        }),
+        data: expect.objectContaining({ status: "queued", promptId: null }),
+      }),
+    );
+    expect(prisma.generationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "job-fail" },
+        data: expect.objectContaining({ positiveFinal: expect.any(String), autoRetryCount: 0 }),
       }),
     );
 
@@ -326,5 +329,79 @@ describe("regenerateJobFreshPrompt", () => {
     expect(res.status).toBe(409);
     const data = await res.json();
     expect(data.error.code).toBe("conflict");
+  });
+  const failedJob = {
+    id: "job-bg",
+    batchId: "batch-1",
+    status: "failed",
+    indexInBatch: 3,
+    seed: BigInt(42),
+    width: 1152,
+    height: 952,
+    autoRetryCount: 0,
+  };
+  const doneBatch = {
+    id: "batch-1",
+    status: "completed",
+    autoStatus: "done",
+    ideaPrompt: "Calendar idea",
+    mediumId: null,
+  };
+
+  it("startRegenerateJob queues the job and clears its image without calling the LLM", async () => {
+    vi.mocked(prisma.generationJob.findUnique).mockResolvedValueOnce(failedJob as unknown as never);
+    vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(doneBatch as unknown as never);
+
+    const started = await startRegenerateJob("job-bg");
+
+    expect(started.job.id).toBe("job-bg");
+    expect(prisma.generatedImage.deleteMany).toHaveBeenCalledWith({ where: { jobId: "job-bg" } });
+    expect(prisma.generationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "job-bg" }, data: expect.objectContaining({ status: "queued", promptId: null }) }),
+    );
+    expect(prisma.generationBatch.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "running", autoStatus: null }) }),
+    );
+    expect(mockGeneratePrompts).not.toHaveBeenCalled();
+
+    // Bấm lại trong lúc phần nền chưa chạy -> xung đột, không chạy trùng.
+    vi.mocked(prisma.generationJob.findUnique).mockResolvedValueOnce(failedJob as unknown as never);
+    vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(doneBatch as unknown as never);
+    await expect(startRegenerateJob("job-bg")).rejects.toThrow("Ảnh này đang được tạo");
+
+    mockGeneratePrompts.mockRejectedValueOnce(new Error("LLM down"));
+    await finishRegenerateJob(started);
+  });
+
+  it("finishRegenerateJob marks the job failed (and returns the error) when the LLM fails", async () => {
+    vi.mocked(prisma.generationJob.findUnique).mockResolvedValueOnce(failedJob as unknown as never);
+    vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(doneBatch as unknown as never);
+    const started = await startRegenerateJob("job-bg");
+    vi.mocked(prisma.generationJob.update).mockResolvedValue({} as never);
+
+    mockGeneratePrompts.mockRejectedValueOnce(new Error("LLM down"));
+    const error = await finishRegenerateJob(started);
+
+    expect(error?.message).toBe("LLM down");
+    expect(prisma.generationJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "job-bg" },
+        data: expect.objectContaining({ status: "failed", errorMessage: "LLM down" }),
+      }),
+    );
+  });
+
+  it("POST route returns 202 right after queuing, before the background work finishes", async () => {
+    vi.mocked(prisma.generationJob.findUnique).mockResolvedValueOnce(failedJob as unknown as never);
+    vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce(doneBatch as unknown as never);
+    vi.mocked(prisma.generationBatch.findUniqueOrThrow).mockResolvedValueOnce({ id: "batch-1", jobs: [] } as unknown as never);
+    let releaseLlm: (value: unknown) => void = () => {};
+    mockGeneratePrompts.mockReturnValueOnce(new Promise((resolve) => (releaseLlm = resolve)));
+
+    const req = new Request("http://localhost:3000/api/history/job-bg/regenerate-fresh", { method: "POST" }) as NextRequest;
+    const res = await POST(req, { params: Promise.resolve({ jobId: "job-bg" }) });
+
+    expect(res.status).toBe(202);
+    releaseLlm({ images: [{ positive: "a" }, { positive: "b" }], negative: "n" });
   });
 });

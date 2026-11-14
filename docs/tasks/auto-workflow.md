@@ -29,7 +29,7 @@ Phần R2/CSV **đã làm xong** ở branch `feature/cloudflare_r2_store` (đọ
 
 Quyết định đã chốt (không thay đổi):
 - Bảng online = Google Sheets, service account.
-- 2 tab: `da-che` (các dòng SKU `-CEN`) và `khong-che` (các dòng `-ORG`). Mỗi batch 2 dòng/tab (khổ 11 và 14).
+- 1 tab: `khong-che` (các dòng SKU `-ORG`), mỗi batch 2 dòng (khổ 11 và 14). Tab `da-che` (dòng `-CEN`) đã bỏ khỏi Sheet cho gọn; dòng `-CEN` vẫn có trong CSV/R2.
 - Giữ nguyên quy chuẩn SKU, key R2, CSV của `lib/r2/*`.
 - Ảnh lỗi tự gen lại tối đa **2 lần/job**, sau đó mới báo lỗi.
 - Preview 6–8 để trống.

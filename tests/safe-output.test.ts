@@ -67,4 +67,24 @@ describe("buildBatchFolder", () => {
     });
     expect(folder.length).toBeLessThan(80);
   });
+
+  it("returns the SKU verbatim when r2SkuBase is set", () => {
+    const folder = buildBatchFolder({
+      id: "abc123",
+      ideaPrompt: "Batch mẫu",
+      createdAt,
+      r2SkuBase: "CAL-REA-2611-U8QMB",
+    });
+    expect(folder).toBe("CAL-REA-2611-U8QMB");
+  });
+
+  it("falls back to the legacy slug when r2SkuBase is null", () => {
+    const folder = buildBatchFolder({
+      id: "clx9f8a2b",
+      ideaPrompt: "Trợ lý AI 15 ảnh",
+      createdAt,
+      r2SkuBase: null,
+    });
+    expect(folder.startsWith("2026-11-02_14-30_")).toBe(true);
+  });
 });

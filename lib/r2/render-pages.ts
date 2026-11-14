@@ -14,7 +14,9 @@ export async function renderBatchPages(
   batchId: string,
   format: CalendarFormat,
   stagingDir: string,
+  opts?: { orgOnly?: boolean },
 ): Promise<{ cen: string[]; org: string[] }> {
+  const orgOnly = opts?.orgOnly ?? false;
   const settings = await getOrCreateSettings();
   const outputRoot = resolveOutputRoot(settings);
   const censoredRoot = resolveCensoredRoot(outputRoot);
@@ -38,10 +40,10 @@ export async function renderBatchPages(
     }
   }
 
+  const orgDir = orgOnly ? stagingDir : path.join(stagingDir, "org");
   const cenDir = path.join(stagingDir, "cen");
-  const orgDir = path.join(stagingDir, "org");
-  await fs.mkdir(cenDir, { recursive: true });
   await fs.mkdir(orgDir, { recursive: true });
+  if (!orgOnly) await fs.mkdir(cenDir, { recursive: true });
 
   // 1. Render 13 trang artwork (0..12)
   for (let slot = 0; slot <= 12; slot++) {
@@ -51,6 +53,8 @@ export async function renderBatchPages(
     const srcOrg = await fs.readFile(resolveSafePath(outputRoot, img.relativePath));
     const upscaledOrg = await upscaleToSize(srcOrg, format);
     await fs.writeFile(path.join(orgDir, filename), upscaledOrg);
+
+    if (orgOnly) continue;
 
     if (img.maskedRelativePath) {
       try {
@@ -81,6 +85,12 @@ export async function renderBatchPages(
   const composedOrg = await composeBackCover(orgArtBuffers, geom);
   await fs.writeFile(path.join(orgDir, PAGE_FILENAMES[13]), composedOrg);
 
+  const org = PAGE_FILENAMES.map((f) => path.join(orgDir, f));
+
+  if (orgOnly) {
+    return { org, cen: [] };
+  }
+
   const cenArtBuffers = await Promise.all(
     Array.from({ length: 12 }, (_, i) => {
       const artImg = slotMap.get(i + 1)!;
@@ -93,7 +103,6 @@ export async function renderBatchPages(
   const composedCen = await composeBackCover(cenArtBuffers, geom);
   await fs.writeFile(path.join(cenDir, PAGE_FILENAMES[13]), composedCen);
 
-  const org = PAGE_FILENAMES.map((f) => path.join(orgDir, f));
   const cen = PAGE_FILENAMES.map((f) => path.join(cenDir, f));
 
   return { org, cen };

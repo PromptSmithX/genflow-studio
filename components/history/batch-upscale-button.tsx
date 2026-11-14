@@ -113,7 +113,8 @@ export function BatchUpscaleButton({
             <AlertDialogTitle>Bạn đã xem kỹ {imageCount} ảnh chưa?</AlertDialogTitle>
             <AlertDialogDescription>
               App sẽ phóng to ảnh về đúng khổ in, tự ghép bìa sau, rồi lưu vào thư mục trên máy gồm: bản gốc
-              (khong-che), bản đã che (da-che), 5 ảnh mockup và file etsy.txt.
+              (khong-che), bản đã che (da-che), 5 ảnh mockup và file etsy.txt. Kèm thư mục kết quả đủ 2 khổ
+              14×11.5 và 11×8.5 (org/cen) cùng mockup, sắp xếp giống kho R2.
               {isReExport ? " Thư mục cũ của bộ lịch này sẽ được thay bằng bản mới." : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>

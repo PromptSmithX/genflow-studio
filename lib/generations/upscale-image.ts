@@ -17,6 +17,7 @@ import { listCalendarFormats, type CalendarFormat } from "@/lib/calendar/formats
 import { loadBackCoverGeometry } from "@/lib/calendar/back-cover-format";
 import { composeBackCover } from "@/lib/images/back-cover";
 import { wrapBatchMockup } from "@/lib/mockup/run-mockup";
+import { buildResultsFolder } from "@/lib/generations/results-folder";
 import { BACK_COVER_FILENAME, slotFilename } from "@/lib/calendar/slot-label";
 
 interface UpscaleRoots {
@@ -307,6 +308,7 @@ export interface UpscaleBatchResult {
   finalExport: "done" | "failed" | "skipped";
   mockup: "done" | "failed" | "skipped";
   mockupError?: string;
+  resultsFolder: "done" | "failed" | "skipped";
 }
 
 /**
@@ -354,5 +356,8 @@ export async function upscaleBatch(batchId: string, formatId: string): Promise<U
     }
   }
 
-  return { total: images.length, done, failed, backCover, finalExport, mockup, mockupError };
+  // Thư mục kết quả cho người dùng (2 khổ + mockup, cấu trúc như R2) -- sau mockup.
+  const resultsFolder = finalExport === "done" ? await buildResultsFolder(batchId) : "skipped";
+
+  return { total: images.length, done, failed, backCover, finalExport, mockup, mockupError, resultsFolder };
 }

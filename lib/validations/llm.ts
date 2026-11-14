@@ -13,8 +13,22 @@ export type SuggestPromptsInput = z.infer<typeof suggestPromptsSchema>;
 // Model gen ảnh TỰ VẼ chữ lên ảnh bìa (#1) -- không còn overlay canvas. "title"
 // (tên, chữ lớn nhất) + "year" chỉ áp dụng cho ảnh #1; app đảm bảo cả 2 chuỗi
 // (cùng nhãn "CALENDAR") có mặt trong "positive" khi gửi gen.
+// Anime có chế độ template (couple/solo_f/solo_m): LLM trả "scene" + "woman"/"man"
+// thay cho "positive"; app ghép lại ở finalizeSuggestedImage. Các trường này lỏng
+// (.catch) để LLM trả null/sai kiểu không làm hỏng cả lượt; thiếu thì dùng "positive".
+const optionalText = z.string().trim().optional().catch(undefined);
+export const llmShotSchema = z.object({
+  camera: optionalText,
+  poses: optionalText,
+  visible: optionalText,
+});
+
 export const llmImageSuggestionSchema = z.object({
-  positive: z.string().trim().min(1),
+  positive: z.string().trim().catch(""),
+  scene: optionalText,
+  woman: optionalText,
+  man: optionalText,
+  shot: llmShotSchema.optional().catch(undefined),
   caption: z.string().trim().min(1),
   title: z.string().trim().max(60).optional(),
   year: z.string().trim().max(20).optional(),

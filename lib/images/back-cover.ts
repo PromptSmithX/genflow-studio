@@ -1,5 +1,6 @@
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 import type { BackCoverGeometry } from "@/lib/calendar/back-cover-format";
+import { PRINT_DPI, withPngDpi } from "@/lib/images/png-dpi";
 
 const GRID_COLS = 4;
 const GRID_ROWS = 3;
@@ -62,5 +63,5 @@ export async function composeBackCover(artworks: Buffer[], geom: BackCoverGeomet
     drawContainRounded(ctx, image, cellX, cellY, cellW, cellH);
   }
 
-  return canvas.encode("png");
+  return withPngDpi(await canvas.encode("png"), PRINT_DPI);
 }

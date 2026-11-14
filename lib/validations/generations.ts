@@ -44,6 +44,22 @@ export const createGenerationSchema = z.object({
 
 export type CreateGenerationInput = z.infer<typeof createGenerationSchema>;
 
+// Thông số vẽ người dùng chọn ở trang Tạo; lưu vào batch lúc xếp hàng.
+export const draftParamsSchema = z.object({
+  width: z.number().int().min(64).max(4096).optional(),
+  height: z.number().int().min(64).max(4096).optional(),
+  steps: z.number().int().min(1).max(200).optional(),
+  cfg: z.number().min(0).max(30).optional(),
+});
+
+// Thêm một bộ lịch vào hàng đợi soạn mô tả (lib/generations/draft-queue.ts).
+export const enqueueDraftSchema = draftParamsSchema.extend({
+  request: z.string().trim().min(1, "Vui lòng nhập mô tả ý tưởng").max(2000),
+  mediumId: z.string().min(1).optional().nullable(),
+});
+
+export type EnqueueDraftInput = z.infer<typeof enqueueDraftSchema>;
+
 export const nodeMappingEntrySchema = z.object({
   nodeId: z.string().min(1),
   inputKey: z.string().min(1),

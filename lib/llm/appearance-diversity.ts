@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { applyDecision, type Intent } from "@/lib/llm/axis-decision";
 
 /**
  * Đa dạng NGOẠI HÌNH nhân vật giữa các bộ lịch bằng code (cùng khuôn với
@@ -117,8 +118,53 @@ export const BODY_TYPES = [
   { key: "dancer", label: "lean graceful dancer's body" },
 ];
 
+export const ANIME_HAIR = [
+  { key: "silver-hime", label: "long silver hair with hime cut" },
+  { key: "pink-twintails", label: "pink hair in long twintails" },
+  { key: "black-ahoge", label: "short black hair with ahoge" },
+  { key: "blue-ponytail", label: "long blue hair in a high ponytail" },
+  { key: "two-tone", label: "two-tone black and red hair" },
+  { key: "lavender-braid", label: "lavender wavy hair with a side braid" },
+  { key: "blonde-bob", label: "messy blonde bob with side bangs" },
+  { key: "white-straight", label: "white very long straight hair" },
+  { key: "orange-short", label: "short orange hair with a hairclip" },
+  { key: "brown-braids", label: "brown hair in low twin braids" },
+  { key: "green-bangs", label: "medium green hair with blunt bangs" },
+  { key: "red-curls", label: "long crimson hair with drill curls" },
+  { key: "teal-gradient", label: "teal hair with gradient tips" },
+  { key: "black-long", label: "long glossy black hair" },
+];
+
+export const ANIME_EYES = [
+  "red eyes",
+  "violet eyes",
+  "golden eyes",
+  "aqua eyes",
+  "emerald green eyes",
+  "heterochromia, blue and gold eyes",
+  "pink eyes",
+  "deep blue eyes",
+  "amber eyes",
+];
+
+// Chỉ nét TĨNH, không biểu cảm (xem FACE_FEATURES).
+export const ANIME_FACE_FEATURES = [
+  "mole under eye",
+  "sharp upturned eyes",
+  "gentle drooping eyes",
+  "long eyelashes",
+  "light freckles",
+  "beauty mark near the lips",
+  "thick eyebrows",
+  "slender face",
+];
+
+// "petite" với nét vẽ anime dễ làm nhân vật trông trẻ hơn tuổi -> loại.
+export const ANIME_BODY_TYPES = BODY_TYPES.filter((body) => body.key !== "petite");
+
 export const RECENT_APPEARANCE_LIMIT = 5;
 const HAIR_BODY_AVOID_WINDOW = 3;
+const ANIME_KEY_PREFIX = "anime|";
 
 /** Bỏ dấu tiếng Việt + lowercase để khớp từ khoá không phụ thuộc cách gõ. */
 export function normalizeVi(text: string): string {
@@ -202,49 +248,108 @@ function pickAvoiding<T>(items: T[], keyOf: (item: T) => string, avoid: Set<stri
   return pickFrom(fresh.length > 0 ? fresh : items, random);
 }
 
+function pickOptional<T>(pool: T[] | null, random: () => number): T | null {
+  return pool ? pickFrom(pool, random) : null;
+}
+
+function pickAvoidingOptional<T>(
+  pool: T[] | null,
+  keyOf: (item: T) => string,
+  avoid: Set<string>,
+  random: () => number,
+): T | null {
+  return pool ? pickAvoiding(pool, keyOf, avoid, random) : null;
+}
+
+function nationalityPool(request: string, intent: Intent | null | undefined): Nationality[] | null {
+  if (intent) return applyDecision(NATIONALITIES, (nat) => nat.key, intent.nationality);
+  // Không có intent (lượt phân tích lỗi) -> đoán phạm vi bằng từ khoá như trước.
+  const scope = detectNationalityScope(request);
+  if (scope === "skip") return null;
+  const pool = scope ? NATIONALITIES.filter((nat) => scope.includes(nat.region)) : NATIONALITIES;
+  return pool.length > 0 ? pool : NATIONALITIES;
+}
+
 /**
- * Bốc ngoại hình cho một batch. Quốc tịch né 5 batch gần nhất (theo phạm vi
- * vùng người dùng nêu), tóc + dáng né 3 batch gần nhất; mắt/nét mặt/tuổi tự do.
+ * Bốc ngoại hình cho một batch. Quốc tịch né 5 batch gần nhất, tóc + dáng né 3
+ * batch gần nhất; mắt/nét mặt/tuổi tự do. `intent` (nếu có) bỏ các trục người
+ * dùng đã nêu và thu hẹp các trục người dùng ngụ ý.
  */
 export function pickAppearanceSeed(
   request: string,
   recent: RecentAppearances = { keys: [] },
   random: () => number = Math.random,
+  intent?: Intent | null,
 ): AppearanceSeed {
-  const parsed = recent.keys.map((key) => key.split("|"));
+  const parsed = recent.keys.filter((key) => !key.startsWith(ANIME_KEY_PREFIX)).map((key) => key.split("|"));
   const recentNats = new Set(parsed.slice(0, RECENT_APPEARANCE_LIMIT).map((parts) => parts[0]).filter(Boolean));
   const recentHair = new Set(parsed.slice(0, HAIR_BODY_AVOID_WINDOW).map((parts) => parts[1]).filter(Boolean));
   const recentBody = new Set(parsed.slice(0, HAIR_BODY_AVOID_WINDOW).map((parts) => parts[2]).filter(Boolean));
 
-  const scope = detectNationalityScope(request);
-  let nationality: Nationality | null = null;
-  if (scope !== "skip") {
-    const pool = scope ? NATIONALITIES.filter((nat) => scope.includes(nat.region)) : NATIONALITIES;
-    nationality = pickAvoiding(pool.length > 0 ? pool : NATIONALITIES, (nat) => nat.key, recentNats, random);
-  }
-  const hair = pickAvoiding(HAIR, (item) => item.key, recentHair, random);
-  const body = pickAvoiding(BODY_TYPES, (item) => item.key, recentBody, random);
-  const eyes = pickFrom(EYES, random);
-  const face = pickFrom(FACE_FEATURES, random);
-  const age = pickFrom(AGES, random);
+  const nationality = pickAvoidingOptional(nationalityPool(request, intent), (nat) => nat.key, recentNats, random);
+  const hair = pickAvoidingOptional(applyDecision(HAIR, (item) => item.key, intent?.hair), (item) => item.key, recentHair, random);
+  const body = pickAvoidingOptional(applyDecision(BODY_TYPES, (item) => item.key, intent?.body), (item) => item.key, recentBody, random);
+  const eyes = pickOptional(applyDecision(EYES, (item) => item, intent?.eyes), random);
+  const face = pickOptional(applyDecision(FACE_FEATURES, (item) => item, intent?.face), random);
+  const age = pickOptional(applyDecision(AGES, (item) => item, intent?.age), random);
 
   const parts = [
     nationality ? `${nationality.label} woman` : null,
-    `in her ${age}`,
-    hair.label,
+    age ? `in her ${age}` : null,
+    hair?.label,
     eyes,
     face,
-    body.label,
+    body?.label,
   ].filter(Boolean);
 
   return {
-    key: [nationality?.key ?? "", hair.key, body.key].join("|"),
+    key: [nationality?.key ?? "", hair?.key ?? "", body?.key ?? ""].join("|"),
     text: parts.join(", "),
   };
 }
 
-/** appearanceKey của các batch gần nhất trong DB (mới nhất trước). */
-export async function loadRecentAppearances(limit = RECENT_APPEARANCE_LIMIT): Promise<RecentAppearances> {
+/**
+ * Ngoại hình cho bộ anime: không quốc tịch, luôn là người trưởng thành; tóc +
+ * dáng né 3 bộ anime gần nhất. Key "anime|hair|body".
+ */
+export function pickAnimeAppearanceSeed(
+  recent: RecentAppearances = { keys: [] },
+  random: () => number = Math.random,
+  intent?: Intent | null,
+): AppearanceSeed {
+  const parsed = recent.keys
+    .filter((key) => key.startsWith(ANIME_KEY_PREFIX))
+    .slice(0, HAIR_BODY_AVOID_WINDOW)
+    .map((key) => key.split("|"));
+  const recentHair = new Set(parsed.map((parts) => parts[1]).filter(Boolean));
+  const recentBody = new Set(parsed.map((parts) => parts[2]).filter(Boolean));
+
+  const hair = pickAvoidingOptional(applyDecision(ANIME_HAIR, (item) => item.key, intent?.hair), (item) => item.key, recentHair, random);
+  const body = pickAvoidingOptional(
+    applyDecision(ANIME_BODY_TYPES, (item) => item.key, intent?.body),
+    (item) => item.key,
+    recentBody,
+    random,
+  );
+  const age = pickOptional(applyDecision(AGES, (item) => item, intent?.age), random);
+
+  return {
+    key: `${ANIME_KEY_PREFIX}${hair?.key ?? ""}|${body?.key ?? ""}`,
+    text: [
+      age ? `adult woman in her ${age}` : "adult woman",
+      "mature features",
+      hair?.label,
+      pickOptional(applyDecision(ANIME_EYES, (item) => item, intent?.eyes), random),
+      pickOptional(applyDecision(ANIME_FACE_FEATURES, (item) => item, intent?.face), random),
+      body?.label,
+    ]
+      .filter(Boolean)
+      .join(", "),
+  };
+}
+
+/** appearanceKey của các batch gần nhất trong DB (mới nhất trước), cả thực lẫn anime. */
+export async function loadRecentAppearances(limit = 15): Promise<RecentAppearances> {
   const rows = await prisma.generationBatch.findMany({
     where: { appearanceKey: { not: null } },
     orderBy: { createdAt: "desc" },

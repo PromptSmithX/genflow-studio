@@ -13,10 +13,17 @@ import { useRevealFolder } from "@/hooks/use-upscale";
 export function OpenFolderButton({
   batchId,
   status,
+  folder,
+  label = "Mở thư mục bộ lịch",
+  variant = "outline",
   className,
 }: {
   batchId: string;
   status: "done" | "failed" | null;
+  /** "results": thư mục kết quả 2 khổ + mockup (cấu trúc như R2). */
+  folder?: "results";
+  label?: string;
+  variant?: "outline" | "default";
   className?: string;
 }) {
   const revealMutation = useRevealFolder();
@@ -25,18 +32,18 @@ export function OpenFolderButton({
 
   return (
     <Button
-      variant="outline"
+      variant={variant}
       size="sm"
       className={className}
       disabled={revealMutation.isPending}
       onClick={() =>
-        revealMutation.mutate(batchId, {
+        revealMutation.mutate(folder ? { batchId, folder } : batchId, {
           onError: (e) => toast.error(e instanceof Error ? e.message : "Không mở được thư mục"),
         })
       }
     >
       {revealMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
-      Mở thư mục bộ lịch
+      {label}
     </Button>
   );
 }

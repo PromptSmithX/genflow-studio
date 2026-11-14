@@ -9,7 +9,6 @@ import {
   appendRange,
 } from "./client";
 import {
-  SHEET_TAB_DA_CHE,
   SHEET_TAB_KHONG_CHE,
   FULL_SHEET_HEADER,
   columnToLetter,
@@ -62,7 +61,8 @@ export async function syncBatchToSheet(options: SyncBatchToSheetOptions): Promis
   const statusCol = columnToLetter(statusIndex >= 0 ? statusIndex : 26);
   const updatedCol = columnToLetter(updatedIndex >= 0 ? updatedIndex : 27);
 
-  const targetTabs = [SHEET_TAB_DA_CHE, SHEET_TAB_KHONG_CHE] as const;
+  // Sheet chỉ giữ tab khong-che cho gọn; dòng -CEN vẫn được tách ở rows.ts nhưng không ghi.
+  const targetTabs = [SHEET_TAB_KHONG_CHE] as const;
 
   for (const tab of targetTabs) {
     if (!existingTitles.includes(tab)) {

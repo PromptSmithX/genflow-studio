@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANIME_LOOK,
   LOCATION_FAMILIES,
   PHOTO_LOOK,
   TIME_WEATHER,
@@ -22,29 +23,51 @@ describe("familyConflicts", () => {
   });
 });
 
+describe("ANIME_LOOK", () => {
+  it("never suggests a photo look", () => {
+    for (const look of ANIME_LOOK) expect(look).not.toMatch(/photo/i);
+  });
+
+  it("is used by pickConceptSeed when passed as looks", () => {
+    const seed = pickConceptSeed({ keys: [], themes: [] }, () => 0, { families: [LIBRARY], looks: ANIME_LOOK });
+    expect(seed.text).toBe(`a historic library, ${TIME_WEATHER[0]}, ${ANIME_LOOK[0]}`);
+  });
+});
+
 describe("pickConceptSeed", () => {
   it("never picks a family whose key was used recently", () => {
     for (let i = 0; i < 20; i++) {
-      const seed = pickConceptSeed({ keys: ["car"], themes: [] }, () => i / 20, [CAR, LIBRARY]);
+      const seed = pickConceptSeed({ keys: ["car"], themes: [] }, () => i / 20, { families: [CAR, LIBRARY] });
       expect(seed.key).toBe("library");
     }
   });
 
   it("avoids by keyword when only a theme is known (user-specified batches)", () => {
     for (let i = 0; i < 20; i++) {
-      const seed = pickConceptSeed({ keys: [], themes: ["Red supercar showroom"] }, () => i / 20, [CAR, LIBRARY]);
+      const seed = pickConceptSeed({ keys: [], themes: ["Red supercar showroom"] }, () => i / 20, {
+        families: [CAR, LIBRARY],
+      });
       expect(seed.key).toBe("library");
     }
   });
 
   it("falls back to all families when every family is excluded", () => {
-    const seed = pickConceptSeed({ keys: ["car", "library"], themes: [] }, () => 0, [CAR, LIBRARY]);
+    const seed = pickConceptSeed({ keys: ["car", "library"], themes: [] }, () => 0, { families: [CAR, LIBRARY] });
     expect(seed.key).toBe("car");
   });
 
   it("combines location direction, time/weather and style axes", () => {
-    const seed = pickConceptSeed({ keys: [], themes: [] }, () => 0, [LIBRARY]);
+    const seed = pickConceptSeed({ keys: [], themes: [] }, () => 0, { families: [LIBRARY] });
     expect(seed.text).toBe(`a historic library, ${TIME_WEATHER[0]}, ${PHOTO_LOOK[0]}`);
+  });
+
+  it("drops the parts passed as null (user already set them)", () => {
+    const noLocation = pickConceptSeed({ keys: [], themes: [] }, () => 0, { families: null });
+    expect(noLocation.key).toBe("");
+    expect(noLocation.text).toBe(`${TIME_WEATHER[0]}, ${PHOTO_LOOK[0]}`);
+
+    const nothing = pickConceptSeed({ keys: [], themes: [] }, () => 0, { families: null, timeWeather: null, looks: null });
+    expect(nothing.text).toBe("");
   });
 
   it("never repeats any of the last 10 families", () => {

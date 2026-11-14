@@ -1,7 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { GenerationBatch } from "@prisma/client";
+import { Prisma, type GenerationBatch } from "@prisma/client";
 import { mediumCode, buildSkuBase, fullSku, ensureSkuBase } from "@/lib/r2/sku";
 import { prisma } from "@/lib/db";
+
+function uniqueConstraintError(): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+    code: "P2002",
+    clientVersion: "6.19.3",
+  });
+}
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -93,6 +100,51 @@ describe("r2-sku", () => {
         where: { id: "batch123456789" },
         data: { r2SkuBase: "CAL-GEN-2611-456789" },
       });
+    });
+
+    it("retries with a longer code when update hits a unique constraint race", async () => {
+      const createdAt = new Date(2026, 10, 6);
+      vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce({
+        id: "batch123456789",
+        createdAt,
+        mediumId: null,
+        r2SkuBase: null,
+      } as unknown as GenerationBatch);
+
+      vi.mocked(prisma.generationBatch.findMany).mockResolvedValueOnce([]);
+
+      vi.mocked(prisma.generationBatch.update)
+        .mockRejectedValueOnce(uniqueConstraintError())
+        .mockResolvedValueOnce({} as unknown as GenerationBatch);
+
+      const sku = await ensureSkuBase("batch123456789");
+      // Lần đầu (5 ký tự "56789") đụng lỗi unique -- do một batch khác vừa
+      // giành mất giữa lúc kiểm tra và ghi -- nên mở rộng lên 6 ký tự.
+      expect(sku).toBe("CAL-GEN-2611-456789");
+      expect(prisma.generationBatch.update).toHaveBeenCalledTimes(2);
+      expect(prisma.generationBatch.update).toHaveBeenNthCalledWith(1, {
+        where: { id: "batch123456789" },
+        data: { r2SkuBase: "CAL-GEN-2611-56789" },
+      });
+      expect(prisma.generationBatch.update).toHaveBeenNthCalledWith(2, {
+        where: { id: "batch123456789" },
+        data: { r2SkuBase: "CAL-GEN-2611-456789" },
+      });
+    });
+
+    it("rethrows a non-unique-constraint error from update without retrying", async () => {
+      const createdAt = new Date(2026, 10, 6);
+      vi.mocked(prisma.generationBatch.findUnique).mockResolvedValueOnce({
+        id: "batch123456789",
+        createdAt,
+        mediumId: null,
+        r2SkuBase: null,
+      } as unknown as GenerationBatch);
+      vi.mocked(prisma.generationBatch.findMany).mockResolvedValueOnce([]);
+      vi.mocked(prisma.generationBatch.update).mockRejectedValueOnce(new Error("db down"));
+
+      await expect(ensureSkuBase("batch123456789")).rejects.toThrow("db down");
+      expect(prisma.generationBatch.update).toHaveBeenCalledTimes(1);
     });
   });
 });

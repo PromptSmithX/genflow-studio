@@ -123,6 +123,7 @@ model WorkflowConfig {
 }
 
 enum BatchStatus {
+  drafting
   queued
   running
   completed
@@ -183,7 +184,8 @@ model GenerationBatch {
   etsyDescription String?
   etsyTagsJson    String?
 
-  // SKU gốc (CAL-{MED}-{YYMM}-{CODE}) cố định cho bộ lịch khi đẩy R2 lần đầu.
+  // SKU gốc (CAL-{MED}-{YYMM}-{CODE}), gán ngay lúc tạo batch (ensureSkuBase);
+  // R2 push chỉ tái dùng giá trị đã gán sẵn qua đường early-return của ensureSkuBase.
   r2SkuBase  String?   @unique
   // Thư mục lưu trên R2 ({YYYY}/{sku-lower}_{title-slug}) tính ở lần đẩy đầu.
   r2Folder   String?
@@ -209,6 +211,11 @@ model GenerationBatch {
   // Ngoại hình code đã bốc cho nhân vật, dạng "quốc tịch|tóc|dáng"
   // (lib/llm/appearance-diversity.ts) -- để các batch sau né, đa dạng nhân vật.
   appearanceKey     String?
+  // Hàng đợi soạn mô tả (lib/generations/draft-queue.ts), chỉ dùng khi status =
+  // drafting: draftError null = đang chờ/đang soạn, có giá trị = soạn lỗi.
+  // draftParamsJson giữ width/height/steps/cfg người dùng chọn lúc thêm vào hàng đợi.
+  draftError        String?
+  draftParamsJson   String?
   // Chi tiết lỗi khi chạy pipeline tự động thất bại.
   autoError      String?
   // Thời điểm kết thúc chạy pipeline tự động gần nhất.

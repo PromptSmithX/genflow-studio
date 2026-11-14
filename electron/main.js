@@ -3,7 +3,7 @@
 // see scripts/download-node.mjs for why), waits for it to come up, then opens
 // a BrowserWindow pointed at it. No code here runs in the renderer; it only
 // manages the child process and the window.
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const { spawn, spawnSync } = require("node:child_process");
 const net = require("node:net");
 const fs = require("node:fs");
@@ -28,6 +28,14 @@ const SECRETS_WHITELIST = new Set([
 
 let serverProcess = null;
 let mainWindow = null;
+
+ipcMain.handle("dialog:open-directory", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ["openDirectory"],
+    title: "Chọn thư mục lưu ảnh",
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
 
 function getPaths() {
   if (app.isPackaged) {
@@ -232,6 +240,10 @@ async function createWindow() {
     height: 800,
     title: "Anima Studio",
     autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+    },
   });
 
   mainWindow.loadURL(`http://127.0.0.1:${port}`);

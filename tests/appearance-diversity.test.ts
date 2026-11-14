@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANIME_HAIR,
   BODY_TYPES,
   NATIONALITIES,
   detectNationalityScope,
+  pickAnimeAppearanceSeed,
   pickAppearanceSeed,
   requestWantsHeavyBody,
 } from "@/lib/llm/appearance-diversity";
+import type { Intent } from "@/lib/llm/axis-decision";
 import { composeUserMessage, SHARED_BIAS_PROMPT } from "@/lib/llm/default-system-prompt";
 import { finalizeSuggestedImage } from "@/lib/llm/finalize-suggestion";
 
@@ -58,6 +61,87 @@ describe("pickAppearanceSeed", () => {
   it("only describes adults", () => {
     const seed = pickAppearanceSeed("cô gái", { keys: [] }, () => 0.5);
     expect(seed.text).toMatch(/in her (early|mid|late) (20s|30s)/);
+  });
+
+  it("ignores anime batches when avoiding recent hair/body", () => {
+    const recent = ["anime|pink-twintails|slim", "anime|blonde-bob|athletic", "anime|x|tall-model", "french|auburn|hourglass"];
+    const bodies = new Set<string>();
+    for (let i = 0; i < 40; i++) {
+      bodies.add(pickAppearanceSeed("cô gái châu âu", { keys: recent }, () => i / 40).key.split("|")[2]);
+    }
+    expect(bodies.has("slim")).toBe(true);
+    expect(bodies.has("hourglass")).toBe(false);
+  });
+});
+
+describe("pickAppearanceSeed with intent", () => {
+  const free = { mode: "free" } as const;
+  const baseIntent: Intent = {
+    nationality: free, hair: free, eyes: free, face: free, body: free, age: free, location: free, timeWeather: free, look: free,
+  };
+
+  it("omits locked axes and picks narrowed axes only from the pool", () => {
+    const intent: Intent = {
+      ...baseIntent,
+      nationality: { mode: "omit" },
+      hair: { mode: "pool", ids: new Set(["jet-black-long", "black-bob"]) },
+      eyes: { mode: "pool", ids: new Set(["deep brown eyes"]) },
+    };
+    for (let i = 0; i < 40; i++) {
+      const seed = pickAppearanceSeed("cô gái nhật bản", { keys: [] }, () => i / 40, intent);
+      const [nat, hair] = seed.key.split("|");
+      expect(nat).toBe("");
+      expect(["jet-black-long", "black-bob"]).toContain(hair);
+      expect(seed.text).toContain("deep brown eyes");
+      expect(seed.text).not.toMatch(/ woman,/);
+    }
+  });
+
+  it("avoids recent hair inside the pool, falling back to the pool when all are recent", () => {
+    const intent: Intent = { ...baseIntent, hair: { mode: "pool", ids: new Set(["jet-black-long", "black-bob"]) } };
+    for (let i = 0; i < 20; i++) {
+      expect(pickAppearanceSeed("x", { keys: ["|jet-black-long|"] }, () => i / 20, intent).key.split("|")[1]).toBe("black-bob");
+      const both = pickAppearanceSeed("x", { keys: ["|jet-black-long|", "|black-bob|"] }, () => i / 20, intent);
+      expect(["jet-black-long", "black-bob"]).toContain(both.key.split("|")[1]);
+    }
+  });
+
+  it("returns empty text when every appearance axis is locked", () => {
+    const omit = { mode: "omit" } as const;
+    const intent: Intent = { ...baseIntent, nationality: omit, hair: omit, eyes: omit, face: omit, body: omit, age: omit };
+    expect(pickAppearanceSeed("x", { keys: [] }, Math.random, intent)).toEqual({ key: "||", text: "" });
+  });
+
+  it("anime keeps the adult marker even when age is locked", () => {
+    const seed = pickAnimeAppearanceSeed({ keys: [] }, () => 0, { ...baseIntent, age: { mode: "omit" } });
+    expect(seed.text.startsWith("adult woman, mature features")).toBe(true);
+  });
+});
+
+describe("pickAnimeAppearanceSeed", () => {
+  it("uses anime traits, no nationality, always an adult", () => {
+    for (let i = 0; i < 40; i++) {
+      const seed = pickAnimeAppearanceSeed({ keys: [] }, () => i / 40);
+      expect(seed.key.startsWith("anime|")).toBe(true);
+      expect(seed.text).toMatch(/^adult woman in her (early|mid|late) (20s|30s), mature features/);
+      expect(ANIME_HAIR.some((hair) => seed.text.includes(hair.label))).toBe(true);
+      for (const nat of NATIONALITIES) expect(seed.text).not.toContain(`${nat.label} woman`);
+    }
+  });
+
+  it("never picks a petite body", () => {
+    for (let i = 0; i < 40; i++) {
+      expect(pickAnimeAppearanceSeed({ keys: [] }, () => i / 40).text).not.toMatch(/petite/);
+    }
+  });
+
+  it("avoids hair/body of the last 3 anime batches, ignoring real ones", () => {
+    const recent = ["french|auburn|slim", "anime|pink-twintails|athletic", "anime|silver-hime|dancer", "anime|blue-ponytail|natural"];
+    for (let i = 0; i < 40; i++) {
+      const [, hair, body] = pickAnimeAppearanceSeed({ keys: recent }, () => i / 40).key.split("|");
+      expect(["pink-twintails", "silver-hime", "blue-ponytail"]).not.toContain(hair);
+      expect(["athletic", "dancer", "natural"]).not.toContain(body);
+    }
   });
 });
 

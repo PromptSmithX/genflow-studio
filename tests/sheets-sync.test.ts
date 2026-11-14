@@ -126,9 +126,12 @@ describe("sheets-sync", () => {
     expect(headerPuts.length).toBeGreaterThanOrEqual(1);
     expect(headerPuts[0]?.body?.values?.[0]).toEqual(FULL_SHEET_HEADER);
 
-    // Check append called
+    // Chỉ dòng -ORG được append vào khong-che; không đụng tới tab da-che
     const appendCalls = fetchCalls.filter((c) => c.method === "POST" && c.url.includes(":append"));
-    expect(appendCalls.length).toBeGreaterThanOrEqual(2);
+    expect(appendCalls).toHaveLength(1);
+    expect(decodeURIComponent(appendCalls[0].url)).toContain("'khong-che'!A1:append");
+    expect(appendCalls[0].body?.values?.[0]?.[0]).toBe("CAL-ANI-2611-TEST-11-ORG");
+    expect(fetchCalls.some((c) => decodeURIComponent(c.url).includes(SHEET_TAB_DA_CHE))).toBe(false);
 
     expect(prisma.generationBatch.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -212,12 +215,9 @@ describe("sheets-sync", () => {
 
     expect(result).toBe("done");
 
-    // da-che SKU existed at index 2 (row 3) -> PUT to A3
-    const updateCall = fetchCalls.find(
-      (c) => c.method === "PUT" && decodeURIComponent(c.url).includes("'da-che'!A3"),
-    );
-    expect(updateCall).toBeDefined();
-    expect(updateCall?.body?.values?.[0]?.[0]).toBe("CAL-ANI-2611-TEST-11-CEN");
+    // Tab da-che không còn được đọc hay ghi, kể cả khi đang tồn tại trên Sheet
+    expect(fetchCalls.some((c) => decodeURIComponent(c.url).includes(SHEET_TAB_DA_CHE))).toBe(false);
+    expect(fetchCalls.some((c) => c.url.includes(":batchUpdate"))).toBe(false);
 
     // khong-che SKU was new -> POST append to A1
     const appendCall = fetchCalls.find(
@@ -265,8 +265,8 @@ describe("sheets-sync", () => {
       }
 
       if (method === "GET" && url.includes("/values/")) {
-        // da-che has CAL-ANI-2611-ERR01-11-CEN at row 5 (index 4)
-        if (url.includes(SHEET_TAB_DA_CHE)) {
+        // khong-che has CAL-ANI-2611-ERR01-11-ORG at row 5 (index 4)
+        if (url.includes(SHEET_TAB_KHONG_CHE)) {
           return {
             ok: true,
             json: async () => ({
@@ -275,7 +275,7 @@ describe("sheets-sync", () => {
                 ["OTHER-1"],
                 ["OTHER-2"],
                 ["OTHER-3"],
-                ["CAL-ANI-2611-ERR01-11-CEN"],
+                ["CAL-ANI-2611-ERR01-11-ORG"],
               ],
             }),
           };
@@ -298,9 +298,11 @@ describe("sheets-sync", () => {
 
     expect(result).toBe("done");
 
-    // da-che row 5 already existed -> PUT called for AA5:AB5 only
+    expect(fetchCalls.some((c) => decodeURIComponent(c.url).includes(SHEET_TAB_DA_CHE))).toBe(false);
+
+    // khong-che row 5 already existed -> PUT called for AA5:AB5 only
     const updateCall = fetchCalls.find(
-      (c) => c.method === "PUT" && decodeURIComponent(c.url).includes("'da-che'!AA5:AB5"),
+      (c) => c.method === "PUT" && decodeURIComponent(c.url).includes("'khong-che'!AA5:AB5"),
     );
     expect(updateCall).toBeDefined();
     expect(updateCall?.body?.values).toBeDefined();

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Thư mục kết quả (2 khổ + mockup, cấu trúc như R2) -- lib/generations/results-folder.ts.
     if (sub === "results") {
-      const resultsPath = resolveSafePath(resolveResultsRoot(outputRoot), batch.finalExportRelativePath);
+      const resultsPath = resolveSafePath(resolveResultsRoot(settings), batch.finalExportRelativePath);
       const resultsStat = await fs.stat(resultsPath).catch(() => null);
       if (!resultsStat?.isDirectory()) {
         return apiError("not_found", "Thư mục kết quả chưa có, đợi bộ lịch xuất file xong", 404);

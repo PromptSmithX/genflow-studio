@@ -11,7 +11,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/settings", () => ({
-  getOrCreateSettings: vi.fn().mockResolvedValue({ outputDirectory: "outputs" }),
+  getOrCreateSettings: vi.fn().mockResolvedValue({ outputDirectory: path.resolve("user", "Chon-Thu-Muc") }),
 }));
 
 vi.mock("@/lib/output-dir", async (importOriginal) => {
@@ -30,6 +30,7 @@ vi.mock("node:child_process", () => {
 });
 
 const slug = "2026-11-12_17-01_cap-doi_9f4me3";
+const chosenDir = path.resolve("user", "Chon-Thu-Muc");
 
 function reveal(folder: string) {
   const req = new NextRequest(`http://localhost/api/generations/b1/reveal-folder?folder=${folder}`, { method: "POST" });
@@ -52,7 +53,7 @@ describe("reveal-folder ?folder=results", () => {
     expect(res.status).toBe(200);
     expect(spawn).toHaveBeenCalledWith(
       "explorer.exe",
-      [path.resolve("root", "outputs_ket-qua", slug)],
+      [path.join(chosenDir, slug)],
       expect.objectContaining({ detached: true }),
     );
   });

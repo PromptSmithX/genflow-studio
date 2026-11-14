@@ -40,7 +40,6 @@ export async function POST(_request: NextRequest, { params }: Params) {
       resolveUpscaledCensoredRoot(outputRoot),
       resolveBackCoverRoot(outputRoot),
       resolveFinalRoot(outputRoot),
-      resolveResultsRoot(outputRoot),
     ];
 
     for (const root of roots) {
@@ -50,6 +49,14 @@ export async function POST(_request: NextRequest, { params }: Params) {
       } catch {
         // Không dừng nếu xóa thư mục lỗi (đã bị xóa tay, quyền truy cập, v.v.)
       }
+    }
+
+    // Thư mục kết quả nằm trong thư mục người dùng chọn (không phải sibling của outputRoot).
+    try {
+      const resultsDir = path.join(resolveResultsRoot(settings), slug);
+      if (fs.existsSync(resultsDir)) fs.rmSync(resultsDir, { recursive: true, force: true });
+    } catch {
+      // Không dừng nếu xóa thư mục lỗi
     }
 
     // Xóa DB — cascade xóa cả jobs và images

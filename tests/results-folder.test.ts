@@ -11,7 +11,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/settings", () => ({
-  getOrCreateSettings: vi.fn().mockResolvedValue({ outputDirectory: "data/outputs" }),
+  getOrCreateSettings: vi.fn().mockResolvedValue({ outputDirectory: path.resolve("user", "Chon-Thu-Muc") }),
 }));
 
 vi.mock("@/lib/output-dir", async (importOriginal) => {
@@ -35,12 +35,23 @@ vi.mock("node:fs/promises", () => {
 });
 
 const slug = "2026-11-12_17-01_cap-doi_9f4me3";
-const resultsDir = path.resolve("root", "outputs_ket-qua", slug);
+const chosenDir = path.resolve("user", "Chon-Thu-Muc");
+const resultsDir = path.join(chosenDir, slug);
 const mockupDir = path.resolve("root", "outputs_final", slug, "mockup");
 
 describe("resolveResultsRoot", () => {
-  it("is a sibling of the output root", () => {
-    expect(resolveResultsRoot(path.join("x", "data", "outputs"))).toBe(path.join("x", "data", "outputs_ket-qua"));
+  it("returns the user-chosen absolute folder as-is", () => {
+    const settings = { outputDirectory: chosenDir } as never;
+    expect(resolveResultsRoot(settings)).toBe(chosenDir);
+  });
+
+  it("falls back to outputs_ket-qua when user kept the default work root", async () => {
+    const actual = await vi.importActual<typeof import("@/lib/output-dir")>("@/lib/output-dir");
+    const workRoot = actual.resolveOutputRoot();
+    const settings = { outputDirectory: workRoot } as never;
+    expect(actual.resolveResultsRoot(settings)).toBe(
+      path.join(path.dirname(workRoot), `${path.basename(workRoot)}_ket-qua`),
+    );
   });
 });
 
@@ -61,7 +72,7 @@ describe("buildResultsFolder", () => {
     vi.mocked(fs.copyFile).mockResolvedValue(undefined);
   });
 
-  it("renders both sizes like R2 and copies mockups into previews/", async () => {
+  it("renders org-only pages straight into the user's chosen folder and copies mockups into previews/", async () => {
     vi.mocked(fs.readdir).mockResolvedValue([
       "00_mockup_covers.png",
       "01_mockup_q1.png",
@@ -73,10 +84,20 @@ describe("buildResultsFolder", () => {
     const result = await buildResultsFolder("b1");
 
     expect(result).toBe("done");
-    expect(fs.rm).toHaveBeenCalledWith(resultsDir, { recursive: true, force: true });
+    expect(fs.rm).not.toHaveBeenCalledWith(resultsDir, { recursive: true, force: true });
     expect(renderBatchPages).toHaveBeenCalledTimes(2);
-    expect(renderBatchPages).toHaveBeenCalledWith("b1", expect.objectContaining({ id: "premade_wall_14x11_5" }), path.join(resultsDir, "14x11.5"));
-    expect(renderBatchPages).toHaveBeenCalledWith("b1", expect.objectContaining({ id: "premade_wall_11x8_5" }), path.join(resultsDir, "11x8.5"));
+    expect(renderBatchPages).toHaveBeenCalledWith(
+      "b1",
+      expect.objectContaining({ id: "premade_wall_14x11_5" }),
+      path.join(resultsDir, "14x11.5"),
+      { orgOnly: true },
+    );
+    expect(renderBatchPages).toHaveBeenCalledWith(
+      "b1",
+      expect.objectContaining({ id: "premade_wall_11x8_5" }),
+      path.join(resultsDir, "11x8.5"),
+      { orgOnly: true },
+    );
     expect(fs.copyFile).toHaveBeenCalledWith(
       path.join(mockupDir, "00_mockup_covers.png"),
       path.join(resultsDir, "previews", "01_mockup_covers.png"),

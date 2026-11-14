@@ -65,6 +65,9 @@ vi.mock("@/lib/llm/suggest-prompts", () => ({ suggestPrompts }));
 const createAndSubmitBatch = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/generations/create-batch", () => ({ createAndSubmitBatch }));
 
+const ensureSkuBase = vi.hoisted(() => vi.fn(async () => "CAL-GEN-2611-ABCDE"));
+vi.mock("@/lib/r2/sku", () => ({ ensureSkuBase }));
+
 import {
   cancelDraft,
   draftQueueState,
@@ -96,6 +99,7 @@ describe("draft queue", () => {
     draftQueueState.running = false;
     draftQueueState.activeBatchId = null;
     suggestPrompts.mockReset().mockResolvedValue(suggestion);
+    ensureSkuBase.mockReset().mockResolvedValue("CAL-GEN-2611-ABCDE");
     createAndSubmitBatch.mockReset().mockImplementation(async (_input, { existingBatchId }) => {
       db.batches.find((b) => b.id === existingBatchId)!.status = "queued";
     });

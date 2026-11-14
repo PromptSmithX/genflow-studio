@@ -11,6 +11,7 @@ import {
 import { buildPrompts } from "@/lib/prompts/build-prompts";
 import { resolveSeeds } from "@/lib/seed";
 import { getRunpodClient, RunpodApiError } from "@/lib/comfyui/runpod-client";
+import { ensureSkuBase } from "@/lib/r2/sku";
 import type { CreateGenerationInput } from "@/lib/validations/generations";
 
 import { GenerationSetupError } from "./errors";
@@ -110,6 +111,10 @@ export async function createAndSubmitBatch(
         data: { ...batchData, draftError: null, draftParamsJson: null },
       })
     : await prisma.generationBatch.create({ data: batchData });
+
+  await ensureSkuBase(batch.id).catch((error) =>
+    console.error(`[create-batch] gán SKU cho batch ${batch.id} thất bại:`, error),
+  );
 
   const jobs = [];
   for (let index = 0; index < input.images.length; index++) {
@@ -243,6 +248,10 @@ export async function regenerateJob(sourceJobId: string, options: RegenerateOpti
   const batch = await prisma.generationBatch.create({
     data: { ideaPrompt: source.ideaPromptSnapshot, requestedCount: 1, status: "queued" },
   });
+
+  await ensureSkuBase(batch.id).catch((error) =>
+    console.error(`[create-batch] gán SKU cho batch regenerate ${batch.id} thất bại:`, error),
+  );
 
   const job = await prisma.generationJob.create({
     data: {

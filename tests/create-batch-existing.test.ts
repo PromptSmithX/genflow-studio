@@ -35,8 +35,10 @@ vi.mock("@/lib/comfyui/runpod-client", () => ({
   getRunpodClient: vi.fn(() => ({ submitJob: vi.fn(async () => ({ jobId: "rp-1" })) })),
   RunpodApiError: class extends Error {},
 }));
+vi.mock("@/lib/r2/sku", () => ({ ensureSkuBase: vi.fn(async () => "CAL-GEN-2611-ABCDE") }));
 
 import { createAndSubmitBatch } from "@/lib/generations/create-batch";
+import { ensureSkuBase } from "@/lib/r2/sku";
 
 describe("createAndSubmitBatch with existingBatchId", () => {
   it("promotes the drafting batch to queued instead of creating a new one", async () => {
@@ -66,5 +68,6 @@ describe("createAndSubmitBatch with existingBatchId", () => {
     });
     expect(prismaMock.generationJob.create).toHaveBeenCalledTimes(2);
     expect(prismaMock.generationJob.create.mock.calls[0][0].data.batchId).toBe("draft-1");
+    expect(ensureSkuBase).toHaveBeenCalledWith("draft-1");
   });
 });

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 export function mediumCode(name?: string | null): "ANI" | "REA" | "GEN" {
   if (!name) return "GEN";
@@ -63,16 +64,28 @@ export async function ensureSkuBase(batchId: string): Promise<string> {
   const taken = new Set(existing.map((b) => b.r2SkuBase));
 
   let codeLength = 5;
-  let candidate = buildSkuBase(batch, mediumName, codeLength);
-  while (taken.has(candidate) && codeLength <= batch.id.length + 5) {
-    codeLength++;
-    candidate = buildSkuBase(batch, mediumName, codeLength);
+  const maxCodeLength = batch.id.length + 5;
+
+  for (;;) {
+    let candidate = buildSkuBase(batch, mediumName, codeLength);
+    while (taken.has(candidate) && codeLength <= maxCodeLength) {
+      codeLength++;
+      candidate = buildSkuBase(batch, mediumName, codeLength);
+    }
+
+    try {
+      await prisma.generationBatch.update({
+        where: { id: batchId },
+        data: { r2SkuBase: candidate },
+      });
+      return candidate;
+    } catch (error) {
+      const isUniqueViolation = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+      if (!isUniqueViolation || codeLength > maxCodeLength) throw error;
+      // Một lần tạo batch khác vừa giành mất SKU này giữa lúc kiểm tra và ghi
+      // (danh sách "taken" chỉ là ảnh chụp) -- mở rộng mã và thử lại.
+      taken.add(candidate);
+      codeLength++;
+    }
   }
-
-  await prisma.generationBatch.update({
-    where: { id: batchId },
-    data: { r2SkuBase: candidate },
-  });
-
-  return candidate;
 }

@@ -40,19 +40,35 @@ export function buildOutputFilename(jobId: string, originalFilename: string): st
 }
 
 /**
- * Tên folder gom toàn bộ output của một batch (ảnh gen / censor / upscale), để
- * dễ lấy đúng bộ ảnh của 1 batch đem lên template lịch. Định dạng:
+ * Slug cũ dùng khi batch chưa có r2SkuBase (bộ tạo trước khi đổi sang đặt tên
+ * theo SKU, hoặc ensureSkuBase lỡ thất bại). Định dạng:
  * `YYYY-MM-DD_HH-mm_<nhãn>_<6 ký tự cuối id>`, thời gian theo local của máy chạy
- * app, nhãn lấy từ ideaPrompt đã sanitize + cắt ~40 ký tự. Tính xác định với
- * cùng input nên mọi job trong batch cùng ra một folder.
+ * app, nhãn lấy từ ideaPrompt đã sanitize + cắt ~40 ký tự.
  */
-export function buildBatchFolder(batch: { id: string; ideaPrompt: string; createdAt: Date }): string {
+function buildLegacyBatchFolder(batch: { id: string; ideaPrompt: string; createdAt: Date }): string {
   const d = batch.createdAt;
   const pad = (n: number) => String(n).padStart(2, "0");
   const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
   const label = sanitizeFilenameSegment(batch.ideaPrompt).slice(0, 40).replace(/_+$/, "");
   const shortId = batch.id.slice(-6);
   return [stamp, label, shortId].filter(Boolean).join("_");
+}
+
+/**
+ * Tên folder gom toàn bộ output của một batch (ảnh gen / censor / upscale) và
+ * folder kết quả cho người dùng. Ưu tiên dùng thẳng mã SKU đã gán cho batch
+ * (vd "CAL-REA-2611-U8QMB" -- cùng định dạng với Excel/Sheets/R2) để dễ đối
+ * chiếu; rơi về slug thời gian cũ nếu batch chưa có r2SkuBase. Tính xác định
+ * với cùng input nên mọi job trong batch cùng ra một folder.
+ */
+export function buildBatchFolder(batch: {
+  id: string;
+  ideaPrompt: string;
+  createdAt: Date;
+  r2SkuBase?: string | null;
+}): string {
+  if (batch.r2SkuBase) return batch.r2SkuBase;
+  return buildLegacyBatchFolder(batch);
 }
 
 export function buildWorkflowUploadFilename(originalFilename: string): string {

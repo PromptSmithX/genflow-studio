@@ -8,6 +8,7 @@ import { mergeTags } from "@/lib/prompts/merge-tags";
 import { isAnimeMediumPreset, scrubAnimeKeyVisual } from "@/lib/llm/finalize-suggestion";
 import { randomSeed } from "@/lib/seed";
 import { createAndSubmitBatch } from "@/lib/generations/create-batch";
+import { ensureSkuBase } from "@/lib/r2/sku";
 import { GenerationSetupError } from "@/lib/generations/errors";
 import { draftParamsSchema, type EnqueueDraftInput } from "@/lib/validations/generations";
 import type { DraftQueueItemDTO } from "@/lib/types";
@@ -58,6 +59,9 @@ export async function enqueueDraft(input: EnqueueDraftInput) {
       draftParamsJson: JSON.stringify(params),
     },
   });
+  await ensureSkuBase(batch.id).catch((error) =>
+    console.error(`[draft-queue] gán SKU cho batch ${batch.id} thất bại:`, error),
+  );
   kickDraftQueue();
   return batch;
 }

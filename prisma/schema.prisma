@@ -184,7 +184,8 @@ model GenerationBatch {
   etsyDescription String?
   etsyTagsJson    String?
 
-  // SKU gốc (CAL-{MED}-{YYMM}-{CODE}) cố định cho bộ lịch khi đẩy R2 lần đầu.
+  // SKU gốc (CAL-{MED}-{YYMM}-{CODE}), gán ngay lúc tạo batch (ensureSkuBase);
+  // R2 push chỉ tái dùng giá trị đã gán sẵn qua đường early-return của ensureSkuBase.
   r2SkuBase  String?   @unique
   // Thư mục lưu trên R2 ({YYYY}/{sku-lower}_{title-slug}) tính ở lần đẩy đầu.
   r2Folder   String?
